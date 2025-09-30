@@ -36,6 +36,10 @@ docs = [
     "ipython>=8.31.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["fairsense_agentix"]
+
+
 # Default dependency groups to be installed
 [tool.uv]
 default-groups = ["dev", "docs"]
