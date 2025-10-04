@@ -1,0 +1,340 @@
+"""Module for loading and managing application settings.
+
+This module provides a centralized configuration system using Pydantic Settings.
+All configuration can be set via environment variables with the FAIRSENSE_ prefix.
+
+Example:
+    >>> from fairsense_agentix.configs.settings import Settings
+    >>> settings = Settings()
+    >>> print(settings.llm_model_name)
+    'gpt-4'
+
+    # Override via environment variable:
+    $ export FAIRSENSE_LLM_MODEL_NAME="claude-3-5-sonnet-20241022"
+"""
+
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field, ValidationInfo, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings with environment variable support.
+
+    All settings can be overridden via environment variables with the
+    FAIRSENSE_ prefix. For example, to set llm_model_name, use:
+    FAIRSENSE_LLM_MODEL_NAME="gpt-4"
+
+    Attributes
+    ----------
+    llm_provider : str
+        LLM provider to use (openai, anthropic, local, fake)
+    llm_model_name : str
+        Specific model identifier
+    llm_api_key : str | None
+        API key for the LLM provider
+    llm_temperature : float
+        Sampling temperature for LLM calls (0.0-1.0)
+    llm_max_tokens : int
+        Maximum tokens to generate per LLM call
+    llm_timeout_seconds : int
+        Timeout for LLM API calls
+    ocr_tool : str
+        OCR tool to use (tesseract, paddleocr, fake)
+    ocr_language : str
+        Language code for OCR (e.g., 'eng', 'fra')
+    ocr_confidence_threshold : float
+        Minimum confidence for OCR results (0.0-1.0)
+    caption_model : str
+        Image captioning model (blip, blip2, llava, fake)
+    caption_max_length : int
+        Maximum length for generated captions
+    embedding_model : str
+        Sentence embedding model name
+    embedding_dimension : int
+        Expected dimension of embeddings
+    faiss_risks_index_path : Path
+        Path to FAISS index for risks database
+    faiss_rmf_index_path : Path
+        Path to FAISS index for AI-RMF database
+    faiss_top_k : int
+        Number of top results to retrieve from FAISS
+    cache_enabled : bool
+        Enable/disable caching globally
+    cache_backend : str
+        Cache backend (memory, redis, filesystem)
+    cache_ttl_seconds : int
+        Time-to-live for cache entries
+    cache_dir : Path
+        Directory for filesystem cache
+    telemetry_enabled : bool
+        Enable/disable telemetry globally
+    log_level : str
+        Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    otel_endpoint : str | None
+        OpenTelemetry collector endpoint
+    trace_all_llm_calls : bool
+        Whether to trace all LLM calls
+    api_host : str
+        API server host
+    api_port : int
+        API server port
+    api_reload : bool
+        Enable auto-reload for development
+    max_refinement_iterations : int
+        Maximum refinement iterations for evaluators
+    workflow_timeout_seconds : int
+        Timeout for entire workflow execution
+    router_confidence_threshold : float
+        Minimum confidence for router decisions (0.0-1.0)
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="FAIRSENSE_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # ===========================
+    # LLM Configuration
+    # ===========================
+    llm_provider: Literal["openai", "anthropic", "local", "fake"] = Field(
+        default="fake",
+        description="LLM provider to use for bias/risk analysis",
+    )
+
+    llm_model_name: str = Field(
+        default="gpt-4",
+        description="Specific model identifier (e.g., gpt-4, claude-3-5-sonnet)",
+    )
+
+    llm_api_key: str | None = Field(
+        default=None,
+        description="API key for the LLM provider",
+    )
+
+    llm_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Sampling temperature for LLM calls",
+    )
+
+    llm_max_tokens: int = Field(
+        default=2000,
+        gt=0,
+        description="Maximum tokens to generate per LLM call",
+    )
+
+    llm_timeout_seconds: int = Field(
+        default=60,
+        gt=0,
+        description="Timeout for LLM API calls",
+    )
+
+    # ===========================
+    # OCR Configuration
+    # ===========================
+    ocr_tool: Literal["tesseract", "paddleocr", "fake"] = Field(
+        default="fake",
+        description="OCR tool to use for text extraction from images",
+    )
+
+    ocr_language: str = Field(
+        default="eng",
+        description="Language code for OCR (e.g., 'eng', 'fra', 'spa')",
+    )
+
+    ocr_confidence_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold for OCR results",
+    )
+
+    # ===========================
+    # Image Captioning Configuration
+    # ===========================
+    caption_model: Literal["blip", "blip2", "llava", "fake"] = Field(
+        default="fake",
+        description="Image captioning model to use",
+    )
+
+    caption_max_length: int = Field(
+        default=100,
+        gt=0,
+        description="Maximum length for generated captions",
+    )
+
+    # ===========================
+    # Embedding & FAISS Configuration
+    # ===========================
+    embedding_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        description="Sentence embedding model name (from sentence-transformers)",
+    )
+
+    embedding_dimension: int = Field(
+        default=384,
+        gt=0,
+        description="Expected dimension of embeddings (must match embedding_model)",
+    )
+
+    faiss_risks_index_path: Path = Field(
+        default=Path("data/indexes/risks.faiss"),
+        description="Path to FAISS index for risks database",
+    )
+
+    faiss_rmf_index_path: Path = Field(
+        default=Path("data/indexes/rmf.faiss"),
+        description="Path to FAISS index for AI-RMF database",
+    )
+
+    faiss_top_k: int = Field(
+        default=5,
+        gt=0,
+        description="Number of top results to retrieve from FAISS searches",
+    )
+
+    # ===========================
+    # Cache Configuration
+    # ===========================
+    cache_enabled: bool = Field(
+        default=True,
+        description="Enable/disable caching globally",
+    )
+
+    cache_backend: Literal["memory", "redis", "filesystem"] = Field(
+        default="memory",
+        description="Cache backend to use",
+    )
+
+    cache_ttl_seconds: int = Field(
+        default=3600,
+        gt=0,
+        description="Time-to-live for cache entries in seconds",
+    )
+
+    cache_dir: Path = Field(
+        default=Path(".cache"),
+        description="Directory for filesystem cache",
+    )
+
+    # ===========================
+    # Telemetry & Observability Configuration
+    # ===========================
+    telemetry_enabled: bool = Field(
+        default=False,
+        description="Enable/disable telemetry and detailed logging",
+    )
+
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
+        default="INFO",
+        description="Logging level for the application",
+    )
+
+    otel_endpoint: str | None = Field(
+        default=None,
+        description="OpenTelemetry collector endpoint (optional)",
+    )
+
+    trace_all_llm_calls: bool = Field(
+        default=True,
+        description="Whether to trace all LLM calls for observability",
+    )
+
+    # ===========================
+    # API Server Configuration
+    # ===========================
+    api_host: str = Field(
+        default="0.0.0.0",
+        description="API server host address",
+    )
+
+    api_port: int = Field(
+        default=8000,
+        gt=0,
+        le=65535,
+        description="API server port",
+    )
+
+    api_reload: bool = Field(
+        default=False,
+        description="Enable auto-reload for development (uvicorn --reload)",
+    )
+
+    # ===========================
+    # Workflow & Orchestration Configuration
+    # ===========================
+    max_refinement_iterations: int = Field(
+        default=2,
+        ge=0,
+        description="Maximum refinement iterations for evaluator feedback loops",
+    )
+
+    workflow_timeout_seconds: int = Field(
+        default=300,
+        gt=0,
+        description="Timeout for entire workflow execution",
+    )
+
+    router_confidence_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence for router to select a workflow",
+    )
+
+    @field_validator("faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir")
+    @classmethod
+    def expand_path(cls, v: Path) -> Path:
+        """Expand and resolve paths to absolute paths.
+
+        Parameters
+        ----------
+        v : Path
+            Path to expand
+
+        Returns
+        -------
+        Path
+            Absolute path
+        """
+        return v.expanduser().resolve()
+
+    @field_validator("llm_api_key")
+    @classmethod
+    def validate_api_key(cls, v: str | None, info: ValidationInfo) -> str | None:
+        """Validate that API key is set for non-fake providers.
+
+        Parameters
+        ----------
+        v : str | None
+            API key value
+        info : ValidationInfo
+            Validation context with other field values
+
+        Returns
+        -------
+        str | None
+            Validated API key
+
+        Raises
+        ------
+        ValueError
+            If API key is missing for a provider that requires it
+        """
+        # Note: info.data contains other field values during validation
+        provider = info.data.get("llm_provider", "fake")
+        if provider in {"openai", "anthropic"} and not v:
+            msg = f"llm_api_key is required when llm_provider={provider}"
+            raise ValueError(msg)
+        return v
+
+
+# Singleton instance for convenient access
+settings = Settings()
