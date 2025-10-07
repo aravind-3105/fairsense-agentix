@@ -270,6 +270,11 @@ class Settings(BaseSettings):
     # ===========================
     # Workflow & Orchestration Configuration
     # ===========================
+    enable_refinement: bool = Field(
+        default=False,
+        description="Enable refinement loop (Phase 2-6: False, Phase 7+: True)",
+    )
+
     max_refinement_iterations: int = Field(
         default=2,
         ge=0,
