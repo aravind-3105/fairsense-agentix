@@ -1,22 +1,29 @@
 # API Reference
 
-## Top Level Module
+## FairSense AgentiX
 
 ::: fairsense_agentix
     options:
       show_root_heading: true
       show_root_full_path: true
 
-## Foo Module
+## Configs
 
-::: fairsense_agentix.foo
+::: fairsense_agentix.configs
     options:
       show_root_heading: true
       show_root_full_path: true
 
-## Bar Module
+## Graphs
 
-::: fairsense_agentix.bar
+::: fairsense_agentix.graphs
+    options:
+      show_root_heading: true
+      show_root_full_path: true
+
+## Services
+
+::: fairsense_agentix.services
     options:
       show_root_heading: true
       show_root_full_path: true
