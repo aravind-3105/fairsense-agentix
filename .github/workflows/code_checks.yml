@@ -46,6 +46,11 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
+      - name: Upgrade pip to latest
+        run: |
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+
       - name: Install dependencies and check code
         run: |
           source .venv/bin/activate
