@@ -2,21 +2,21 @@
 
 ## Top Level Module
 
-::: fairsense-Agentix
+::: fairsense_agentix
     options:
       show_root_heading: true
       show_root_full_path: true
 
 ## Foo Module
 
-::: fairsense-Agentix.foo
+::: fairsense_agentix.foo
     options:
       show_root_heading: true
       show_root_full_path: true
 
 ## Bar Module
 
-::: fairsense-Agentix.bar
+::: fairsense_agentix.bar
     options:
       show_root_heading: true
       show_root_full_path: true
