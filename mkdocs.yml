@@ -6,7 +6,7 @@ extra:
     - icon: fontawesome/brands/discord
       link: 404.html
     - icon: fontawesome/brands/github
-      link: https://github.com/VectorInstitute/aieng-template-uv
+      link: https://github.com/VectorInstitute/fairsense-AgentiX
 markdown_extensions:
   - attr_list
   - admonition
@@ -44,8 +44,8 @@ plugins:
             show_root_toc_entry: false
             show_symbol_type_heading: true
             show_symbol_type_toc: true
-repo_url: https://github.com/VectorInstitute/aieng-template-uv
-repo_name: VectorInstitute/aieng-template-uv
+repo_url: https://github.com/VectorInstitute/fairsense-AgentiX
+repo_name: VectorInstitute/fairsense-AgentiX
 site_name: AI Engineering Template (uv)
 theme:
   custom_dir: docs/overrides
