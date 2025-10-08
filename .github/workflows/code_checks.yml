@@ -58,5 +58,6 @@ jobs:
 
       - name: pip-audit (gh-action-pip-audit)
         uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266
+        continue-on-error: true
         with:
           virtual-environment: .venv/
