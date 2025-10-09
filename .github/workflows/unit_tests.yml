@@ -56,9 +56,9 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Install dependencies and check code
+      - name: Run unit tests
         run: |
-          uv run pytest -m "not integration_test" --cov src/aifairsense-agentix --cov-report=xml tests
+          uv run pytest -m "not integration_test" --cov fairsense_agentix --cov-report=xml tests
 
       # # Uncomment this once this repo is configured on Codecov
       # - name: Upload coverage to Codecov

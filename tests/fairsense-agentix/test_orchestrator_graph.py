@@ -9,9 +9,12 @@ These tests verify:
 Comprehensive integration tests will be added after Phase 2 completion.
 """
 
+import pytest
+
 from fairsense_agentix.graphs.orchestrator_graph import create_orchestrator_graph
 
 
+@pytest.mark.integration_test
 class TestOrchestratorGraphBasic:
     """Basic smoke tests for orchestrator graph."""
 
@@ -108,6 +111,7 @@ class TestOrchestratorGraphBasic:
         assert "html_table" in result["workflow_result"]
 
 
+@pytest.mark.integration_test
 class TestOrchestratorConditionalRouting:
     """Test conditional edges and routing logic."""
 

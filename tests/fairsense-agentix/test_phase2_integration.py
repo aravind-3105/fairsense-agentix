@@ -14,9 +14,12 @@ verifying the full integration:
 - Run ID tracing
 """
 
+import pytest
+
 from fairsense_agentix.graphs.orchestrator_graph import create_orchestrator_graph
 
 
+@pytest.mark.integration_test
 class TestPhase2Integration:
     """End-to-end integration tests for Phase 2 infrastructure."""
 

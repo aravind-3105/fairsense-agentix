@@ -143,5 +143,5 @@ markers = [
 
 [tool.coverage]
     [tool.coverage.run]
-    source=["aieng_template"]
+    source=["fairsense_agentix"]
     omit=["tests/*", "*__init__.py"]
