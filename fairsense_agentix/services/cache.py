@@ -303,7 +303,9 @@ class CacheService:
         elif backend == "redis":
             # Placeholder for future Redis implementation
             msg = "Redis backend not yet implemented, falling back to memory"
-            telemetry.log_warning("cache_backend_fallback", backend=backend)
+            telemetry.log_warning(
+                "cache_backend_fallback", backend=backend, message=msg
+            )
             self.backend = MemoryCacheBackend()
         else:
             msg = f"Unknown cache backend: {backend}"
