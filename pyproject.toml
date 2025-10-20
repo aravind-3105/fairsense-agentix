@@ -7,7 +7,12 @@ authors = [ {name = "Vector AI Engineering", email = "ai_engineering@vectorinsti
 license = "Apache-2.0"
 repository = "https://github.com/VectorInstitute/aieng-template-uv"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.10.6",
+    "pydantic-settings>=2.7.1",
+    "langgraph>=0.2.56",
+    "langchain-core>=0.3.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -138,5 +143,5 @@ markers = [
 
 [tool.coverage]
     [tool.coverage.run]
-    source=["aieng_template"]
+    source=["fairsense_agentix"]
     omit=["tests/*", "*__init__.py"]
