@@ -46,7 +46,7 @@ plugins:
             show_symbol_type_toc: true
 repo_url: https://github.com/VectorInstitute/fairsense-AgentiX
 repo_name: VectorInstitute/fairsense-AgentiX
-site_name: AI Engineering Template (uv)
+site_name: fairsense-AgentiX
 theme:
   custom_dir: docs/overrides
   favicon: assets/favicon-48x48.svg
