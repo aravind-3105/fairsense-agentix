@@ -22,7 +22,10 @@ class TestBiasTextGraphBasic:
         assert hasattr(graph, "invoke")
 
     def test_short_text_analysis(self) -> None:
-        """Test end-to-end execution with short text."""
+        """Test end-to-end execution with short text (< 500 chars).
+
+        Short text should skip summarization node (conditional routing).
+        """
         graph = create_bias_text_graph()
 
         result = graph.invoke(
@@ -32,15 +35,16 @@ class TestBiasTextGraphBasic:
             }
         )
 
-        # Verify all required outputs
+        # Verify required outputs
         assert result["bias_analysis"] is not None
         assert len(result["bias_analysis"]) > 0
         assert "Bias Analysis Report" in result["bias_analysis"]
 
-        # Summary generated
-        assert result["summary"] is not None
+        # Summary should NOT be generated for short text (< 500 chars)
+        # Conditional routing skips summarize node
+        assert "summary" not in result or result.get("summary") is None
 
-        # HTML generated
+        # HTML generated (always runs)
         assert result["highlighted_html"] is not None
         assert "<html>" in result["highlighted_html"]
         assert "Looking for a talented developer" in result["highlighted_html"]
@@ -65,7 +69,10 @@ class TestBiasTextGraphBasic:
         assert result["highlighted_html"] is not None
 
     def test_options_propagate(self) -> None:
-        """Test that options are accessible in state."""
+        """Test that options are accessible in state and control behavior.
+
+        Tests enable_summary option forces summarization even for short text.
+        """
         graph = create_bias_text_graph()
 
         result = graph.invoke(
@@ -78,3 +85,8 @@ class TestBiasTextGraphBasic:
         # Verify execution completed with options
         assert result["bias_analysis"] is not None
         assert result["options"]["temperature"] == 0.5
+
+        # Verify enable_summary=True triggers summarization even for short text
+        # (short text = 11 chars, but enable_summary=True forces summarize node)
+        assert result["summary"] is not None
+        assert len(result["summary"]) > 0

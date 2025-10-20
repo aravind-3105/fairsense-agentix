@@ -5,7 +5,12 @@ ability, etc.) using LLM-based analysis, optional summarization, and HTML
 highlighting of problematic text spans.
 
 Workflow:
-    START → analyze_bias → summarize (conditional) → highlight → assess_quality → END
+    START → analyze_bias → [summarize (conditional)] → highlight → END
+
+    Conditional: summarize runs if text > 500 chars or options["enable_summary"] = True
+
+Note: Quality assessment is handled by orchestrator's posthoc_eval node.
+Subgraphs produce output; orchestrator evaluates quality.
 
 Phase 2 (Checkpoint 2.4): Stub implementations with fake LLM/tools
 Phase 5+: Real LLM integration, prompt engineering, highlighting logic
@@ -281,7 +286,10 @@ def create_bias_text_graph() -> CompiledStateGraph:
     Builds the text bias analysis workflow with conditional summarization.
 
     Graph Structure:
-        START → analyze_bias → summarize → highlight → END
+        START → analyze_bias → [summarize (conditional)] → highlight → END
+
+        Conditional: If should_summarize() is True, route to summarize node.
+                     Otherwise, skip directly to highlight node.
 
     Note: Quality assessment is handled by orchestrator's posthoc_eval node.
 
@@ -309,13 +317,22 @@ def create_bias_text_graph() -> CompiledStateGraph:
     # START → analyze_bias
     workflow.add_edge(START, "analyze_bias")
 
-    # analyze_bias → summarize
-    workflow.add_edge("analyze_bias", "summarize")
+    # analyze_bias → [conditional routing]
+    # If should_summarize: analyze_bias → summarize → highlight
+    # Else: analyze_bias → highlight (skip summarize)
+    workflow.add_conditional_edges(
+        "analyze_bias",
+        should_summarize,
+        {
+            True: "summarize",
+            False: "highlight",
+        },
+    )
 
-    # summarize → highlight
+    # summarize → highlight (when summarize runs)
     workflow.add_edge("summarize", "highlight")
 
-    # highlight → END
+    # highlight → END (always)
     workflow.add_edge("highlight", END)
 
     # Compile graph

@@ -184,10 +184,11 @@ def execute_workflow(state: OrchestratorState) -> dict:
             )
 
             # Package result
+            # Note: summary is optional (conditional node in BiasTextGraph)
             result = {
                 "workflow_id": "bias_text",
                 "bias_analysis": subgraph_result["bias_analysis"],
-                "summary": subgraph_result["summary"],
+                "summary": subgraph_result.get("summary"),  # Optional field
                 "highlighted_html": subgraph_result["highlighted_html"],
             }
 
@@ -212,13 +213,14 @@ def execute_workflow(state: OrchestratorState) -> dict:
             )
 
             # Package result
+            # Note: summary is optional (conditional node in BiasImageGraph)
             result = {
                 "workflow_id": "bias_image",
                 "ocr_text": subgraph_result["ocr_text"],
                 "caption_text": subgraph_result["caption_text"],
                 "merged_text": subgraph_result["merged_text"],
                 "bias_analysis": subgraph_result["bias_analysis"],
-                "summary": subgraph_result["summary"],
+                "summary": subgraph_result.get("summary"),  # Optional field
                 "highlighted_html": subgraph_result["highlighted_html"],
             }
         elif workflow_id == "risk":
