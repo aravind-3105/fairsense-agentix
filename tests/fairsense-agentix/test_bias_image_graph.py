@@ -71,9 +71,10 @@ class TestBiasImageGraphBasic:
         assert result["ocr_text"] is not None
         assert result["caption_text"] is not None
 
-        # Large image should have more detailed mocks
-        assert len(result["ocr_text"]) > 100
-        assert "Job Posting" in result["ocr_text"] or "Hiring" in result["ocr_text"]
+        # Phase 4: FakeOCRTool returns deterministic output
+        # Verify OCR text is present (no longer check for specific mock content)
+        assert len(result["ocr_text"]) > 0
+        assert isinstance(result["ocr_text"], str)
 
         # Verify complete workflow
         assert result["merged_text"] is not None

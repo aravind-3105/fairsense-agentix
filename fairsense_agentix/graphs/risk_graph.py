@@ -28,6 +28,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from fairsense_agentix.graphs.state import RiskState
+from fairsense_agentix.tools import get_tool_registry
 
 
 # ============================================================================
@@ -42,7 +43,7 @@ def embed_scenario(state: RiskState) -> dict:
     etc.) to convert scenario text into a dense vector representation for
     semantic search.
 
-    Phase 2: Stub returning mock embedding.
+    Phase 4+: Uses tool registry to get embedder implementation (fake or real).
     Phase 5+: Real embedding using sentence-transformers or similar.
 
     Parameters
@@ -62,24 +63,13 @@ def embed_scenario(state: RiskState) -> dict:
     >>> len(update["embedding"])
     384
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real embedding using sentence-transformers (all-MiniLM-L6-v2, etc.)
+    # Get tools from registry
+    registry = get_tool_registry()
 
-    scenario_length = len(state.scenario_text)
+    # Use embedder tool to generate embedding
+    embedding = registry.embedder.encode(state.scenario_text)
 
-    # Mock 384-dimensional embedding (default for all-MiniLM-L6-v2)
-    # In reality, this would be: model.encode(state.scenario_text)
-    mock_embedding = [0.1 * (i % 10) for i in range(384)]
-
-    # Add some variation based on scenario length
-    if scenario_length > 100:
-        mock_embedding[0] = 0.9
-        mock_embedding[1] = 0.8
-    else:
-        mock_embedding[0] = 0.3
-        mock_embedding[1] = 0.4
-
-    return {"embedding": mock_embedding}
+    return {"embedding": embedding}
 
 
 def search_risks(state: RiskState) -> dict:
@@ -89,7 +79,7 @@ def search_risks(state: RiskState) -> dict:
     AI Similarity Search) to find the most relevant risks for the given
     scenario.
 
-    Phase 2: Stub returning mock risks.
+    Phase 4+: Uses tool registry to get FAISS implementation (fake or real).
     Phase 5+: Real FAISS search against risks index.
 
     Parameters
@@ -109,10 +99,8 @@ def search_risks(state: RiskState) -> dict:
     >>> len(update["risks"])
     5
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real FAISS search
-    #   index = faiss.read_index(settings.faiss_risks_index_path)
-    #   distances, indices = index.search(embedding, k=top_k)
+    # Get tools from registry
+    registry = get_tool_registry()
 
     if state.embedding is None:
         return {"risks": []}
@@ -121,52 +109,10 @@ def search_risks(state: RiskState) -> dict:
     options = state.options or {}
     top_k = options.get("top_k", 5)
 
-    # Mock risk data
-    mock_risks = [
-        {
-            "risk_id": "RISK-001",
-            "category": "Privacy",
-            "description": "Unauthorized collection and use of personal biometric data",
-            "severity": "High",
-            "likelihood": "High",
-            "score": 0.92,
-        },
-        {
-            "risk_id": "RISK-002",
-            "category": "Fairness",
-            "description": "Algorithmic bias leading to discriminatory outcomes in identification",
-            "severity": "High",
-            "likelihood": "Medium",
-            "score": 0.88,
-        },
-        {
-            "risk_id": "RISK-003",
-            "category": "Transparency",
-            "description": "Lack of transparency in facial recognition system deployment",
-            "severity": "Medium",
-            "likelihood": "High",
-            "score": 0.85,
-        },
-        {
-            "risk_id": "RISK-004",
-            "category": "Safety",
-            "description": "Misidentification leading to wrongful detention or harm",
-            "severity": "Critical",
-            "likelihood": "Low",
-            "score": 0.82,
-        },
-        {
-            "risk_id": "RISK-005",
-            "category": "Accountability",
-            "description": "Unclear accountability for false positives and system failures",
-            "severity": "Medium",
-            "likelihood": "Medium",
-            "score": 0.78,
-        },
-    ]
+    # Use FAISS risks index from registry
+    risks = registry.faiss_risks.search(query_vector=state.embedding, top_k=top_k)
 
-    # Return top_k risks
-    return {"risks": mock_risks[:top_k]}
+    return {"risks": risks}
 
 
 def search_rmf_per_risk(state: RiskState) -> dict:
@@ -175,7 +121,7 @@ def search_rmf_per_risk(state: RiskState) -> dict:
     For each identified risk, performs a secondary FAISS search to find
     relevant recommendations from the NIST AI Risk Management Framework (AI-RMF).
 
-    Phase 2: Stub returning mock RMF recommendations.
+    Phase 4+: Uses tool registry to get embedder and FAISS RMF implementation.
     Phase 5+: Real FAISS search against RMF index for each risk.
 
     Parameters
@@ -195,45 +141,32 @@ def search_rmf_per_risk(state: RiskState) -> dict:
     >>> "RISK-001" in update["rmf_recommendations"]
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real FAISS search for each risk
-    #   For each risk:
-    #     risk_embedding = embed(risk.description)
-    #     rmf_results = rmf_index.search(risk_embedding, k=3)
+    # Get tools from registry
+    registry = get_tool_registry()
 
     if not state.risks:
         return {"rmf_recommendations": {}}
 
-    # Mock RMF recommendations keyed by risk_id
+    # Get RMF recommendations per risk from options (default 3)
+    options = state.options or {}
+    rmf_per_risk = options.get("rmf_per_risk", 3)
+
+    # RMF recommendations keyed by risk_id
     rmf_recommendations = {}
 
     for risk in state.risks:
-        risk_id = risk["risk_id"]
+        risk_id = risk["id"] if "id" in risk else risk.get("risk_id", "")
+        risk_description = risk.get("description", risk.get("text", ""))
 
-        # Mock 3 RMF recommendations per risk
-        rmf_recommendations[risk_id] = [
-            {
-                "rmf_id": f"{risk_id}-RMF-1",
-                "function": "GOVERN",
-                "category": "Policies and Procedures",
-                "recommendation": "Establish clear policies for biometric data collection, use, and retention",
-                "relevance_score": 0.95,
-            },
-            {
-                "rmf_id": f"{risk_id}-RMF-2",
-                "function": "MAP",
-                "category": "Impact Assessment",
-                "recommendation": "Conduct comprehensive impact assessment covering privacy and civil liberties",
-                "relevance_score": 0.89,
-            },
-            {
-                "rmf_id": f"{risk_id}-RMF-3",
-                "function": "MEASURE",
-                "category": "Performance Monitoring",
-                "recommendation": "Implement continuous monitoring for false positive and negative rates across demographics",
-                "relevance_score": 0.84,
-            },
-        ]
+        # Embed the risk description
+        risk_embedding = registry.embedder.encode(risk_description)
+
+        # Search RMF index for recommendations
+        rmf_results = registry.faiss_rmf.search(
+            query_vector=risk_embedding, top_k=rmf_per_risk
+        )
+
+        rmf_recommendations[risk_id] = rmf_results
 
     return {"rmf_recommendations": rmf_recommendations}
 
@@ -243,6 +176,8 @@ def join_data(state: RiskState) -> dict:
 
     Merges risk data with their corresponding RMF recommendations into a
     flat table structure suitable for display and export.
+
+    Phase 4+: Handles both fake FAISS and future real FAISS key structures.
 
     Parameters
     ----------
@@ -267,25 +202,27 @@ def join_data(state: RiskState) -> dict:
     joined_table = []
 
     for risk in state.risks:
-        risk_id = risk["risk_id"]
+        # Handle both key naming conventions (fake FAISS vs original mock)
+        risk_id = risk.get("risk_id") or risk.get("id", "")
         rmf_recs = state.rmf_recommendations.get(risk_id, [])
 
         for rmf in rmf_recs:
-            # Create joined row
+            # Create joined row - handle flexible key names
             row = {
-                # Risk fields
-                "risk_id": risk["risk_id"],
-                "risk_category": risk["category"],
-                "risk_description": risk["description"],
-                "risk_severity": risk["severity"],
-                "risk_likelihood": risk["likelihood"],
-                "risk_score": risk["score"],
-                # RMF fields
-                "rmf_id": rmf["rmf_id"],
-                "rmf_function": rmf["function"],
-                "rmf_category": rmf["category"],
-                "rmf_recommendation": rmf["recommendation"],
-                "rmf_relevance_score": rmf["relevance_score"],
+                # Risk fields (handle both "risk_id" and "id")
+                "risk_id": risk.get("risk_id") or risk.get("id", ""),
+                "risk_category": risk.get("category", ""),
+                "risk_description": risk.get("description") or risk.get("text", ""),
+                "risk_severity": risk.get("severity", ""),
+                "risk_likelihood": risk.get("likelihood", "N/A"),
+                "risk_score": risk.get("score", 0.0),
+                # RMF fields (handle both naming conventions)
+                "rmf_id": rmf.get("rmf_id") or rmf.get("id", ""),
+                "rmf_function": rmf.get("function", ""),
+                "rmf_category": rmf.get("category", ""),
+                "rmf_recommendation": rmf.get("recommendation") or rmf.get("text", ""),
+                "rmf_relevance_score": rmf.get("relevance_score")
+                or rmf.get("score", 0.0),
             }
             joined_table.append(row)
 
@@ -299,7 +236,7 @@ def format_html(state: RiskState) -> dict:
     user-friendly format. Includes color-coding by severity and interactive
     elements.
 
-    Phase 2: Basic HTML table.
+    Phase 4+: Uses formatter tool from registry.
     Phase 5+: Enhanced styling, sorting, filtering, collapsible sections.
 
     Parameters
@@ -319,105 +256,26 @@ def format_html(state: RiskState) -> dict:
     >>> "<table>" in update["html_table"]
     True
     """
+    # Get tools from registry
+    registry = get_tool_registry()
+
     if not state.joined_table:
         return {"html_table": "<p>No risks found for this scenario.</p>"}
 
-    # Build HTML table
-    html_parts = [
-        """<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>AI Risk Assessment Report</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1400px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-        .scenario {
-            background-color: #e3f2fd;
-            padding: 15px;
-            border-left: 4px solid #2196F3;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        th {
-            background-color: #1976D2;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: bold;
-        }
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-        .severity-critical { background-color: #ffcdd2; }
-        .severity-high { background-color: #ffe0b2; }
-        .severity-medium { background-color: #fff9c4; }
-        .severity-low { background-color: #c8e6c9; }
-        .rmf-govern { color: #1976D2; font-weight: bold; }
-        .rmf-map { color: #388E3C; font-weight: bold; }
-        .rmf-measure { color: #F57C00; font-weight: bold; }
-        .rmf-manage { color: #7B1FA2; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <h1>AI Risk Assessment Report</h1>
-    <div class="scenario">
-        <strong>Scenario:</strong> """
-        + state.scenario_text
-        + """
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Risk ID</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Severity</th>
-                <th>RMF Function</th>
-                <th>Recommendation</th>
-            </tr>
-        </thead>
-        <tbody>"""
+    # Define table headers
+    headers = [
+        "risk_id",
+        "risk_category",
+        "risk_description",
+        "risk_severity",
+        "rmf_function",
+        "rmf_recommendation",
     ]
 
-    for row in state.joined_table:
-        severity_class = f"severity-{row['risk_severity'].lower()}"
-        rmf_class = f"rmf-{row['rmf_function'].lower()}"
+    # Use formatter tool to generate HTML table
+    html_table = registry.formatter.table(data=state.joined_table, headers=headers)
 
-        html_parts.append(f"""
-            <tr class="{severity_class}">
-                <td>{row["risk_id"]}</td>
-                <td>{row["risk_category"]}</td>
-                <td>{row["risk_description"]}</td>
-                <td><strong>{row["risk_severity"]}</strong></td>
-                <td class="{rmf_class}">{row["rmf_function"]}</td>
-                <td>{row["rmf_recommendation"]}</td>
-            </tr>""")
-
-    html_parts.append("""
-        </tbody>
-    </table>
-    <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
-        <em>Report generated by FairSense-AgentiX AI Risk Assessment System</em>
-    </p>
-</body>
-</html>""")
-
-    return {"html_table": "".join(html_parts)}
+    return {"html_table": html_table}
 
 
 def export_csv(state: RiskState) -> dict:
@@ -426,7 +284,7 @@ def export_csv(state: RiskState) -> dict:
     Exports the joined risk and RMF data to a CSV file for further analysis,
     reporting, or integration with other tools.
 
-    Phase 2: Stub returning mock CSV path.
+    Phase 4+: Uses persistence tool from registry.
     Phase 5+: Real CSV file generation with configurable output directory.
 
     Parameters
@@ -446,23 +304,20 @@ def export_csv(state: RiskState) -> dict:
     >>> update["csv_path"].endswith(".csv")
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real CSV file writing
-    #   import csv
-    #   csv_path = Path(f"outputs/risk_assessment_{run_id}.csv")
-    #   with open(csv_path, 'w') as f:
-    #       writer = csv.DictWriter(f, fieldnames=...)
-    #       writer.writeheader()
-    #       writer.writerows(state.joined_table)
+    # Get tools from registry
+    registry = get_tool_registry()
 
     if not state.joined_table:
         return {"csv_path": None}
 
-    # Mock CSV path
+    # Generate filename using run_id
     run_id = state.run_id
-    mock_csv_path = f"/tmp/risk_assessment_{run_id[:8]}.csv"
+    filename = f"risk_assessment_{run_id[:8]}.csv"
 
-    return {"csv_path": mock_csv_path}
+    # Use persistence tool to save CSV
+    csv_path = registry.persistence.save_csv(data=state.joined_table, filename=filename)
+
+    return {"csv_path": str(csv_path)}
 
 
 # Note: Quality assessment removed from subgraph
