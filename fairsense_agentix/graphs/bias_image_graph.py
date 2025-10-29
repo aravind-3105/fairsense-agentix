@@ -326,7 +326,9 @@ def highlight(state: BiasImageState) -> dict[str, str]:
     merged_text = state.merged_text or ""
 
     # For now, pass empty spans list (Phase 5 will extract from bias_analysis)
-    spans: list[tuple[int, int, str]] = []  # Future: extract from state.bias_analysis
+    spans: list[
+        tuple[int, int, str]
+    ] = []  # TODO: extract from state.bias_analysis to populate
 
     # Define bias type colors
     bias_types = {
