@@ -511,14 +511,30 @@ def get_tool_registry() -> ToolRegistry:
 def reset_tool_registry() -> None:
     """Reset the global tool registry singleton.
 
-    Useful for testing when you need to force registry reconstruction
-    with different settings.
+    Clears the global registry instance, forcing the next call to
+    get_tool_registry() to create a fresh registry. This is used
+    exclusively in tests to ensure test isolation - each test gets
+    a clean registry without pollution from previous tests.
+
+    **NOT for production use** - resetting the registry is expensive
+    and unnecessary in production where a single registry instance
+    should be reused throughout the application lifetime.
+
+    Use Cases
+    ---------
+    - Test setup/teardown for isolation
+    - Testing different configuration settings
+    - Pytest fixtures that need fresh registry state
 
     Examples
     --------
-    >>> # In tests
-    >>> reset_tool_registry()
-    >>> # Next get_tool_registry() call will create new registry
+    >>> # In test setup
+    >>> class TestSomething:
+    ...     def setup_method(self):
+    ...         reset_tool_registry()  # Fresh registry per test
+    ...
+    ...     def test_workflow(self):
+    ...         registry = get_tool_registry()  # New instance
     """
     global _global_registry  # noqa: PLW0603
     _global_registry = None
