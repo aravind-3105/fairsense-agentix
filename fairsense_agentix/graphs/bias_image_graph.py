@@ -31,7 +31,7 @@ from fairsense_agentix.tools import get_tool_registry
 # ============================================================================
 
 
-def extract_ocr(state: BiasImageState) -> dict:
+def extract_ocr(state: BiasImageState) -> dict[str, str]:
     """OCR node: Extract text from image using OCR tool.
 
     Uses OCR (Optical Character Recognition) to extract text content from
@@ -66,17 +66,24 @@ def extract_ocr(state: BiasImageState) -> dict:
     language = state.options.get("ocr_language", "eng")
     confidence_threshold = state.options.get("ocr_confidence", 0.5)
 
-    # Use OCR tool from registry
-    ocr_text = registry.ocr.extract(
-        image_bytes=state.image_bytes,
-        language=language,
-        confidence_threshold=confidence_threshold,
-    )
+    # Use OCR tool from registry with error handling
+    try:
+        ocr_text = registry.ocr.extract(
+            image_bytes=state.image_bytes,
+            language=language,
+            confidence_threshold=confidence_threshold,
+        )
+    except Exception:
+        # TODO Phase 8: Log OCR failure with telemetry
+        # Fallback: Empty string allows workflow to continue with caption-only
+        # OCR can fail for many reasons (bad image format, corrupted data, etc.)
+        # Since caption runs in parallel, we can continue with single data source
+        ocr_text = ""
 
     return {"ocr_text": ocr_text}
 
 
-def generate_caption(state: BiasImageState) -> dict:
+def generate_caption(state: BiasImageState) -> dict[str, str]:
     """Captioning node: Generate descriptive caption for image.
 
     Uses image captioning models (BLIP, BLIP-2, LLaVA, etc.) to generate
@@ -111,15 +118,22 @@ def generate_caption(state: BiasImageState) -> dict:
     # Extract options
     max_length = state.options.get("caption_max_length", 100)
 
-    # Use caption tool from registry
-    caption_text = registry.caption.caption(
-        image_bytes=state.image_bytes, max_length=max_length
-    )
+    # Use caption tool from registry with error handling
+    try:
+        caption_text = registry.caption.caption(
+            image_bytes=state.image_bytes, max_length=max_length
+        )
+    except Exception:
+        # TODO Phase 8: Log caption failure with telemetry
+        # Fallback: Empty string allows workflow to continue with OCR-only
+        # Caption models can fail (model loading error, OOM, invalid image, etc.)
+        # Since OCR runs in parallel, we can continue with single data source
+        caption_text = ""
 
     return {"caption_text": caption_text}
 
 
-def merge_text(state: BiasImageState) -> dict:
+def merge_text(state: BiasImageState) -> dict[str, str]:
     """Merge node: Combine OCR and caption text into unified input.
 
     Merges the extracted OCR text and generated caption into a single
@@ -153,6 +167,14 @@ def merge_text(state: BiasImageState) -> dict:
     ocr_text = state.ocr_text or ""
     caption_text = state.caption_text or ""
 
+    # If BOTH extraction methods failed, we can't continue
+    if not ocr_text and not caption_text:
+        # TODO Phase 8: Log dual-extraction failure with telemetry
+        # Raise error that orchestrator will catch and handle
+        raise ValueError(
+            "Both OCR and caption extraction failed - no text available for analysis"
+        )
+
     # Simple merge with section headers
     merged = f"""**OCR Extracted Text:**
 {ocr_text}
@@ -163,7 +185,7 @@ def merge_text(state: BiasImageState) -> dict:
     return {"merged_text": merged}
 
 
-def analyze_bias(state: BiasImageState) -> dict:
+def analyze_bias(state: BiasImageState) -> dict[str, str]:
     """LLM node: Analyze merged text for various forms of bias.
 
     Uses LLM to identify and explain bias in the merged OCR + caption text
@@ -225,7 +247,7 @@ Format your response as a structured report."""
     return {"bias_analysis": bias_analysis}
 
 
-def summarize(state: BiasImageState) -> dict:
+def summarize(state: BiasImageState) -> dict[str, str | None]:
     """Summarization node: Generate concise summary of bias findings.
 
     Creates a short executive summary of the bias analysis. Useful for
@@ -254,16 +276,22 @@ def summarize(state: BiasImageState) -> dict:
     if state.bias_analysis is None:
         return {"summary": None}
 
-    # Use summarizer tool to generate summary
+    # Use summarizer tool to generate summary with error handling
     max_length = state.options.get("summary_max_length", 200)
-    summary = registry.summarizer.summarize(
-        text=state.bias_analysis, max_length=max_length
-    )
+    try:
+        summary = registry.summarizer.summarize(
+            text=state.bias_analysis, max_length=max_length
+        )
+    except Exception:
+        # TODO Phase 8: Log summarization failure with telemetry
+        # Fallback: None (summary is already optional in the workflow)
+        # If summarization fails, workflow continues without summary
+        summary = None
 
     return {"summary": summary}
 
 
-def highlight(state: BiasImageState) -> dict:
+def highlight(state: BiasImageState) -> dict[str, str]:
     """Highlighting node: Generate HTML with bias spans highlighted.
 
     Creates HTML representation of the merged text with problematic spans
@@ -309,10 +337,17 @@ def highlight(state: BiasImageState) -> dict:
         "socioeconomic": "#E0BBE4",
     }
 
-    # Use formatter tool to generate highlighted HTML
-    highlighted_html = registry.formatter.highlight(
-        text=merged_text, spans=spans, bias_types=bias_types
-    )
+    # Use formatter tool to generate highlighted HTML with error handling
+    try:
+        highlighted_html = registry.formatter.highlight(
+            text=merged_text, spans=spans, bias_types=bias_types
+        )
+    except Exception:
+        # TODO Phase 8: Log formatting failure with telemetry
+        # Fallback: Plain HTML with unformatted text
+        # Formatting is presentation layer - if it fails, provide plain text
+        # rather than killing the entire workflow
+        highlighted_html = f"<pre>{merged_text}</pre>"
 
     return {"highlighted_html": highlighted_html}
 
