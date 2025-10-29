@@ -22,6 +22,7 @@ Example:
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasImageState
 from fairsense_agentix.tools import get_tool_registry
 
@@ -330,14 +331,8 @@ def highlight(state: BiasImageState) -> dict[str, str]:
         tuple[int, int, str]
     ] = []  # TODO: extract from state.bias_analysis to populate
 
-    # Define bias type colors
-    bias_types = {
-        "gender": "#FFB3BA",
-        "age": "#FFDFBA",
-        "racial": "#FFFFBA",
-        "disability": "#BAE1FF",
-        "socioeconomic": "#E0BBE4",
-    }
+    # Get bias type colors from configuration
+    bias_types = settings.get_bias_type_colors()
 
     # Use formatter tool to generate highlighted HTML with error handling
     try:

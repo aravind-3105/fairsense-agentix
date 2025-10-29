@@ -89,6 +89,18 @@ class Settings(BaseSettings):
         Timeout for entire workflow execution
     router_confidence_threshold : float
         Minimum confidence for router decisions (0.0-1.0)
+    bias_categories : list[str]
+        Bias categories to detect and analyze
+    bias_color_gender : str
+        Highlight color for gender bias (hex code)
+    bias_color_age : str
+        Highlight color for age bias (hex code)
+    bias_color_racial : str
+        Highlight color for racial bias (hex code)
+    bias_color_disability : str
+        Highlight color for disability bias (hex code)
+    bias_color_socioeconomic : str
+        Highlight color for socioeconomic bias (hex code)
     """
 
     model_config = SettingsConfigDict(
@@ -293,6 +305,65 @@ class Settings(BaseSettings):
         le=1.0,
         description="Minimum confidence for router to select a workflow",
     )
+
+    # ===========================
+    # Bias Detection Configuration
+    # ===========================
+    bias_categories: list[str] = Field(
+        default=["gender", "age", "racial", "disability", "socioeconomic"],
+        description="Bias categories to detect and analyze",
+    )
+
+    bias_color_gender: str = Field(
+        default="#FFB3BA",
+        description="Highlight color for gender bias (pink)",
+    )
+
+    bias_color_age: str = Field(
+        default="#FFDFBA",
+        description="Highlight color for age bias (orange)",
+    )
+
+    bias_color_racial: str = Field(
+        default="#FFFFBA",
+        description="Highlight color for racial bias (yellow)",
+    )
+
+    bias_color_disability: str = Field(
+        default="#BAE1FF",
+        description="Highlight color for disability bias (blue)",
+    )
+
+    bias_color_socioeconomic: str = Field(
+        default="#E0BBE4",
+        description="Highlight color for socioeconomic bias (purple)",
+    )
+
+    def get_bias_type_colors(self) -> dict[str, str]:
+        """Get bias type to color mapping.
+
+        Returns a dictionary mapping bias category names to their
+        corresponding highlight colors for HTML rendering.
+
+        Returns
+        -------
+        dict[str, str]
+            Mapping of bias type to hex color code
+
+        Examples
+        --------
+        >>> settings = Settings()
+        >>> colors = settings.get_bias_type_colors()
+        >>> colors["gender"]
+        '#FFB3BA'
+        """
+        return {
+            "gender": self.bias_color_gender,
+            "age": self.bias_color_age,
+            "racial": self.bias_color_racial,
+            "disability": self.bias_color_disability,
+            "socioeconomic": self.bias_color_socioeconomic,
+        }
 
     @field_validator("faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir")
     @classmethod
