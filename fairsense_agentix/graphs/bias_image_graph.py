@@ -67,6 +67,14 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
     language = state.options.get("ocr_language", "eng")
     confidence_threshold = state.options.get("ocr_confidence", 0.5)
 
+    # Validate parameters
+    if not isinstance(confidence_threshold, (int, float)) or not (
+        0.0 <= confidence_threshold <= 1.0
+    ):
+        confidence_threshold = 0.5  # Use default for invalid values
+    if not isinstance(language, str) or not language:
+        language = "eng"  # Use default for invalid values
+
     # Use OCR tool from registry with error handling
     try:
         ocr_text = registry.ocr.extract(
@@ -118,6 +126,10 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
 
     # Extract options
     max_length = state.options.get("caption_max_length", 100)
+
+    # Validate max_length parameter
+    if not isinstance(max_length, int) or max_length <= 0:
+        max_length = 100  # Use default for invalid values
 
     # Use caption tool from registry with error handling
     try:
@@ -223,6 +235,12 @@ def analyze_bias(state: BiasImageState) -> dict[str, str]:
     temperature = state.options.get("temperature", 0.3)
     max_tokens = state.options.get("llm_max_tokens", 2000)
 
+    # Validate parameters
+    if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 1.0):
+        temperature = 0.3  # Use default for invalid values
+    if not isinstance(max_tokens, int) or max_tokens <= 0:
+        max_tokens = 2000  # Use default for invalid values
+
     # Build prompt for bias analysis (image-specific context)
     prompt = f"""Analyze the following text (extracted from an image via OCR and captioning) for various forms of bias including gender, age, racial/ethnic, disability, and socioeconomic bias.
 
@@ -279,6 +297,11 @@ def summarize(state: BiasImageState) -> dict[str, str | None]:
 
     # Use summarizer tool to generate summary with error handling
     max_length = state.options.get("summary_max_length", 200)
+
+    # Validate max_length parameter
+    if not isinstance(max_length, int) or max_length <= 0:
+        max_length = 200  # Use default for invalid values
+
     try:
         summary = registry.summarizer.summarize(
             text=state.bias_analysis, max_length=max_length

@@ -109,6 +109,11 @@ def search_risks(state: RiskState) -> dict:
     options = state.options or {}
     top_k = options.get("top_k", 5)
 
+    # Validate top_k parameter
+    if not isinstance(top_k, int) or top_k <= 0:
+        top_k = 5  # Use default for invalid values
+    top_k = min(top_k, 100)  # Cap at reasonable maximum
+
     # Use FAISS risks index from registry
     risks = registry.faiss_risks.search(query_vector=state.embedding, top_k=top_k)
 
@@ -150,6 +155,11 @@ def search_rmf_per_risk(state: RiskState) -> dict:
     # Get RMF recommendations per risk from options (default 3)
     options = state.options or {}
     rmf_per_risk = options.get("rmf_per_risk", 3)
+
+    # Validate rmf_per_risk parameter
+    if not isinstance(rmf_per_risk, int) or rmf_per_risk <= 0:
+        rmf_per_risk = 3  # Use default for invalid values
+    rmf_per_risk = min(rmf_per_risk, 20)  # Cap at reasonable maximum
 
     # RMF recommendations keyed by risk_id
     rmf_recommendations = {}
@@ -272,8 +282,15 @@ def format_html(state: RiskState) -> dict:
         "rmf_recommendation",
     ]
 
-    # Use formatter tool to generate HTML table
-    html_table = registry.formatter.table(data=state.joined_table, headers=headers)
+    # Use formatter tool to generate HTML table with error handling
+    try:
+        html_table = registry.formatter.table(data=state.joined_table, headers=headers)
+    except Exception:
+        # TODO Phase 8: Log formatting failure with telemetry
+        # Fallback: Plain HTML message
+        # Formatting is presentation layer - if it fails, provide error message
+        # rather than killing the entire workflow
+        html_table = "<p>Error generating risk assessment table</p>"
 
     return {"html_table": html_table}
 
@@ -310,14 +327,27 @@ def export_csv(state: RiskState) -> dict:
     if not state.joined_table:
         return {"csv_path": None}
 
-    # Generate filename using run_id
-    run_id = state.run_id
-    filename = f"risk_assessment_{run_id[:8]}.csv"
+    # Generate filename using run_id with validation
+    run_id = state.run_id if state.run_id else "unknown"
+    # Sanitize run_id to prevent path traversal
+    run_id_safe = "".join(c for c in run_id[:8] if c.isalnum() or c == "-")
+    if not run_id_safe:
+        run_id_safe = "unknown"
+    filename = f"risk_assessment_{run_id_safe}.csv"
 
-    # Use persistence tool to save CSV
-    csv_path = registry.persistence.save_csv(data=state.joined_table, filename=filename)
+    # Use persistence tool to save CSV with error handling
+    try:
+        csv_path = registry.persistence.save_csv(
+            data=state.joined_table, filename=filename
+        )
+    except Exception:
+        # TODO Phase 8: Log persistence failure with telemetry
+        # Fallback: None (CSV export failed)
+        # If persistence fails, workflow continues but without CSV output
+        # Orchestrator can handle this gracefully
+        csv_path = None
 
-    return {"csv_path": str(csv_path)}
+    return {"csv_path": str(csv_path) if csv_path else None}
 
 
 # Note: Quality assessment removed from subgraph

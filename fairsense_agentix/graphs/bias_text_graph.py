@@ -76,6 +76,12 @@ def analyze_bias(state: BiasTextState) -> dict:
     temperature = state.options.get("temperature", 0.3)
     max_tokens = state.options.get("llm_max_tokens", 2000)
 
+    # Validate parameters
+    if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 1.0):
+        temperature = 0.3  # Use default for invalid values
+    if not isinstance(max_tokens, int) or max_tokens <= 0:
+        max_tokens = 2000  # Use default for invalid values
+
     # Build prompt for bias analysis
     prompt = f"""Analyze the following text for various forms of bias including gender, age, racial/ethnic, disability, and socioeconomic bias.
 
@@ -131,11 +137,22 @@ def summarize(state: BiasTextState) -> dict:
     if state.bias_analysis is None:
         return {"summary": None}
 
-    # Use summarizer tool to generate summary
+    # Use summarizer tool to generate summary with error handling
     max_length = state.options.get("summary_max_length", 200)
-    summary = registry.summarizer.summarize(
-        text=state.bias_analysis, max_length=max_length
-    )
+
+    # Validate max_length parameter
+    if not isinstance(max_length, int) or max_length <= 0:
+        max_length = 200  # Use default for invalid values
+
+    try:
+        summary = registry.summarizer.summarize(
+            text=state.bias_analysis, max_length=max_length
+        )
+    except Exception:
+        # TODO Phase 8: Log summarization failure with telemetry
+        # Fallback: None (summary is already optional in the workflow)
+        # If summarization fails, workflow continues without summary
+        summary = None
 
     return {"summary": summary}
 
@@ -180,10 +197,17 @@ def highlight(state: BiasTextState) -> dict:
     # Get bias type colors from configuration
     bias_types = settings.get_bias_type_colors()
 
-    # Use formatter tool to generate highlighted HTML
-    highlighted_html = registry.formatter.highlight(
-        text=state.text, spans=spans, bias_types=bias_types
-    )
+    # Use formatter tool to generate highlighted HTML with error handling
+    try:
+        highlighted_html = registry.formatter.highlight(
+            text=state.text, spans=spans, bias_types=bias_types
+        )
+    except Exception:
+        # TODO Phase 8: Log formatting failure with telemetry
+        # Fallback: Plain HTML with unformatted text
+        # Formatting is presentation layer - if it fails, provide plain text
+        # rather than killing the entire workflow
+        highlighted_html = f"<pre>{state.text}</pre>"
 
     return {"highlighted_html": highlighted_html}
 
