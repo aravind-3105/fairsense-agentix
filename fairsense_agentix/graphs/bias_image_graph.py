@@ -22,7 +22,9 @@ Example:
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasImageState
+from fairsense_agentix.tools import get_tool_registry
 
 
 # ============================================================================
@@ -30,7 +32,7 @@ from fairsense_agentix.graphs.state import BiasImageState
 # ============================================================================
 
 
-def extract_ocr(state: BiasImageState) -> dict:
+def extract_ocr(state: BiasImageState) -> dict[str, str]:
     """OCR node: Extract text from image using OCR tool.
 
     Uses OCR (Optical Character Recognition) to extract text content from
@@ -38,7 +40,7 @@ def extract_ocr(state: BiasImageState) -> dict:
 
     Executes in parallel with generate_caption for faster processing.
 
-    Phase 2: Stub returning mock OCR text.
+    Phase 4+: Uses tool registry to get OCR implementation (fake or real).
     Phase 5+: Real OCR integration with confidence thresholds.
 
     Parameters
@@ -58,30 +60,39 @@ def extract_ocr(state: BiasImageState) -> dict:
     >>> "ocr_text" in update
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real OCR using Tesseract, PaddleOCR, or other backends
+    # Get tools from registry
+    registry = get_tool_registry()
 
-    image_size = len(state.image_bytes)
+    # Extract options
+    language = state.options.get("ocr_language", "eng")
+    confidence_threshold = state.options.get("ocr_confidence", 0.5)
 
-    # Mock OCR text based on image size
-    if image_size > 10000:
-        mock_ocr = """Job Posting: Senior Software Engineer
+    # Validate parameters
+    if not isinstance(confidence_threshold, (int, float)) or not (
+        0.0 <= confidence_threshold <= 1.0
+    ):
+        confidence_threshold = 0.5  # Use default for invalid values
+    if not isinstance(language, str) or not language:
+        language = "eng"  # Use default for invalid values
 
-Requirements:
-- 5+ years experience in software development
-- Strong communication skills
-- Bachelor's degree required
-- Must be a recent graduate with fresh ideas
+    # Use OCR tool from registry with error handling
+    try:
+        ocr_text = registry.ocr.extract(
+            image_bytes=state.image_bytes,
+            language=language,
+            confidence_threshold=confidence_threshold,
+        )
+    except Exception:
+        # TODO Phase 8: Log OCR failure with telemetry
+        # Fallback: Empty string allows workflow to continue with caption-only
+        # OCR can fail for many reasons (bad image format, corrupted data, etc.)
+        # Since caption runs in parallel, we can continue with single data source
+        ocr_text = ""
 
-We're looking for energetic young professionals to join our team.
-Candidates should be digital natives comfortable with modern technology."""
-    else:
-        mock_ocr = "Hiring Software Engineers\nApply today!"
-
-    return {"ocr_text": mock_ocr}
+    return {"ocr_text": ocr_text}
 
 
-def generate_caption(state: BiasImageState) -> dict:
+def generate_caption(state: BiasImageState) -> dict[str, str]:
     """Captioning node: Generate descriptive caption for image.
 
     Uses image captioning models (BLIP, BLIP-2, LLaVA, etc.) to generate
@@ -90,7 +101,7 @@ def generate_caption(state: BiasImageState) -> dict:
 
     Executes in parallel with extract_ocr for faster processing.
 
-    Phase 2: Stub returning mock caption.
+    Phase 4+: Uses tool registry to get caption implementation (fake or real).
     Phase 5+: Real captioning using BLIP-2 or similar models.
 
     Parameters
@@ -110,23 +121,32 @@ def generate_caption(state: BiasImageState) -> dict:
     >>> "caption_text" in update
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real captioning using BLIP-2, LLaVA, or other models
+    # Get tools from registry
+    registry = get_tool_registry()
 
-    image_size = len(state.image_bytes)
+    # Extract options
+    max_length = state.options.get("caption_max_length", 100)
 
-    # Mock caption based on image size
-    if image_size > 10000:
-        mock_caption = """A professional job posting advertisement featuring diverse team photos.
-The image shows a modern office environment with collaborative workspaces.
-Text overlays emphasize qualifications and company culture."""
-    else:
-        mock_caption = "A simple job posting flyer with text and company logo."
+    # Validate max_length parameter
+    if not isinstance(max_length, int) or max_length <= 0:
+        max_length = 100  # Use default for invalid values
 
-    return {"caption_text": mock_caption}
+    # Use caption tool from registry with error handling
+    try:
+        caption_text = registry.caption.caption(
+            image_bytes=state.image_bytes, max_length=max_length
+        )
+    except Exception:
+        # TODO Phase 8: Log caption failure with telemetry
+        # Fallback: Empty string allows workflow to continue with OCR-only
+        # Caption models can fail (model loading error, OOM, invalid image, etc.)
+        # Since OCR runs in parallel, we can continue with single data source
+        caption_text = ""
+
+    return {"caption_text": caption_text}
 
 
-def merge_text(state: BiasImageState) -> dict:
+def merge_text(state: BiasImageState) -> dict[str, str]:
     """Merge node: Combine OCR and caption text into unified input.
 
     Merges the extracted OCR text and generated caption into a single
@@ -160,6 +180,14 @@ def merge_text(state: BiasImageState) -> dict:
     ocr_text = state.ocr_text or ""
     caption_text = state.caption_text or ""
 
+    # If BOTH extraction methods failed, we can't continue
+    if not ocr_text and not caption_text:
+        # TODO Phase 8: Log dual-extraction failure with telemetry
+        # Raise error that orchestrator will catch and handle
+        raise ValueError(
+            "Both OCR and caption extraction failed - no text available for analysis"
+        )
+
     # Simple merge with section headers
     merged = f"""**OCR Extracted Text:**
 {ocr_text}
@@ -170,7 +198,7 @@ def merge_text(state: BiasImageState) -> dict:
     return {"merged_text": merged}
 
 
-def analyze_bias(state: BiasImageState) -> dict:
+def analyze_bias(state: BiasImageState) -> dict[str, str]:
     """LLM node: Analyze merged text for various forms of bias.
 
     Uses LLM to identify and explain bias in the merged OCR + caption text
@@ -179,7 +207,7 @@ def analyze_bias(state: BiasImageState) -> dict:
     This is conceptually similar to BiasTextGraph's analyze_bias, but operates
     on the merged text from image analysis.
 
-    Phase 2: Stub returning mock analysis.
+    Phase 4+: Uses tool registry to get LLM implementation (fake or real).
     Phase 5+: Real LLM call with bias detection prompt.
 
     Parameters
@@ -199,56 +227,46 @@ def analyze_bias(state: BiasImageState) -> dict:
     >>> "bias_analysis" in update
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real LLM call with bias detection prompt
+    # Get tools from registry
+    registry = get_tool_registry()
 
+    # Extract options
     merged_text = state.merged_text or ""
-    text_length = len(merged_text)
+    temperature = state.options.get("temperature", 0.3)
+    max_tokens = state.options.get("llm_max_tokens", 2000)
 
-    # Mock analysis
-    mock_analysis = f"""**Bias Analysis Report (Image-Based)**
+    # Validate parameters
+    if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 1.0):
+        temperature = 0.3  # Use default for invalid values
+    if not isinstance(max_tokens, int) or max_tokens <= 0:
+        max_tokens = 2000  # Use default for invalid values
 
-**Input Source**: Image analysis via OCR + Captioning
-**Merged Text Length**: {text_length} characters
+    # Build prompt for bias analysis (image-specific context)
+    prompt = f"""Analyze the following text (extracted from an image via OCR and captioning) for various forms of bias including gender, age, racial/ethnic, disability, and socioeconomic bias.
 
-**Bias Assessment**:
+Text to analyze:
+{merged_text}
 
-1. **Gender Bias**: DETECTED - The phrase "digital natives" may inadvertently exclude
-   older candidates. The emphasis on "recent graduate" combined with "fresh ideas" shows
-   potential age discrimination.
+This text was extracted from an image, combining both visible text (OCR) and visual context (caption).
 
-2. **Age Bias**: HIGH - Multiple age-related red flags:
-   - "Recent graduate" requirement is explicitly age-discriminatory
-   - "Young professionals" directly references age
-   - "Energetic" and "fresh" are common age-coded terms
+Provide a detailed analysis report with:
+1. Bias Assessment (by category)
+2. Visual Context Considerations
+3. Overall Assessment
+4. Recommendations for improvement
+5. Confidence score
 
-3. **Racial/Ethnic Bias**: LOW - No explicit racial bias detected in the visible text.
-   However, visual analysis notes diverse team photos, which is positive.
+Format your response as a structured report."""
 
-4. **Disability Bias**: LOW - No explicit disability-related bias detected.
+    # Call LLM via registry
+    bias_analysis = registry.llm.predict(
+        prompt=prompt, temperature=temperature, max_tokens=max_tokens
+    )
 
-5. **Socioeconomic Bias**: MODERATE - "Bachelor's degree required" may create barriers
-   for qualified candidates from lower socioeconomic backgrounds.
-
-**Visual Context** (from caption): The image portrays a modern, collaborative workplace.
-While diverse representation is visible, the text content contradicts this inclusive imagery.
-
-**Overall Assessment**: The text extracted from this image demonstrates concerning age bias.
-The visual context suggests inclusivity, but the written content undermines this message.
-
-**Recommendations**:
-- Remove age-specific language ("young", "recent graduate")
-- Replace "energetic" with skill-based requirements
-- Consider making degree requirement flexible based on experience
-- Align text content with inclusive visual messaging
-
-**Confidence**: 0.88
-"""
-
-    return {"bias_analysis": mock_analysis}
+    return {"bias_analysis": bias_analysis}
 
 
-def summarize(state: BiasImageState) -> dict:
+def summarize(state: BiasImageState) -> dict[str, str | None]:
     """Summarization node: Generate concise summary of bias findings.
 
     Creates a short executive summary of the bias analysis. Useful for
@@ -271,22 +289,33 @@ def summarize(state: BiasImageState) -> dict:
     >>> "summary" in update
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real summarization
+    # Get tools from registry
+    registry = get_tool_registry()
 
     if state.bias_analysis is None:
         return {"summary": None}
 
-    # Mock summary
-    mock_summary = """**Summary**: HIGH age bias detected in image text. Job posting
-explicitly targets "young professionals" and "recent graduates," which is discriminatory.
-Visual context shows diversity, but written content contradicts this. Immediate revision
-recommended to remove age-coded language. Confidence: 0.88"""
+    # Use summarizer tool to generate summary with error handling
+    max_length = state.options.get("summary_max_length", 200)
 
-    return {"summary": mock_summary}
+    # Validate max_length parameter
+    if not isinstance(max_length, int) or max_length <= 0:
+        max_length = 200  # Use default for invalid values
+
+    try:
+        summary = registry.summarizer.summarize(
+            text=state.bias_analysis, max_length=max_length
+        )
+    except Exception:
+        # TODO Phase 8: Log summarization failure with telemetry
+        # Fallback: None (summary is already optional in the workflow)
+        # If summarization fails, workflow continues without summary
+        summary = None
+
+    return {"summary": summary}
 
 
-def highlight(state: BiasImageState) -> dict:
+def highlight(state: BiasImageState) -> dict[str, str]:
     """Highlighting node: Generate HTML with bias spans highlighted.
 
     Creates HTML representation of the merged text with problematic spans
@@ -312,84 +341,35 @@ def highlight(state: BiasImageState) -> dict:
     >>> "<html>" in update["highlighted_html"]
     True
     """
-    # Phase 2: Stub implementation with basic HTML
-    # Phase 5+: Real highlighting based on bias analysis
+    # Get tools from registry
+    registry = get_tool_registry()
+
+    # Phase 4: Use formatter tool from registry
+    # Phase 5+: Real highlighting logic will parse bias_analysis for spans
 
     merged_text = state.merged_text or ""
 
-    # Mock HTML highlighting
-    mock_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Bias Analysis - Image-Based Highlighting</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 20px;
-            line-height: 1.6;
-        }}
-        .source-note {{
-            background-color: #e3f2fd;
-            padding: 15px;
-            border-left: 4px solid #2196F3;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }}
-        .text-content {{
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-radius: 5px;
-            border-left: 4px solid #4CAF50;
-            white-space: pre-wrap;
-        }}
-        .bias-gender {{ background-color: #FFB3BA; }}
-        .bias-age {{ background-color: #FFDFBA; font-weight: bold; }}
-        .bias-racial {{ background-color: #FFFFBA; }}
-        .bias-disability {{ background-color: #BAE1FF; }}
-        .bias-socioeconomic {{ background-color: #E0BBE4; }}
-        .legend {{
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }}
-        .legend-item {{
-            display: inline-block;
-            margin-right: 15px;
-            padding: 5px 10px;
-            border-radius: 3px;
-        }}
-    </style>
-</head>
-<body>
-    <h1>Bias Analysis - Image-Based Text</h1>
+    # For now, pass empty spans list (Phase 5 will extract from bias_analysis)
+    spans: list[
+        tuple[int, int, str]
+    ] = []  # TODO: extract from state.bias_analysis to populate
 
-    <div class="source-note">
-        <strong>Source:</strong> Text extracted from image via OCR + Image Captioning<br>
-        <strong>Note:</strong> Analysis combines both extracted text and visual context
-    </div>
+    # Get bias type colors from configuration
+    bias_types = settings.get_bias_type_colors()
 
-    <div class="text-content">
-{merged_text}
-    </div>
+    # Use formatter tool to generate highlighted HTML with error handling
+    try:
+        highlighted_html = registry.formatter.highlight(
+            text=merged_text, spans=spans, bias_types=bias_types
+        )
+    except Exception:
+        # TODO Phase 8: Log formatting failure with telemetry
+        # Fallback: Plain HTML with unformatted text
+        # Formatting is presentation layer - if it fails, provide plain text
+        # rather than killing the entire workflow
+        highlighted_html = f"<pre>{merged_text}</pre>"
 
-    <div class="legend">
-        <h3>Bias Type Legend:</h3>
-        <span class="legend-item bias-gender">Gender Bias</span>
-        <span class="legend-item bias-age">Age Bias</span>
-        <span class="legend-item bias-racial">Racial Bias</span>
-        <span class="legend-item bias-disability">Disability Bias</span>
-        <span class="legend-item bias-socioeconomic">Socioeconomic Bias</span>
-    </div>
-
-    <p><em>Note: Phase 2 stub. Real highlighting will identify specific problematic spans in Phase 5+.</em></p>
-</body>
-</html>"""
-
-    return {"highlighted_html": mock_html}
+    return {"highlighted_html": highlighted_html}
 
 
 # Note: Quality assessment removed from subgraph

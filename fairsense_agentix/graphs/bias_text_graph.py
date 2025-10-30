@@ -28,7 +28,9 @@ Example:
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasTextState
+from fairsense_agentix.tools import get_tool_registry
 
 
 # ============================================================================
@@ -46,8 +48,8 @@ def analyze_bias(state: BiasTextState) -> dict:
     - Disability bias
     - Socioeconomic bias
 
-    In Phase 2 (Checkpoint 2.4), this is a stub that returns mock analysis.
-    In Phase 5+, this will use real LLM calls with structured prompts.
+    Phase 4+: Uses tool registry to get LLM implementation (fake or real).
+    Phase 5+: Real LLM calls with structured prompts when real tools configured.
 
     Parameters
     ----------
@@ -66,42 +68,40 @@ def analyze_bias(state: BiasTextState) -> dict:
     >>> "bias_analysis" in update
     True
     """
-    # Phase 2: Stub implementation with fake analysis
-    # Phase 5+: Real LLM call with bias detection prompt
+    # Get tools from registry (configuration-driven: fake or real)
+    registry = get_tool_registry()
 
+    # Extract options
     text = state.text
-    text_length = len(text)
+    temperature = state.options.get("temperature", 0.3)
+    max_tokens = state.options.get("llm_max_tokens", 2000)
 
-    # Mock analysis based on text characteristics
-    mock_analysis = f"""**Bias Analysis Report**
+    # Validate parameters
+    if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 1.0):
+        temperature = 0.3  # Use default for invalid values
+    if not isinstance(max_tokens, int) or max_tokens <= 0:
+        max_tokens = 2000  # Use default for invalid values
 
-**Input Text**: {text[:100]}{"..." if text_length > 100 else ""}
-**Text Length**: {text_length} characters
+    # Build prompt for bias analysis
+    prompt = f"""Analyze the following text for various forms of bias including gender, age, racial/ethnic, disability, and socioeconomic bias.
 
-**Bias Assessment**:
+Text to analyze:
+{text}
 
-1. **Gender Bias**: No explicit gender bias detected. The text uses neutral language.
+Provide a detailed analysis report with:
+1. Bias Assessment (by category)
+2. Overall Assessment
+3. Recommendations for improvement
+4. Confidence score
 
-2. **Age Bias**: No age-related bias detected. No age-specific terms or requirements found.
+Format your response as a structured report."""
 
-3. **Racial/Ethnic Bias**: No racial or ethnic bias detected. Language is inclusive.
+    # Call LLM via registry (uses fake or real based on settings)
+    bias_analysis = registry.llm.predict(
+        prompt=prompt, temperature=temperature, max_tokens=max_tokens
+    )
 
-4. **Disability Bias**: No disability-related bias detected.
-
-5. **Socioeconomic Bias**: Minimal bias detected. Text is generally accessible.
-
-**Overall Assessment**: The text demonstrates good awareness of potential bias.
-Minor improvements could be made to enhance inclusivity.
-
-**Recommendations**:
-- Consider adding explicit diversity statements
-- Review job requirements for hidden biases
-- Ensure accessible language throughout
-
-**Confidence**: 0.85
-"""
-
-    return {"bias_analysis": mock_analysis}
+    return {"bias_analysis": bias_analysis}
 
 
 def summarize(state: BiasTextState) -> dict:
@@ -131,18 +131,30 @@ def summarize(state: BiasTextState) -> dict:
     >>> "summary" in update
     True
     """
-    # Phase 2: Stub implementation
-    # Phase 5+: Real summarization (LLM or extractive)
+    # Get tools from registry
+    registry = get_tool_registry()
 
     if state.bias_analysis is None:
         return {"summary": None}
 
-    # Mock summary
-    mock_summary = """**Summary**: Minimal bias detected. Text is generally inclusive with
-neutral language across gender, age, and racial dimensions. Consider adding explicit
-diversity statements for improvement. Confidence: 0.85"""
+    # Use summarizer tool to generate summary with error handling
+    max_length = state.options.get("summary_max_length", 200)
 
-    return {"summary": mock_summary}
+    # Validate max_length parameter
+    if not isinstance(max_length, int) or max_length <= 0:
+        max_length = 200  # Use default for invalid values
+
+    try:
+        summary = registry.summarizer.summarize(
+            text=state.bias_analysis, max_length=max_length
+        )
+    except Exception:
+        # TODO Phase 8: Log summarization failure with telemetry
+        # Fallback: None (summary is already optional in the workflow)
+        # If summarization fails, workflow continues without summary
+        summary = None
+
+    return {"summary": summary}
 
 
 def highlight(state: BiasTextState) -> dict:
@@ -173,71 +185,31 @@ def highlight(state: BiasTextState) -> dict:
     >>> "<html>" in update["highlighted_html"]
     True
     """
-    # Phase 2: Stub implementation with basic HTML
-    # Phase 5+: Real highlighting logic based on bias analysis
+    # Get tools from registry
+    registry = get_tool_registry()
 
-    text = state.text
+    # Phase 4: Use formatter tool from registry
+    # Phase 5+: Real highlighting logic will parse bias_analysis for spans
 
-    # Mock HTML highlighting
-    mock_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Bias Analysis - Highlighted Text</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            line-height: 1.6;
-        }}
-        .text-content {{
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-radius: 5px;
-            border-left: 4px solid #4CAF50;
-        }}
-        .bias-gender {{ background-color: #FFB3BA; }}
-        .bias-age {{ background-color: #FFDFBA; }}
-        .bias-racial {{ background-color: #FFFFBA; }}
-        .bias-disability {{ background-color: #BAE1FF; }}
-        .bias-socioeconomic {{ background-color: #E0BBE4; }}
-        .legend {{
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }}
-        .legend-item {{
-            display: inline-block;
-            margin-right: 15px;
-            padding: 5px 10px;
-            border-radius: 3px;
-        }}
-    </style>
-</head>
-<body>
-    <h1>Bias Analysis - Highlighted Text</h1>
+    # For now, pass empty spans list (Phase 5 will extract from bias_analysis)
+    spans: list[tuple[int, int, str]] = []  # Future: extract from state.bias_analysis
 
-    <div class="text-content">
-        <p>{text}</p>
-    </div>
+    # Get bias type colors from configuration
+    bias_types = settings.get_bias_type_colors()
 
-    <div class="legend">
-        <h3>Bias Type Legend:</h3>
-        <span class="legend-item bias-gender">Gender Bias</span>
-        <span class="legend-item bias-age">Age Bias</span>
-        <span class="legend-item bias-racial">Racial Bias</span>
-        <span class="legend-item bias-disability">Disability Bias</span>
-        <span class="legend-item bias-socioeconomic">Socioeconomic Bias</span>
-    </div>
+    # Use formatter tool to generate highlighted HTML with error handling
+    try:
+        highlighted_html = registry.formatter.highlight(
+            text=state.text, spans=spans, bias_types=bias_types
+        )
+    except Exception:
+        # TODO Phase 8: Log formatting failure with telemetry
+        # Fallback: Plain HTML with unformatted text
+        # Formatting is presentation layer - if it fails, provide plain text
+        # rather than killing the entire workflow
+        highlighted_html = f"<pre>{state.text}</pre>"
 
-    <p><em>Note: This is a Phase 2 stub. Real highlighting will be implemented in Phase 5+.</em></p>
-</body>
-</html>"""
-
-    return {"highlighted_html": mock_html}
+    return {"highlighted_html": highlighted_html}
 
 
 # Note: Quality assessment removed from subgraph
