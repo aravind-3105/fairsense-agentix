@@ -286,19 +286,31 @@ def _resolve_embedder_tool(settings: Settings) -> EmbedderTool:
     ToolConfigurationError
         If embedder cannot be constructed
     """
-    # Phase 4: Use fake embedder
-    from fairsense_agentix.tools.fake import FakeEmbedderTool  # noqa: PLC0415
+    # Check if using fake embedder
+    if settings.embedding_model == "fake":
+        from fairsense_agentix.tools.fake import FakeEmbedderTool  # noqa: PLC0415
 
-    return FakeEmbedderTool(dimension=settings.embedding_dimension)
+        return FakeEmbedderTool(dimension=settings.embedding_dimension)
 
     # Phase 5: Use real sentence-transformers embedder
-    # from fairsense_agentix.tools.real.sentence_transformer import (
-    #     SentenceTransformerEmbedder,
-    # )
-    # return SentenceTransformerEmbedder(
-    #     model_name=settings.embedding_model,
-    #     dimension=settings.embedding_dimension
-    # )
+    try:
+        from fairsense_agentix.tools.embeddings import (  # noqa: PLC0415
+            SentenceTransformerEmbedder,
+        )
+
+        return SentenceTransformerEmbedder(
+            model_name=settings.embedding_model,
+            dimension=settings.embedding_dimension,
+        )
+    except Exception as e:
+        raise ToolConfigurationError(
+            f"Failed to create SentenceTransformerEmbedder: {e}",
+            context={
+                "model_name": settings.embedding_model,
+                "dimension": settings.embedding_dimension,
+                "error_type": type(e).__name__,
+            },
+        ) from e
 
 
 def _resolve_faiss_tool(
@@ -324,14 +336,27 @@ def _resolve_faiss_tool(
     ToolConfigurationError
         If FAISS index cannot be loaded
     """
-    # Phase 4: Use fake FAISS index
-    from fairsense_agentix.tools.fake import FakeFAISSIndexTool  # noqa: PLC0415
+    # Check if index file exists - if not, use fake
+    if not index_path.exists():
+        from fairsense_agentix.tools.fake import FakeFAISSIndexTool  # noqa: PLC0415
 
-    return FakeFAISSIndexTool(index_path=index_path, embedder=embedder)
+        return FakeFAISSIndexTool(index_path=index_path, embedder=embedder)
 
     # Phase 5: Use real FAISS index
-    # from fairsense_agentix.tools.real.faiss_index import FAISSIndex
-    # return FAISSIndex(index_path=index_path, embedder=embedder)
+    try:
+        from fairsense_agentix.tools.faiss_index import (  # noqa: PLC0415
+            FAISSIndexTool as RealFAISSIndexTool,
+        )
+
+        return RealFAISSIndexTool(index_path=index_path, embedder=embedder)
+    except Exception as e:
+        raise ToolConfigurationError(
+            f"Failed to load FAISS index: {e}",
+            context={
+                "index_path": str(index_path),
+                "error_type": type(e).__name__,
+            },
+        ) from e
 
 
 def _resolve_formatter_tool() -> FormatterTool:

@@ -26,6 +26,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 
 if TYPE_CHECKING:
     from fairsense_agentix.tools.interfaces import EmbedderTool
@@ -279,7 +281,7 @@ class FakeEmbedderTool:
         self.call_count = 0
         self.last_call_args: dict[str, Any] = {}
 
-    def encode(self, text: str) -> list[float]:
+    def encode(self, text: str) -> np.ndarray:
         """Generate fake embedding vector."""
         self.call_count += 1
         self.last_call_args = {"text_len": len(text)}
@@ -287,9 +289,8 @@ class FakeEmbedderTool:
         # Generate deterministic vector based on text hash
         # Use hash to get different but consistent vectors for different texts
         text_hash = hash(text)
-        return [
-            (text_hash + i) % 1000 / 1000.0 for i in range(self._dimension)
-        ]  # vector
+        vector = [(text_hash + i) % 1000 / 1000.0 for i in range(self._dimension)]
+        return np.array(vector, dtype="float32")
 
     @property
     def dimension(self) -> int:
@@ -379,7 +380,8 @@ class FakeFAISSIndexTool:
         """Perform fake text-based search."""
         embedder = FakeEmbedderTool() if self.embedder is None else self.embedder
         query_vector = embedder.encode(query_text)
-        return self.search(query_vector, top_k)
+        # Convert numpy array to list for search() protocol compatibility
+        return self.search(query_vector.tolist(), top_k)
 
     @property
     def index_path(self) -> Path:

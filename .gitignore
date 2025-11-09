@@ -23,3 +23,7 @@ wheels/
 # Claude Files
 /planning_files
 CLAUDE.md
+*.faiss
+*.index
+data/indexes/*.json
+data/indexes/README.md

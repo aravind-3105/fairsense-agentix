@@ -171,9 +171,9 @@ def search_rmf_per_risk(state: RiskState) -> dict:
         # Embed the risk description
         risk_embedding = registry.embedder.encode(risk_description)
 
-        # Search RMF index for recommendations
+        # Search RMF index for recommendations (convert ndarray to list for protocol)
         rmf_results = registry.faiss_rmf.search(
-            query_vector=risk_embedding, top_k=rmf_per_risk
+            query_vector=risk_embedding.tolist(), top_k=rmf_per_risk
         )
 
         rmf_recommendations[risk_id] = rmf_results

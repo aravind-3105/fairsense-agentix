@@ -24,6 +24,8 @@ Examples
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+import numpy as np
+
 
 # ============================================================================
 # Image Processing Tools
@@ -253,7 +255,7 @@ class EmbedderTool(Protocol):
     384
     """
 
-    def encode(self, text: str) -> list[float]:
+    def encode(self, text: str) -> np.ndarray:
         """Convert text to dense vector embedding.
 
         Parameters
@@ -263,8 +265,8 @@ class EmbedderTool(Protocol):
 
         Returns
         -------
-        list[float]
-            Dense vector representation (length = self.dimension)
+        np.ndarray
+            Dense vector representation (1D array of shape (dimension,))
 
         Raises
         ------

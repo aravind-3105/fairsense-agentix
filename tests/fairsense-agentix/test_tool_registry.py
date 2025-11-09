@@ -11,6 +11,7 @@ We do NOT extensively test fake tool internals - they're temporary stubs.
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
@@ -194,14 +195,14 @@ class TestToolFunctionalitySmokeTests:
         assert isinstance(result, str)
 
     def test_embedder_tool_can_encode(self):
-        """Embedder tool encode() should return list of floats."""
+        """Embedder tool encode() should return vector (list or array)."""
         registry = create_tool_registry()
 
         result = registry.embedder.encode("Test text")
 
-        assert isinstance(result, list)
+        # Accept both list and numpy array (real embedders use arrays)
+        assert isinstance(result, (list, np.ndarray))
         assert len(result) == registry.embedder.dimension
-        assert all(isinstance(x, float) for x in result)
 
     def test_faiss_tool_can_search(self):
         """FAISS tool search() should return list of dicts."""

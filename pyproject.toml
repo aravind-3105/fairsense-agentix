@@ -12,6 +12,12 @@ dependencies = [
     "pydantic-settings>=2.7.1",
     "langgraph>=0.2.56",
     "langchain-core>=0.3.0",
+    # Phase 5.1: Embeddings + FAISS
+    "sentence-transformers>=3.0.0",
+    "torch>=2.0.0,<2.6.0",  # Pin to compatible version for manylinux_2_27
+    "faiss-cpu>=1.7.4",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",  # For CSV handling in build script
 ]
 
 [build-system]
