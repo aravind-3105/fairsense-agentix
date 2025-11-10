@@ -148,6 +148,16 @@ class Settings(BaseSettings):
         description="Timeout for LLM API calls",
     )
 
+    llm_cache_enabled: bool = Field(
+        default=True,
+        description="Enable LangChain SQLite caching for LLM responses",
+    )
+
+    llm_cache_path: Path = Field(
+        default=Path(".cache/langchain.db"),
+        description="Path to SQLite cache database for LLM responses",
+    )
+
     # ===========================
     # OCR Configuration
     # ===========================

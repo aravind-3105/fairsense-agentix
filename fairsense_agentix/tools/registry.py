@@ -182,7 +182,7 @@ def _resolve_caption_tool(settings: Settings) -> CaptionTool:
     )
 
 
-def _resolve_llm_tool(settings: Settings) -> LLMTool:
+def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
     """Resolve LLM tool from settings.
 
     Parameters
@@ -206,23 +206,168 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:
         return FakeLLMTool()
 
     if settings.llm_provider == "openai":
-        # Phase 5: Import real OpenAI LLM
-        raise ToolConfigurationError(
-            "OpenAI LLM not yet implemented (Phase 5)",
-            context={"llm_provider": settings.llm_provider},
-        )
+        # Phase 5.2: Real OpenAI LLM via LangChain
+        try:
+            from langchain_core.output_parsers import (  # noqa: PLC0415
+                PydanticOutputParser,
+            )
+            from langchain_openai import ChatOpenAI  # noqa: PLC0415
+
+            from fairsense_agentix.shared.services import get_telemetry  # noqa: PLC0415
+            from fairsense_agentix.tools.llm.callbacks import (  # noqa: PLC0415
+                TelemetryCallback,
+            )
+            from fairsense_agentix.tools.llm.langchain_adapter import (  # noqa: PLC0415
+                LangChainLLMAdapter,
+            )
+            from fairsense_agentix.tools.llm.output_schemas import (  # noqa: PLC0415
+                BiasAnalysisOutput,
+            )
+
+            # Get telemetry service
+            telemetry = get_telemetry(settings)
+
+            # Create telemetry callback
+            callback = TelemetryCallback(
+                telemetry=telemetry,
+                provider="openai",
+                model=settings.llm_model_name,
+            )
+
+            # Enable LangChain caching if configured
+            # This sets up a global SQLite cache for all LLM calls
+            if settings.llm_cache_enabled:
+                from langchain.globals import set_llm_cache  # noqa: PLC0415
+                from langchain_community.cache import SQLiteCache  # noqa: PLC0415
+
+                # Ensure cache directory exists
+                settings.llm_cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Set global LangChain cache
+                # Content-addressed: cache key = SHA256(model, prompt, params)
+                set_llm_cache(SQLiteCache(database_path=str(settings.llm_cache_path)))
+
+            # Create LangChain ChatOpenAI model with retry
+            # Note: temperature, max_tokens, timeout set per-call in adapter
+            from pydantic import SecretStr  # noqa: PLC0415
+
+            base_model = ChatOpenAI(
+                model=settings.llm_model_name,
+                api_key=SecretStr(settings.llm_api_key)
+                if settings.llm_api_key
+                else None,
+                callbacks=[callback],
+            )
+
+            langchain_model = base_model.with_retry(
+                stop_after_attempt=3,  # Retry up to 3 times
+            )
+
+            # Create output parser for structured responses
+            output_parser = PydanticOutputParser(pydantic_object=BiasAnalysisOutput)
+
+            # Wrap in adapter to satisfy LLMTool protocol
+            # LangChain types after .with_retry() are complex, requiring type ignores
+            return LangChainLLMAdapter(  # type: ignore[return-value]
+                langchain_model=langchain_model,  # type: ignore[arg-type]
+                telemetry=telemetry,
+                settings=settings,
+                output_parser=output_parser,
+                provider_name="openai",
+            )
+
+        except Exception as e:
+            msg = f"Failed to initialize OpenAI LLM: {e}"
+            raise ToolConfigurationError(
+                msg, context={"llm_provider": settings.llm_provider}
+            ) from e
 
     if settings.llm_provider == "anthropic":
-        # Phase 5: Import real Anthropic LLM
-        raise ToolConfigurationError(
-            "Anthropic LLM not yet implemented (Phase 5)",
-            context={"llm_provider": settings.llm_provider},
-        )
+        # Phase 5.2: Real Anthropic LLM via LangChain
+        try:
+            from langchain_anthropic import ChatAnthropic  # noqa: PLC0415
+            from langchain_core.output_parsers import (  # noqa: PLC0415
+                PydanticOutputParser,
+            )
+
+            from fairsense_agentix.shared.services import get_telemetry  # noqa: PLC0415
+            from fairsense_agentix.tools.llm.callbacks import (  # noqa: PLC0415
+                TelemetryCallback,
+            )
+            from fairsense_agentix.tools.llm.langchain_adapter import (  # noqa: PLC0415
+                LangChainLLMAdapter,
+            )
+            from fairsense_agentix.tools.llm.output_schemas import (  # noqa: PLC0415
+                BiasAnalysisOutput,
+            )
+
+            # Get telemetry service
+            telemetry = get_telemetry(settings)
+
+            # Create telemetry callback
+            callback = TelemetryCallback(
+                telemetry=telemetry,
+                provider="anthropic",
+                model=settings.llm_model_name,
+            )
+
+            # Enable LangChain caching if configured
+            # This sets up a global SQLite cache for all LLM calls
+            if settings.llm_cache_enabled:
+                from langchain.globals import set_llm_cache  # noqa: PLC0415
+                from langchain_community.cache import SQLiteCache  # noqa: PLC0415
+
+                # Ensure cache directory exists
+                settings.llm_cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Set global LangChain cache
+                # Content-addressed: cache key = SHA256(model, prompt, params)
+                set_llm_cache(SQLiteCache(database_path=str(settings.llm_cache_path)))
+
+            # Create LangChain ChatAnthropic model with retry
+            # Note: temperature, max_tokens, timeout set per-call in adapter
+            from pydantic import SecretStr  # noqa: PLC0415
+
+            # Ensure API key is present (should be guaranteed by Settings validator)
+            if not settings.llm_api_key:
+                msg = "API key required for Anthropic provider"
+                raise ToolConfigurationError(
+                    msg, context={"llm_provider": settings.llm_provider}
+                )
+
+            anthropic_model = ChatAnthropic(  # type: ignore[call-arg]
+                model_name=settings.llm_model_name,  # ChatAnthropic uses model_name not model
+                api_key=SecretStr(settings.llm_api_key),
+                callbacks=[callback],
+            )
+
+            langchain_model = anthropic_model.with_retry(
+                stop_after_attempt=3,  # Retry up to 3 times
+            )
+
+            # Create output parser for structured responses
+            output_parser = PydanticOutputParser(pydantic_object=BiasAnalysisOutput)
+
+            # Wrap in adapter to satisfy LLMTool protocol
+            # LangChain types after .with_retry() are complex, requiring type ignores
+            return LangChainLLMAdapter(  # type: ignore[return-value]
+                langchain_model=langchain_model,  # type: ignore[arg-type]
+                telemetry=telemetry,
+                settings=settings,
+                output_parser=output_parser,
+                provider_name="anthropic",
+            )
+
+        except Exception as e:
+            msg = f"Failed to initialize Anthropic LLM: {e}"
+            raise ToolConfigurationError(
+                msg, context={"llm_provider": settings.llm_provider}
+            ) from e
 
     if settings.llm_provider == "local":
-        # Phase 5: Import real local LLM (vLLM, llama.cpp, etc.)
+        # Phase 5+: Real local LLM (vLLM, llama.cpp, etc.) - not yet implemented
         raise ToolConfigurationError(
-            "Local LLM not yet implemented (Phase 5)",
+            "Local LLM not yet implemented (future phase)",
             context={"llm_provider": settings.llm_provider},
         )
 

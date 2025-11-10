@@ -18,6 +18,12 @@ dependencies = [
     "faiss-cpu>=1.7.4",
     "numpy>=1.24.0",
     "pandas>=2.0.0",  # For CSV handling in build script
+    # Phase 5.2: LLM Adapters (LangChain-based)
+    "langchain>=0.3.0",  # Core LangChain functionality
+    "langchain-openai>=0.2.0",  # OpenAI/GPT-4 integration (brings openai as dependency)
+    "langchain-anthropic>=0.2.0",  # Anthropic/Claude integration (brings anthropic as dependency)
+    "langchain-community>=0.3.0",  # Community integrations (callbacks, cache, etc.)
+    "tiktoken>=0.7.0,<0.12.0",  # OpenAI tokenizer (constrain to version with prebuilt wheels)
 ]
 
 [build-system]
