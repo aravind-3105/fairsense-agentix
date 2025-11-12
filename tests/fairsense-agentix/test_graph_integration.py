@@ -6,6 +6,7 @@ Tests focus on complete workflows, not implementation details.
 These tests are marked with @pytest.mark.integration_test to run separately in CI.
 """
 
+import numpy as np
 import pytest
 
 from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
@@ -143,7 +144,10 @@ class TestRiskGraphIntegration:
 
         # Verify complete sequential pipeline
         assert "embedding" in result
-        assert isinstance(result["embedding"], list)
+        # Design Choice: Accept both list and numpy array for embeddings
+        # Why: Real embedders return numpy arrays, fake returns list
+        # What This Enables: Test works with both fake and real tools
+        assert isinstance(result["embedding"], (list, np.ndarray))
         assert len(result["embedding"]) > 0
 
         assert "risks" in result

@@ -37,7 +37,7 @@ from typing import Any
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
-from fairsense_agentix.shared.telemetry import Telemetry
+from fairsense_agentix.services.telemetry import TelemetryService
 
 
 class TelemetryCallback(BaseCallbackHandler):
@@ -90,7 +90,7 @@ class TelemetryCallback(BaseCallbackHandler):
     >>> # Telemetry automatically tracks tokens, cost, latency
     """
 
-    def __init__(self, telemetry: Telemetry, provider: str, model: str) -> None:
+    def __init__(self, telemetry: TelemetryService, provider: str, model: str) -> None:
         """Initialize telemetry callback.
 
         Parameters
@@ -167,17 +167,15 @@ class TelemetryCallback(BaseCallbackHandler):
         cost_usd = self._estimate_cost(prompt_tokens, completion_tokens)
 
         # Track detailed metrics
-        self.telemetry.track_event(
+        self.telemetry.log_info(
             "llm_call_detailed",
-            {
-                "provider": self.provider,
-                "model": self.model,
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens,
-                "latency_ms": latency_ms,
-                "cost_usd": cost_usd,
-            },
+            provider=self.provider,
+            model=self.model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+            latency_ms=latency_ms,
+            cost_usd=cost_usd,
         )
 
     def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
@@ -197,14 +195,12 @@ class TelemetryCallback(BaseCallbackHandler):
 
         # Track error (high-level tracking already in adapter)
         # This provides callback-level details
-        self.telemetry.track_event(
+        self.telemetry.log_info(
             "llm_callback_error",
-            {
-                "provider": self.provider,
-                "model": self.model,
-                "error": str(error),
-                "error_type": type(error).__name__,
-            },
+            provider=self.provider,
+            model=self.model,
+            error=str(error),
+            error_type=type(error).__name__,
         )
 
     def _estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:

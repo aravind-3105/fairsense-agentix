@@ -44,7 +44,7 @@ from langchain_core.output_parsers import BaseLLMOutputParser
 from pydantic import BaseModel
 
 from fairsense_agentix.configs.settings import Settings
-from fairsense_agentix.shared.telemetry import Telemetry
+from fairsense_agentix.services.telemetry import TelemetryService
 from fairsense_agentix.tools.exceptions import LLMError
 
 
@@ -101,7 +101,7 @@ class LangChainLLMAdapter:
     def __init__(
         self,
         langchain_model: BaseLanguageModel,
-        telemetry: Telemetry,
+        telemetry: TelemetryService,
         settings: Settings,
         output_parser: BaseLLMOutputParser | None = None,
         provider_name: str = "unknown",
@@ -225,27 +225,23 @@ class LangChainLLMAdapter:
             # Track successful call
             # Note: LangChain callbacks handle detailed telemetry
             # This is a high-level success event
-            self.telemetry.track_event(
+            self.telemetry.log_info(
                 "llm_call_success",
-                {
-                    "provider": self.provider_name,
-                    "model": getattr(self.model, "model_name", "unknown"),
-                    "has_parser": self.output_parser is not None,
-                },
+                provider=self.provider_name,
+                model=getattr(self.model, "model_name", "unknown"),
+                has_parser=self.output_parser is not None,
             )
 
             return result
 
         except Exception as e:
             # Track failure
-            self.telemetry.track_event(
+            self.telemetry.log_info(
                 "llm_call_failure",
-                {
-                    "provider": self.provider_name,
-                    "model": getattr(self.model, "model_name", "unknown"),
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
+                provider=self.provider_name,
+                model=getattr(self.model, "model_name", "unknown"),
+                error=str(e),
+                error_type=type(e).__name__,
             )
 
             # Wrap all exceptions as LLMError for consistent error handling

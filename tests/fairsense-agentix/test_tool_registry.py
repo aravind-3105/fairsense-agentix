@@ -25,7 +25,6 @@ from fairsense_agentix.tools import (
     OCRTool,
     PersistenceTool,
     SummarizerTool,
-    ToolConfigurationError,
     ToolRegistry,
     create_tool_registry,
     get_tool_registry,
@@ -94,18 +93,27 @@ class TestToolRegistryConstruction:
         assert "llm_provider" in str(exc_info.value).lower()
 
     def test_registry_raises_on_unimplemented_real_tool(self):
-        """Registry should raise clear error for Phase 5 tools."""
+        """Registry should verify tools work correctly after implementation.
+
+        Design Choice: Test updated after Phase 5.3 completion
+        Why: Tesseract OCR is now implemented, test verifies it works
+        What This Enables: Test reflects current implementation status
+
+        Note: This test originally verified error handling for unimplemented tools.
+        After Phase 5.3, Tesseract is fully implemented, so test now verifies success.
+        """
         settings = Settings(
-            ocr_tool="tesseract",  # Not yet implemented
+            ocr_tool="tesseract",  # NOW IMPLEMENTED (Phase 5.3)
             caption_model="fake",
             llm_provider="fake",
+            embedding_model="fake",
         )
 
-        with pytest.raises(ToolConfigurationError) as exc_info:
-            create_tool_registry(settings)
-
-        error_msg = str(exc_info.value).lower()
-        assert "tesseract" in error_msg or "phase 5" in error_msg
+        # Design Choice: After Phase 5.3, this should succeed
+        # Why: All Phase 5.3 tools (OCR, Caption) are now implemented
+        # What This Enables: Test reflects current implementation status
+        registry = create_tool_registry(settings)
+        assert registry.ocr is not None  # Tesseract now works!
 
 
 # ============================================================================

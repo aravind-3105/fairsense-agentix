@@ -27,3 +27,5 @@ CLAUDE.md
 *.index
 data/indexes/*.json
 data/indexes/README.md
+.env
+.cache/langchain.db

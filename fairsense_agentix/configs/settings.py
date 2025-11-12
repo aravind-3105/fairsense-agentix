@@ -159,37 +159,61 @@ class Settings(BaseSettings):
     )
 
     # ===========================
-    # OCR Configuration
+    # OCR Configuration (Phase 5.3)
     # ===========================
-    ocr_tool: Literal["tesseract", "paddleocr", "fake"] = Field(
-        default="fake",
-        description="OCR tool to use for text extraction from images",
+    ocr_tool: Literal["auto", "paddleocr", "tesseract", "fake"] = Field(
+        default="auto",
+        description=(
+            "OCR tool: auto (GPU-adaptive), paddleocr (GPU/best), "
+            "tesseract (CPU/fast), fake (testing)"
+        ),
+    )
+
+    ocr_force_cpu: bool = Field(
+        default=False,
+        description="Force CPU for OCR even if GPU available (for testing/debugging)",
     )
 
     ocr_language: str = Field(
         default="eng",
-        description="Language code for OCR (e.g., 'eng', 'fra', 'spa')",
+        description="Language code for OCR (e.g., 'eng', 'fra', 'spa', 'chi_sim')",
     )
 
     ocr_confidence_threshold: float = Field(
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Minimum confidence threshold for OCR results",
+        description="Minimum confidence threshold for OCR results (0.0-1.0)",
     )
 
     # ===========================
-    # Image Captioning Configuration
+    # Image Captioning Configuration (Phase 5.3)
     # ===========================
-    caption_model: Literal["blip", "blip2", "llava", "fake"] = Field(
-        default="fake",
-        description="Image captioning model to use",
+    caption_model: Literal["auto", "blip2", "blip", "fake"] = Field(
+        default="auto",
+        description=(
+            "Caption model: auto (GPU-adaptive), blip2 (GPU/best), "
+            "blip (CPU/fast), fake (testing)"
+        ),
+    )
+
+    caption_force_cpu: bool = Field(
+        default=False,
+        description="Force CPU for captioning even if GPU available (for testing/debugging)",
+    )
+
+    caption_preload: bool = Field(
+        default=True,
+        description=(
+            "Preload model at startup (true: fast calls, slow startup; "
+            "false: fast startup, slow first call)"
+        ),
     )
 
     caption_max_length: int = Field(
         default=100,
         gt=0,
-        description="Maximum length for generated captions",
+        description="Maximum caption length in tokens",
     )
 
     # ===========================
