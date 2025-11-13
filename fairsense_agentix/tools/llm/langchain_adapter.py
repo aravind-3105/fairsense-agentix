@@ -187,15 +187,31 @@ class LangChainLLMAdapter:
         )
         timeout = timeout if timeout is not None else self.settings.llm_timeout_seconds
 
+        # Check if model is gpt-5 and override temperature
+        # GPT-5 only supports temperature=1 (default value)
+        # Note: After .with_retry(), model may be wrapped, so check settings directly
+        if "gpt-5" in self.settings.llm_model_name.lower() and temperature != 1.0:
+            self.telemetry.log_info(
+                "llm_parameter_override",
+                provider=self.provider_name,
+                model=self.settings.llm_model_name,
+                parameter="temperature",
+                original_value=temperature,
+                override_value=1.0,
+                reason="GPT-5 only supports temperature=1 (default)",
+            )
+            temperature = 1.0
+
         # Validate inputs
         if not prompt or not prompt.strip():
             msg = "Prompt cannot be empty"
             raise LLMError(msg)
 
         try:
-            # Create message
-            # LangChain chat models expect Message objects, not raw strings
-            message = HumanMessage(content=prompt)
+            # Create message list
+            # LangChain chat models expect a list of Message objects when using chains
+            # For single message: wrap in list for compatibility with output parsers
+            messages = [HumanMessage(content=prompt)]
 
             # Bind temperature and max_tokens to model for this call
             # This is the LangChain way to set per-call parameters
@@ -211,16 +227,23 @@ class LangChainLLMAdapter:
 
             # Invoke LangChain model
             # If output_parser is set, chain: model → parser
-            # Otherwise just invoke model directly
+            # Otherwise invoke model directly (may return AIMessage or Pydantic object)
             if self.output_parser:
                 # Create chain: bound_model | parser
                 # LangChain's Runnable types are complex, ignore type checking
                 chain = bound_model | self.output_parser  # type: ignore[operator,var-annotated]
-                result = chain.invoke(message, config=config)  # type: ignore[arg-type]
+                result = chain.invoke(messages, config=config)  # type: ignore[arg-type]
             else:
-                # Invoke model directly (returns AIMessage)
-                response = bound_model.invoke(message, config=config)  # type: ignore[arg-type]
-                result = response.content
+                # Invoke model directly
+                # If model was configured with .with_structured_output(),
+                # it returns Pydantic object. Otherwise returns AIMessage.
+                response = bound_model.invoke(messages, config=config)  # type: ignore[arg-type]
+                # Check if response is already a Pydantic model (structured output)
+                if isinstance(response, BaseModel):
+                    result = response
+                else:
+                    # Extract content from AIMessage
+                    result = response.content
 
             # Track successful call
             # Note: LangChain callbacks handle detailed telemetry

@@ -263,7 +263,18 @@ Format your response as a structured report."""
         prompt=prompt, temperature=temperature, max_tokens=max_tokens
     )
 
-    return {"bias_analysis": bias_analysis}
+    # Convert structured output to JSON string if needed
+    # With .with_structured_output(), LLM returns Pydantic objects
+    from pydantic import BaseModel  # noqa: PLC0415
+
+    if isinstance(bias_analysis, BaseModel):
+        # Structured output: convert to formatted JSON string
+        bias_analysis_str = bias_analysis.model_dump_json(indent=2)
+    else:
+        # Plain string output (fake tools or legacy)
+        bias_analysis_str = bias_analysis
+
+    return {"bias_analysis": bias_analysis_str}
 
 
 def summarize(state: BiasImageState) -> dict[str, str | None]:

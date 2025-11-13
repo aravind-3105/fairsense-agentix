@@ -354,9 +354,6 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
     if settings.llm_provider == "openai":
         # Phase 5.2: Real OpenAI LLM via LangChain
         try:
-            from langchain_core.output_parsers import (  # noqa: PLC0415
-                PydanticOutputParser,
-            )
             from langchain_openai import ChatOpenAI  # noqa: PLC0415
 
             from fairsense_agentix.services import telemetry  # noqa: PLC0415
@@ -402,20 +399,23 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
                 callbacks=[callback],
             )
 
-            langchain_model = base_model.with_retry(
+            # Apply structured output mode BEFORE retry wrapper
+            # OpenAI's native JSON mode is more reliable than prompt-based parsing
+            structured_model = base_model.with_structured_output(BiasAnalysisOutput)
+
+            # Add retry after structured output configuration
+            langchain_model = structured_model.with_retry(
                 stop_after_attempt=3,  # Retry up to 3 times
             )
 
-            # Create output parser for structured responses
-            output_parser = PydanticOutputParser(pydantic_object=BiasAnalysisOutput)
-
+            # No output parser needed - structured_output handles parsing
             # Wrap in adapter to satisfy LLMTool protocol
             # LangChain types after .with_retry() are complex, requiring type ignores
             return LangChainLLMAdapter(  # type: ignore[return-value]
                 langchain_model=langchain_model,  # type: ignore[arg-type]
                 telemetry=telemetry,
                 settings=settings,
-                output_parser=output_parser,
+                output_parser=None,  # Not needed with structured_output
                 provider_name="openai",
             )
 
@@ -429,9 +429,6 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
         # Phase 5.2: Real Anthropic LLM via LangChain
         try:
             from langchain_anthropic import ChatAnthropic  # noqa: PLC0415
-            from langchain_core.output_parsers import (  # noqa: PLC0415
-                PydanticOutputParser,
-            )
 
             from fairsense_agentix.services import telemetry  # noqa: PLC0415
             from fairsense_agentix.tools.llm.callbacks import (  # noqa: PLC0415
@@ -481,20 +478,25 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
                 callbacks=[callback],
             )
 
-            langchain_model = anthropic_model.with_retry(
+            # Apply structured output mode BEFORE retry wrapper
+            # Anthropic's native JSON mode is more reliable than prompt-based parsing
+            structured_model = anthropic_model.with_structured_output(
+                BiasAnalysisOutput
+            )
+
+            # Add retry after structured output configuration
+            langchain_model = structured_model.with_retry(
                 stop_after_attempt=3,  # Retry up to 3 times
             )
 
-            # Create output parser for structured responses
-            output_parser = PydanticOutputParser(pydantic_object=BiasAnalysisOutput)
-
+            # No output parser needed - structured_output handles parsing
             # Wrap in adapter to satisfy LLMTool protocol
             # LangChain types after .with_retry() are complex, requiring type ignores
             return LangChainLLMAdapter(  # type: ignore[return-value]
                 langchain_model=langchain_model,  # type: ignore[arg-type]
                 telemetry=telemetry,
                 settings=settings,
-                output_parser=output_parser,
+                output_parser=None,  # Not needed with structured_output
                 provider_name="anthropic",
             )
 
@@ -524,7 +526,16 @@ def _resolve_summarizer_tool(settings: Settings) -> SummarizerTool:
     """Resolve summarizer tool from settings.
 
     In most cases, the summarizer uses the same LLM backend as the main
-    LLM tool, just with a different prompt.
+    LLM tool, just with a different prompt. This ensures cache sharing and
+    consistent telemetry tracking.
+
+    Design Choice: Reuse LLM Model
+    -------------------------------
+    The summarizer reuses the SAME LangChain model instance as the main LLM
+    tool. This is critical for:
+    - **Cache sharing**: Avoid duplicate API calls (cost savings)
+    - **Telemetry consistency**: Track all LLM usage in one place
+    - **Connection pooling**: Single HTTP client for all requests
 
     Parameters
     ----------
@@ -541,16 +552,80 @@ def _resolve_summarizer_tool(settings: Settings) -> SummarizerTool:
     ToolConfigurationError
         If summarizer cannot be constructed
     """
+    import logging  # noqa: PLC0415
+
+    logger = logging.getLogger(__name__)
+
     if settings.llm_provider == "fake":
         from fairsense_agentix.tools.fake import FakeSummarizerTool  # noqa: PLC0415
 
         return FakeSummarizerTool()
 
-    # Phase 5: Use LLM-based summarizer
-    raise ToolConfigurationError(
-        "LLM-based summarizer not yet implemented (Phase 5)",
-        context={"llm_provider": settings.llm_provider},
-    )
+    # Phase 5.4: Use LLM-based summarizer
+    # NOTE: Creates separate model instance without structured output
+    # (cannot reuse bias analysis model which has structured output configured)
+    try:
+        from fairsense_agentix.prompts import PromptLoader  # noqa: PLC0415
+        from fairsense_agentix.services import telemetry  # noqa: PLC0415
+        from fairsense_agentix.tools.summarizer import LLMSummarizer  # noqa: PLC0415
+
+        # Create a plain text model for summarization (no structured output)
+        if settings.llm_provider == "openai":
+            from langchain_openai import ChatOpenAI  # noqa: PLC0415
+            from pydantic import SecretStr  # noqa: PLC0415
+
+            base_model = ChatOpenAI(
+                model=settings.llm_model_name,
+                api_key=SecretStr(settings.llm_api_key)
+                if settings.llm_api_key
+                else None,
+            )
+            # Add retry (no structured output for summarizer)
+            langchain_model = base_model.with_retry(stop_after_attempt=3)
+
+        elif settings.llm_provider == "anthropic":
+            from langchain_anthropic import ChatAnthropic  # noqa: PLC0415
+            from pydantic import SecretStr  # noqa: PLC0415
+
+            # Ensure API key is present (should be validated by Settings)
+            if not settings.llm_api_key:
+                raise ToolConfigurationError(
+                    "API key required for Anthropic provider",
+                    context={"llm_provider": settings.llm_provider},
+                )
+
+            base_model = ChatAnthropic(  # type: ignore[call-arg,assignment]
+                model_name=settings.llm_model_name,
+                api_key=SecretStr(settings.llm_api_key),
+            )
+            # Add retry (no structured output for summarizer)
+            langchain_model = base_model.with_retry(stop_after_attempt=3)
+
+        else:
+            raise ToolConfigurationError(
+                f"Unsupported LLM provider for summarizer: {settings.llm_provider}",
+                context={"llm_provider": settings.llm_provider},
+            )
+
+        logger.info(
+            f"Creating LLMSummarizer (plain text model from {settings.llm_provider})"
+        )
+
+        return LLMSummarizer(
+            langchain_model=langchain_model,  # type: ignore[arg-type]
+            telemetry=telemetry,
+            settings=settings,
+            prompt_loader=PromptLoader(),
+        )
+
+    except Exception as e:
+        raise ToolConfigurationError(
+            f"Failed to create LLMSummarizer: {e}",
+            context={
+                "llm_provider": settings.llm_provider,
+                "error_type": type(e).__name__,
+            },
+        ) from e
 
 
 def _resolve_embedder_tool(settings: Settings) -> EmbedderTool:
@@ -644,25 +719,41 @@ def _resolve_faiss_tool(
         ) from e
 
 
-def _resolve_formatter_tool() -> FormatterTool:
+def _resolve_formatter_tool(settings: Settings) -> FormatterTool:
     """Resolve formatter tool.
 
-    The formatter is simple HTML/CSS generation with no external dependencies,
-    so we can use a real implementation even in Phase 4.
+    The formatter generates HTML with bias highlighting and data tables.
+    It uses settings for bias color configuration.
+
+    Parameters
+    ----------
+    settings : Settings
+        Application configuration (includes bias color mappings)
 
     Returns
     -------
     FormatterTool
         Configured formatter tool instance
+
+    Raises
+    ------
+    ToolConfigurationError
+        If formatter cannot be constructed
     """
-    # Phase 4: Use fake formatter (simple HTML generation)
-    from fairsense_agentix.tools.fake import FakeFormatterTool  # noqa: PLC0415
+    # Phase 5.4: Use real HTML formatter
+    try:
+        from fairsense_agentix.tools.formatter import HTMLFormatter  # noqa: PLC0415
 
-    return FakeFormatterTool()
+        # Get bias type colors from settings
+        color_map = settings.get_bias_type_colors()
 
-    # Phase 5: Can use real formatter if more sophisticated templates needed
-    # from fairsense_agentix.tools.real.formatter import HTMLFormatter
-    # return HTMLFormatter()
+        return HTMLFormatter(color_map=color_map)
+
+    except Exception as e:
+        raise ToolConfigurationError(
+            f"Failed to create HTMLFormatter: {e}",
+            context={"error_type": type(e).__name__},
+        ) from e
 
 
 def _resolve_persistence_tool(output_dir: Path) -> PersistenceTool:
@@ -677,15 +768,26 @@ def _resolve_persistence_tool(output_dir: Path) -> PersistenceTool:
     -------
     PersistenceTool
         Configured persistence tool instance
+
+    Raises
+    ------
+    ToolConfigurationError
+        If persistence tool cannot be constructed
     """
-    # Phase 4: Use fake persistence (doesn't actually write files by default)
-    from fairsense_agentix.tools.fake import FakePersistenceTool  # noqa: PLC0415
+    # Phase 5.4: Use real CSV writer
+    try:
+        from fairsense_agentix.tools.persistence import CSVWriter  # noqa: PLC0415
 
-    return FakePersistenceTool(output_dir=output_dir, actually_write=False)
+        return CSVWriter(output_dir=output_dir)
 
-    # Phase 5: Use real persistence
-    # from fairsense_agentix.tools.real.persistence import FileWriter
-    # return FileWriter(output_dir=output_dir)
+    except Exception as e:
+        raise ToolConfigurationError(
+            f"Failed to create CSVWriter: {e}",
+            context={
+                "output_dir": str(output_dir),
+                "error_type": type(e).__name__,
+            },
+        ) from e
 
 
 # ============================================================================
@@ -753,9 +855,9 @@ def create_tool_registry(settings: Settings | None = None) -> ToolRegistry:
             embedder=embedder,
         )
 
-        # Formatter and persistence are straightforward
-        formatter = _resolve_formatter_tool()
-        persistence = _resolve_persistence_tool(output_dir=Path("outputs"))
+        # Formatter and persistence use settings configuration
+        formatter = _resolve_formatter_tool(settings)
+        persistence = _resolve_persistence_tool(output_dir=settings.output_dir)
 
         # Construct registry with all tools
         return ToolRegistry(

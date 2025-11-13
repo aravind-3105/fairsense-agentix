@@ -244,7 +244,8 @@ class FakeSummarizerTool:
         }
 
         if self.return_summary is not None:
-            return self.return_summary
+            # Truncate custom summary to max_length (consistent with real)
+            return self.return_summary[:max_length]
 
         # Deterministic summary
         summary = (

@@ -101,6 +101,10 @@ class Settings(BaseSettings):
         Highlight color for disability bias (hex code)
     bias_color_socioeconomic : str
         Highlight color for socioeconomic bias (hex code)
+    output_dir : Path
+        Directory for saved output files (CSV, JSON, HTML)
+    summarizer_max_length : int
+        Maximum length for generated summaries (characters)
     """
 
     model_config = SettingsConfigDict(
@@ -373,6 +377,20 @@ class Settings(BaseSettings):
         description="Highlight color for socioeconomic bias (purple)",
     )
 
+    # ===========================
+    # Output & Persistence Configuration (Phase 5.4)
+    # ===========================
+    output_dir: Path = Field(
+        default=Path("outputs"),
+        description="Directory for saved output files (CSV, JSON, HTML)",
+    )
+
+    summarizer_max_length: int = Field(
+        default=200,
+        gt=0,
+        description="Maximum length for generated summaries (characters)",
+    )
+
     def get_bias_type_colors(self) -> dict[str, str]:
         """Get bias type to color mapping.
 
@@ -399,7 +417,9 @@ class Settings(BaseSettings):
             "socioeconomic": self.bias_color_socioeconomic,
         }
 
-    @field_validator("faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir")
+    @field_validator(
+        "faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir", "output_dir"
+    )
     @classmethod
     def expand_path(cls, v: Path) -> Path:
         """Expand and resolve paths to absolute paths.
