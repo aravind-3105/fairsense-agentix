@@ -10,6 +10,7 @@ Workflow:
 
 Phase 2 (Checkpoint 2.5): Stub implementations with fake OCR/caption/LLM
 Phase 5+: Real OCR integration, captioning models, LLM analysis
+Phase 6.2: Span extraction with evidence source tracking (caption vs OCR)
 
 Example:
     >>> from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
@@ -19,12 +20,132 @@ Example:
     '...'
 """
 
+from pathlib import Path
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasImageState
 from fairsense_agentix.tools import get_tool_registry
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def _extract_spans_from_analysis(
+    bias_analysis: str | BiasAnalysisOutput,
+    merged_text: str,
+    ocr_text: str,
+    caption_text: str,
+) -> list[tuple[int, int, str]]:
+    """Extract bias spans with character positions from image analysis.
+
+    Phase 6.2: Parse BiasAnalysisOutput to extract (start_char, end_char, type)
+    tuples for HTML highlighting. Handles multiple text sources (OCR + caption)
+    with evidence_source tracking.
+
+    For image analysis, merged_text combines OCR and caption with headers.
+    We map character positions from individual sources to merged_text.
+
+    Parameters
+    ----------
+    bias_analysis : str | BiasAnalysisOutput
+        Bias analysis output (JSON string or Pydantic object)
+    merged_text : str
+        Combined OCR + caption text that was analyzed
+    ocr_text : str
+        Original OCR extracted text
+    caption_text : str
+        Original caption generated text
+
+    Returns
+    -------
+    list[tuple[int, int, str]]
+        List of (start_char, end_char, bias_type) tuples for highlighting
+        in the merged_text
+
+    Examples
+    --------
+    >>> analysis = BiasAnalysisOutput(
+    ...     bias_detected=True,
+    ...     bias_instances=[
+    ...         BiasInstance(
+    ...             type="gender",
+    ...             evidence_source="ocr_text",
+    ...             start_char=0,
+    ...             end_char=8,
+    ...         )
+    ...     ],
+    ... )
+    >>> _extract_spans_from_analysis(analysis, merged, "ocr", "caption")
+    [(27, 35, 'gender')]  # Adjusted for merged_text offset
+    """
+    # Parse analysis if string
+    if isinstance(bias_analysis, str):
+        try:
+            analysis = BiasAnalysisOutput.model_validate_json(bias_analysis)
+        except Exception:
+            return []
+    else:
+        analysis = bias_analysis
+
+    # Calculate offsets for OCR and caption in merged_text
+    # Format: "**OCR Extracted Text:**\n{ocr}\n\n**Image Caption:**\n{caption}"
+    ocr_header = "**OCR Extracted Text:**\n"
+    caption_header = "\n\n**Image Caption:**\n"
+
+    ocr_offset = len(ocr_header)
+    caption_offset = len(ocr_header) + len(ocr_text) + len(caption_header)
+
+    # Extract spans with validation and offset adjustment
+    spans: list[tuple[int, int, str]] = []
+    merged_length = len(merged_text)
+
+    for instance in analysis.bias_instances:
+        # Determine which text source this span refers to
+        evidence_source = instance.evidence_source
+
+        if evidence_source == "ocr_text":
+            source_text = ocr_text
+            offset = ocr_offset
+        elif evidence_source == "caption":
+            source_text = caption_text
+            offset = caption_offset
+        else:
+            # Unknown source or "text" (generic) - skip
+            continue
+
+        # Get positions relative to source text
+        start = instance.start_char
+        end = instance.end_char
+
+        # Validate bounds in source text
+        if not (0 <= start < len(source_text) and start < end <= len(source_text)):
+            continue
+
+        # Validate text_span matches (if provided)
+        if instance.text_span and source_text[start:end] != instance.text_span:
+            continue
+
+        # Adjust to merged_text coordinates
+        merged_start = offset + start
+        merged_end = offset + end
+
+        # Final validation in merged_text
+        if not (
+            0 <= merged_start < merged_length
+            and merged_start < merged_end <= merged_length
+        ):
+            continue
+
+        # Valid span - add to list
+        spans.append((merged_start, merged_end, instance.type))
+
+    return spans
 
 
 # ============================================================================
@@ -209,6 +330,8 @@ def analyze_bias(state: BiasImageState) -> dict[str, str]:
 
     Phase 4+: Uses tool registry to get LLM implementation (fake or real).
     Phase 5+: Real LLM call with bias detection prompt.
+    Phase 6.2: Uses bias_analysis_v1.txt prompt template with structured output
+               and evidence_source tracking (caption vs ocr_text).
 
     Parameters
     ----------
@@ -241,24 +364,37 @@ def analyze_bias(state: BiasImageState) -> dict[str, str]:
     if not isinstance(max_tokens, int) or max_tokens <= 0:
         max_tokens = 2000  # Use default for invalid values
 
-    # Build prompt for bias analysis (image-specific context)
-    prompt = f"""Analyze the following text (extracted from an image via OCR and captioning) for various forms of bias including gender, age, racial/ethnic, disability, and socioeconomic bias.
+    # Phase 6.2: Load prompt template for bias analysis
+    # Template instructs LLM to return precise character positions
+    prompt_template_path = (
+        Path(__file__).parent.parent / "prompts" / "templates" / "bias_analysis_v1.txt"
+    )
 
-Text to analyze:
-{merged_text}
+    try:
+        with open(prompt_template_path) as f:
+            prompt_template = f.read()
+    except FileNotFoundError:
+        # Fallback to hardcoded prompt if template not found
+        prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
 
-This text was extracted from an image, combining both visible text (OCR) and visual context (caption).
+Your task is to carefully analyze the provided text and identify ANY instances of bias across these categories:
+- **Gender bias**: Gendered language, stereotypes, exclusionary terms
+- **Age bias**: Age discrimination, ageist assumptions, generational stereotypes
+- **Racial/ethnic bias**: Racial stereotypes, cultural assumptions, exclusionary language
+- **Disability bias**: Ableist language, accessibility assumptions, capability stereotypes
+- **Socioeconomic bias**: Class-based assumptions, privilege bias, economic stereotypes
 
-Provide a detailed analysis report with:
-1. Bias Assessment (by category)
-2. Visual Context Considerations
-3. Overall Assessment
-4. Recommendations for improvement
-5. Confidence score
+**TEXT TO ANALYZE:**
+{text}
 
-Format your response as a structured report."""
+**IMPORTANT FOR IMAGE ANALYSIS:** Specify evidence_source as "caption" or "ocr_text" for each bias instance.
 
-    # Call LLM via registry
+Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [...], "overall_assessment": str, "risk_level": str}}"""
+
+    # Build prompt with merged text
+    prompt = prompt_template.format(text=merged_text)
+
+    # Call LLM via registry with structured output
     bias_analysis = registry.llm.predict(
         prompt=prompt, temperature=temperature, max_tokens=max_tokens
     )
@@ -333,6 +469,9 @@ def highlight(state: BiasImageState) -> dict[str, str]:
     highlighted by bias type. Since this is image-derived text, the HTML
     includes both OCR and caption sections.
 
+    Phase 6.2: Extracts precise character positions from bias_analysis
+               with evidence source tracking (caption vs OCR).
+
     Parameters
     ----------
     state : BiasImageState
@@ -355,15 +494,20 @@ def highlight(state: BiasImageState) -> dict[str, str]:
     # Get tools from registry
     registry = get_tool_registry()
 
-    # Phase 4: Use formatter tool from registry
-    # Phase 5+: Real highlighting logic will parse bias_analysis for spans
-
     merged_text = state.merged_text or ""
 
-    # For now, pass empty spans list (Phase 5 will extract from bias_analysis)
-    spans: list[
-        tuple[int, int, str]
-    ] = []  # TODO: extract from state.bias_analysis to populate
+    # Phase 6.2: Extract spans from bias analysis with evidence source tracking
+    spans: list[tuple[int, int, str]] = []
+
+    if state.bias_analysis:
+        # Extract (start_char, end_char, bias_type) tuples from analysis
+        # This handles mapping from OCR/caption positions to merged_text
+        spans = _extract_spans_from_analysis(
+            bias_analysis=state.bias_analysis,
+            merged_text=merged_text,
+            ocr_text=state.ocr_text or "",
+            caption_text=state.caption_text or "",
+        )
 
     # Get bias type colors from configuration
     bias_types = settings.get_bias_type_colors()
