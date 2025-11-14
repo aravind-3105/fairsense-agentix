@@ -14,6 +14,7 @@ Subgraphs produce output; orchestrator evaluates quality.
 
 Phase 2 (Checkpoint 2.4): Stub implementations with fake LLM/tools
 Phase 5+: Real LLM integration, prompt engineering, highlighting logic
+Phase 6.1: Span extraction with character-level precision
 
 Example:
     >>> from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
@@ -25,12 +26,99 @@ Example:
     '...'
 """
 
+from pathlib import Path
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasTextState
 from fairsense_agentix.tools import get_tool_registry
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def _extract_spans_from_analysis(
+    bias_analysis: str | BiasAnalysisOutput,
+    original_text: str,
+) -> list[tuple[int, int, str]]:
+    """Extract bias spans with character positions from analysis.
+
+    Phase 6.1: Parse BiasAnalysisOutput to extract (start_char, end_char, type)
+    tuples for HTML highlighting. Validates positions are within text bounds.
+
+    Parameters
+    ----------
+    bias_analysis : str | BiasAnalysisOutput
+        Bias analysis output (JSON string or Pydantic object)
+    original_text : str
+        Original text being analyzed (for bounds checking)
+
+    Returns
+    -------
+    list[tuple[int, int, str]]
+        List of (start_char, end_char, bias_type) tuples for highlighting
+
+    Examples
+    --------
+    >>> analysis = BiasAnalysisOutput(
+    ...     bias_detected=True,
+    ...     bias_instances=[
+    ...         BiasInstance(
+    ...             type="gender",
+    ...             severity="high",
+    ...             text_span="salesman",
+    ...             explanation="Gendered term",
+    ...             start_char=0,
+    ...             end_char=8,
+    ...         )
+    ...     ],
+    ...     overall_assessment="Gender bias detected",
+    ...     risk_level="high",
+    ... )
+    >>> _extract_spans_from_analysis(analysis, "salesman needed")
+    [(0, 8, 'gender')]
+    """
+    # Parse analysis if string
+    if isinstance(bias_analysis, str):
+        try:
+            # Try parsing as JSON into BiasAnalysisOutput
+            analysis = BiasAnalysisOutput.model_validate_json(bias_analysis)
+        except Exception:
+            # Failed to parse - return empty spans
+            # This handles fake LLM outputs or malformed JSON
+            return []
+    else:
+        # Already a Pydantic object
+        analysis = bias_analysis
+
+    # Extract spans with validation
+    spans: list[tuple[int, int, str]] = []
+    text_length = len(original_text)
+
+    for instance in analysis.bias_instances:
+        start = instance.start_char
+        end = instance.end_char
+
+        # Validate bounds
+        if not (0 <= start < text_length and start < end <= text_length):
+            # Skip invalid spans
+            continue
+
+        # Validate text_span matches (if provided)
+        if instance.text_span and original_text[start:end] != instance.text_span:
+            # Mismatch - LLM provided wrong positions
+            # Skip this span rather than highlighting wrong text
+            continue
+
+        # Valid span - add to list
+        spans.append((start, end, instance.type))
+
+    return spans
 
 
 # ============================================================================
@@ -50,6 +138,8 @@ def analyze_bias(state: BiasTextState) -> dict:
 
     Phase 4+: Uses tool registry to get LLM implementation (fake or real).
     Phase 5+: Real LLM calls with structured prompts when real tools configured.
+    Phase 6.1: Uses bias_analysis_v1.txt prompt template with structured output
+               for precise character-level span extraction.
 
     Parameters
     ----------
@@ -82,21 +172,37 @@ def analyze_bias(state: BiasTextState) -> dict:
     if not isinstance(max_tokens, int) or max_tokens <= 0:
         max_tokens = 2000  # Use default for invalid values
 
-    # Build prompt for bias analysis
-    prompt = f"""Analyze the following text for various forms of bias including gender, age, racial/ethnic, disability, and socioeconomic bias.
+    # Phase 6.1: Load prompt template for bias analysis
+    # Template instructs LLM to return precise character positions
+    prompt_template_path = (
+        Path(__file__).parent.parent / "prompts" / "templates" / "bias_analysis_v1.txt"
+    )
 
-Text to analyze:
+    try:
+        with open(prompt_template_path) as f:
+            prompt_template = f.read()
+    except FileNotFoundError:
+        # Fallback to hardcoded prompt if template not found
+        prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
+
+Your task is to carefully analyze the provided text and identify ANY instances of bias across these categories:
+- **Gender bias**: Gendered language, stereotypes, exclusionary terms
+- **Age bias**: Age discrimination, ageist assumptions, generational stereotypes
+- **Racial/ethnic bias**: Racial stereotypes, cultural assumptions, exclusionary language
+- **Disability bias**: Ableist language, accessibility assumptions, capability stereotypes
+- **Socioeconomic bias**: Class-based assumptions, privilege bias, economic stereotypes
+
+**TEXT TO ANALYZE:**
 {text}
 
-Provide a detailed analysis report with:
-1. Bias Assessment (by category)
-2. Overall Assessment
-3. Recommendations for improvement
-4. Confidence score
+Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [...], "overall_assessment": str, "risk_level": str}}"""
 
-Format your response as a structured report."""
+    # Build prompt with text
+    prompt = prompt_template.format(text=text)
 
-    # Call LLM via registry (uses fake or real based on settings)
+    # Call LLM via registry with structured output
+    # For real LLMs, this will use .with_structured_output(BiasAnalysisOutput)
+    # For fake LLMs, this returns a string that we'll try to parse
     bias_analysis = registry.llm.predict(
         prompt=prompt, temperature=temperature, max_tokens=max_tokens
     )
@@ -179,6 +285,9 @@ def highlight(state: BiasTextState) -> dict:
     - Disability bias: Blue
     - Socioeconomic bias: Purple
 
+    Phase 6.1: Extracts precise character positions from bias_analysis
+               for accurate span highlighting.
+
     Parameters
     ----------
     state : BiasTextState
@@ -199,11 +308,15 @@ def highlight(state: BiasTextState) -> dict:
     # Get tools from registry
     registry = get_tool_registry()
 
-    # Phase 4: Use formatter tool from registry
-    # Phase 5+: Real highlighting logic will parse bias_analysis for spans
+    # Phase 6.1: Extract spans from bias analysis with character positions
+    spans: list[tuple[int, int, str]] = []
 
-    # For now, pass empty spans list (Phase 5 will extract from bias_analysis)
-    spans: list[tuple[int, int, str]] = []  # Future: extract from state.bias_analysis
+    if state.bias_analysis:
+        # Extract (start_char, end_char, bias_type) tuples from analysis
+        spans = _extract_spans_from_analysis(
+            bias_analysis=state.bias_analysis,
+            original_text=state.text,
+        )
 
     # Get bias type colors from configuration
     bias_types = settings.get_bias_type_colors()
