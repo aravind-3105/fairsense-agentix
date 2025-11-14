@@ -33,6 +33,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasTextState
+from fairsense_agentix.services.telemetry import telemetry
 from fairsense_agentix.tools import get_tool_registry
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
@@ -140,6 +141,7 @@ def analyze_bias(state: BiasTextState) -> dict:
     Phase 5+: Real LLM calls with structured prompts when real tools configured.
     Phase 6.1: Uses bias_analysis_v1.txt prompt template with structured output
                for precise character-level span extraction.
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -158,32 +160,60 @@ def analyze_bias(state: BiasTextState) -> dict:
     >>> "bias_analysis" in update
     True
     """
-    # Get tools from registry (configuration-driven: fake or real)
-    registry = get_tool_registry()
+    with telemetry.timer("bias_text.analyze_bias", text_length=len(state.text)):
+        telemetry.log_info(
+            "bias_text_analyze_start",
+            text_length=len(state.text),
+            run_id=state.run_id or "unknown",
+        )
 
-    # Extract options
-    text = state.text
-    temperature = state.options.get("temperature", 0.3)
-    max_tokens = state.options.get("llm_max_tokens", 2000)
+        try:
+            # Get tools from registry (configuration-driven: fake or real)
+            registry = get_tool_registry()
 
-    # Validate parameters
-    if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 1.0):
-        temperature = 0.3  # Use default for invalid values
-    if not isinstance(max_tokens, int) or max_tokens <= 0:
-        max_tokens = 2000  # Use default for invalid values
+            # Extract options
+            text = state.text
+            temperature = state.options.get("temperature", 0.3)
+            max_tokens = state.options.get("llm_max_tokens", 2000)
 
-    # Phase 6.1: Load prompt template for bias analysis
-    # Template instructs LLM to return precise character positions
-    prompt_template_path = (
-        Path(__file__).parent.parent / "prompts" / "templates" / "bias_analysis_v1.txt"
-    )
+            # Validate parameters
+            if not isinstance(temperature, (int, float)) or not (
+                0.0 <= temperature <= 1.0
+            ):
+                telemetry.log_warning(
+                    "invalid_temperature",
+                    temperature=temperature,
+                    using_default=0.3,
+                )
+                temperature = 0.3  # Use default for invalid values
+            if not isinstance(max_tokens, int) or max_tokens <= 0:
+                telemetry.log_warning(
+                    "invalid_max_tokens",
+                    max_tokens=max_tokens,
+                    using_default=2000,
+                )
+                max_tokens = 2000  # Use default for invalid values
 
-    try:
-        with open(prompt_template_path) as f:
-            prompt_template = f.read()
-    except FileNotFoundError:
-        # Fallback to hardcoded prompt if template not found
-        prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
+            # Phase 6.1: Load prompt template for bias analysis
+            # Template instructs LLM to return precise character positions
+            prompt_template_path = (
+                Path(__file__).parent.parent
+                / "prompts"
+                / "templates"
+                / "bias_analysis_v1.txt"
+            )
+
+            try:
+                with open(prompt_template_path) as f:
+                    prompt_template = f.read()
+            except FileNotFoundError:
+                telemetry.log_warning(
+                    "prompt_template_not_found",
+                    path=str(prompt_template_path),
+                    using_fallback=True,
+                )
+                # Fallback to hardcoded prompt if template not found
+                prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
 
 Your task is to carefully analyze the provided text and identify ANY instances of bias across these categories:
 - **Gender bias**: Gendered language, stereotypes, exclusionary terms
@@ -197,28 +227,39 @@ Your task is to carefully analyze the provided text and identify ANY instances o
 
 Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [...], "overall_assessment": str, "risk_level": str}}"""
 
-    # Build prompt with text
-    prompt = prompt_template.format(text=text)
+            # Build prompt with text
+            prompt = prompt_template.format(text=text)
 
-    # Call LLM via registry with structured output
-    # For real LLMs, this will use .with_structured_output(BiasAnalysisOutput)
-    # For fake LLMs, this returns a string that we'll try to parse
-    bias_analysis = registry.llm.predict(
-        prompt=prompt, temperature=temperature, max_tokens=max_tokens
-    )
+            # Call LLM via registry with structured output
+            # For real LLMs, this will use .with_structured_output(BiasAnalysisOutput)
+            # For fake LLMs, this returns a string that we'll try to parse
+            with telemetry.timer("bias_text.llm_call", temperature=temperature):
+                bias_analysis = registry.llm.predict(
+                    prompt=prompt, temperature=temperature, max_tokens=max_tokens
+                )
 
-    # Convert structured output to JSON string if needed
-    # With .with_structured_output(), LLM returns Pydantic objects
-    from pydantic import BaseModel  # noqa: PLC0415
+            # Convert structured output to JSON string if needed
+            # With .with_structured_output(), LLM returns Pydantic objects
+            from pydantic import BaseModel  # noqa: PLC0415
 
-    if isinstance(bias_analysis, BaseModel):
-        # Structured output: convert to formatted JSON string
-        bias_analysis_str = bias_analysis.model_dump_json(indent=2)
-    else:
-        # Plain string output (fake tools or legacy)
-        bias_analysis_str = bias_analysis
+            if isinstance(bias_analysis, BaseModel):
+                # Structured output: convert to formatted JSON string
+                bias_analysis_str = bias_analysis.model_dump_json(indent=2)
+                telemetry.log_info("bias_analysis_structured", format="pydantic_json")
+            else:
+                # Plain string output (fake tools or legacy)
+                bias_analysis_str = bias_analysis
+                telemetry.log_info("bias_analysis_unstructured", format="string")
 
-    return {"bias_analysis": bias_analysis_str}
+            telemetry.log_info(
+                "bias_text_analyze_complete",
+                analysis_length=len(bias_analysis_str),
+            )
+            return {"bias_analysis": bias_analysis_str}
+
+        except Exception as e:
+            telemetry.log_error("bias_text_analyze_failed", error=e)
+            raise
 
 
 def summarize(state: BiasTextState) -> dict:
@@ -230,6 +271,8 @@ def summarize(state: BiasTextState) -> dict:
 
     Conditional execution: Only runs if text is long (>500 chars) or if
     explicitly requested in options.
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -248,30 +291,51 @@ def summarize(state: BiasTextState) -> dict:
     >>> "summary" in update
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
-
-    if state.bias_analysis is None:
-        return {"summary": None}
-
-    # Use summarizer tool to generate summary with error handling
-    max_length = state.options.get("summary_max_length", 200)
-
-    # Validate max_length parameter
-    if not isinstance(max_length, int) or max_length <= 0:
-        max_length = 200  # Use default for invalid values
-
-    try:
-        summary = registry.summarizer.summarize(
-            text=state.bias_analysis, max_length=max_length
+    with telemetry.timer("bias_text.summarize"):
+        telemetry.log_info(
+            "bias_text_summarize_start", run_id=state.run_id or "unknown"
         )
-    except Exception:
-        # TODO Phase 8: Log summarization failure with telemetry
-        # Fallback: None (summary is already optional in the workflow)
-        # If summarization fails, workflow continues without summary
-        summary = None
 
-    return {"summary": summary}
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
+
+            if state.bias_analysis is None:
+                telemetry.log_warning("summarize_skipped", reason="no_bias_analysis")
+                return {"summary": None}
+
+            # Use summarizer tool to generate summary with error handling
+            max_length = state.options.get("summary_max_length", 200)
+
+            # Validate max_length parameter
+            if not isinstance(max_length, int) or max_length <= 0:
+                telemetry.log_warning(
+                    "invalid_max_length",
+                    max_length=max_length,
+                    using_default=200,
+                )
+                max_length = 200  # Use default for invalid values
+
+            try:
+                with telemetry.timer("bias_text.summarizer_tool"):
+                    summary = registry.summarizer.summarize(
+                        text=state.bias_analysis, max_length=max_length
+                    )
+                telemetry.log_info(
+                    "bias_text_summarize_complete",
+                    summary_length=len(summary) if summary else 0,
+                )
+            except Exception as e:
+                telemetry.log_error("summarization_failed", error=e)
+                # Fallback: None (summary is already optional in the workflow)
+                # If summarization fails, workflow continues without summary
+                summary = None
+
+            return {"summary": summary}
+
+        except Exception as e:
+            telemetry.log_error("bias_text_summarize_failed", error=e)
+            raise
 
 
 def highlight(state: BiasTextState) -> dict:
@@ -287,6 +351,7 @@ def highlight(state: BiasTextState) -> dict:
 
     Phase 6.1: Extracts precise character positions from bias_analysis
                for accurate span highlighting.
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -305,35 +370,55 @@ def highlight(state: BiasTextState) -> dict:
     >>> "<html>" in update["highlighted_html"]
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
-
-    # Phase 6.1: Extract spans from bias analysis with character positions
-    spans: list[tuple[int, int, str]] = []
-
-    if state.bias_analysis:
-        # Extract (start_char, end_char, bias_type) tuples from analysis
-        spans = _extract_spans_from_analysis(
-            bias_analysis=state.bias_analysis,
-            original_text=state.text,
+    with telemetry.timer("bias_text.highlight"):
+        telemetry.log_info(
+            "bias_text_highlight_start", run_id=state.run_id or "unknown"
         )
 
-    # Get bias type colors from configuration
-    bias_types = settings.get_bias_type_colors()
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
 
-    # Use formatter tool to generate highlighted HTML with error handling
-    try:
-        highlighted_html = registry.formatter.highlight(
-            text=state.text, spans=spans, bias_types=bias_types
-        )
-    except Exception:
-        # TODO Phase 8: Log formatting failure with telemetry
-        # Fallback: Plain HTML with unformatted text
-        # Formatting is presentation layer - if it fails, provide plain text
-        # rather than killing the entire workflow
-        highlighted_html = f"<pre>{state.text}</pre>"
+            # Phase 6.1: Extract spans from bias analysis with character positions
+            spans: list[tuple[int, int, str]] = []
 
-    return {"highlighted_html": highlighted_html}
+            if state.bias_analysis:
+                # Extract (start_char, end_char, bias_type) tuples from analysis
+                with telemetry.timer("bias_text.extract_spans"):
+                    spans = _extract_spans_from_analysis(
+                        bias_analysis=state.bias_analysis,
+                        original_text=state.text,
+                    )
+                telemetry.log_info("spans_extracted", span_count=len(spans))
+            else:
+                telemetry.log_warning(
+                    "highlight_no_analysis", reason="no_bias_analysis"
+                )
+
+            # Get bias type colors from configuration
+            bias_types = settings.get_bias_type_colors()
+
+            # Use formatter tool to generate highlighted HTML with error handling
+            try:
+                with telemetry.timer("bias_text.formatter_tool"):
+                    highlighted_html = registry.formatter.highlight(
+                        text=state.text, spans=spans, bias_types=bias_types
+                    )
+                telemetry.log_info(
+                    "bias_text_highlight_complete", html_length=len(highlighted_html)
+                )
+            except Exception as e:
+                telemetry.log_error("highlighting_failed", error=e)
+                # Fallback: Plain HTML with unformatted text
+                # Formatting is presentation layer - if it fails, provide plain text
+                # rather than killing the entire workflow
+                highlighted_html = f"<pre>{state.text}</pre>"
+
+            return {"highlighted_html": highlighted_html}
+
+        except Exception as e:
+            telemetry.log_error("bias_text_highlight_failed", error=e)
+            raise
 
 
 # Note: Quality assessment removed from subgraph

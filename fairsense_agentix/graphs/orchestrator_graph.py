@@ -37,6 +37,7 @@ from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
 from fairsense_agentix.graphs.risk_graph import create_risk_graph
 from fairsense_agentix.graphs.state import EvaluationResult, OrchestratorState
 from fairsense_agentix.services.router import create_selection_plan
+from fairsense_agentix.services.telemetry import telemetry
 
 
 # ============================================================================
@@ -49,6 +50,8 @@ def request_plan(state: OrchestratorState) -> dict:
 
     Calls the external router module to generate a SelectionPlan that tells
     the orchestrator which workflow to run and how to configure it.
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -67,18 +70,34 @@ def request_plan(state: OrchestratorState) -> dict:
     >>> update["plan"].workflow_id
     'bias_text'
     """
-    try:
-        plan = create_selection_plan(
+    with telemetry.timer("orchestrator.request_plan", input_type=state.input_type):
+        telemetry.log_info(
+            "orchestrator_plan_start",
             input_type=state.input_type,
-            content=state.content,
-            options=state.options,
+            run_id=state.run_id or "unknown",
+            refinement_count=state.refinement_count,
         )
-        return {"plan": plan}
-    except Exception as e:
-        return {
-            "plan": None,
-            "errors": state.errors + [f"Router failed: {e!s}"],
-        }
+
+        try:
+            with telemetry.timer("orchestrator.router_service"):
+                plan = create_selection_plan(
+                    input_type=state.input_type,
+                    content=state.content,
+                    options=state.options,
+                )
+
+            telemetry.log_info(
+                "orchestrator_plan_complete",
+                workflow_id=plan.workflow_id,
+                confidence=plan.confidence,
+            )
+            return {"plan": plan}
+        except Exception as e:
+            telemetry.log_error("orchestrator_request_plan_failed", error=e)
+            return {
+                "plan": None,
+                "errors": state.errors + [f"Router failed: {e!s}"],
+            }
 
 
 def preflight_eval(state: OrchestratorState) -> dict:
@@ -86,6 +105,8 @@ def preflight_eval(state: OrchestratorState) -> dict:
 
     In Phase 2-6, this is a stub that always passes. In Phase 7+, this can
     check for invalid configurations, missing resources, etc.
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -104,28 +125,46 @@ def preflight_eval(state: OrchestratorState) -> dict:
     >>> update["preflight_eval"].passed
     True
     """
-    # Phase 2-6: Always pass (stub)
-    # Phase 7+: Add validation logic (check plan.confidence, resources, etc.)
-
-    if state.plan is None:
-        return {
-            "preflight_eval": EvaluationResult(
-                passed=False,
-                score=0.0,
-                issues=["No plan available"],
-                explanation="Router failed to create a plan",
-            )
-        }
-
-    # Stub: Always pass
-    return {
-        "preflight_eval": EvaluationResult(
-            passed=True,
-            score=1.0,
-            issues=[],
-            explanation=f"Plan validation passed for workflow '{state.plan.workflow_id}'",
+    with telemetry.timer("orchestrator.preflight_eval"):
+        telemetry.log_info(
+            "orchestrator_preflight_start",
+            run_id=state.run_id or "unknown",
+            has_plan=state.plan is not None,
         )
-    }
+
+        try:
+            # Phase 2-6: Always pass (stub)
+            # Phase 7+: Add validation logic (check plan.confidence, resources, etc.)
+
+            if state.plan is None:
+                telemetry.log_warning("preflight_eval_failed", reason="no_plan")
+                return {
+                    "preflight_eval": EvaluationResult(
+                        passed=False,
+                        score=0.0,
+                        issues=["No plan available"],
+                        explanation="Router failed to create a plan",
+                    )
+                }
+
+            # Stub: Always pass
+            telemetry.log_info(
+                "orchestrator_preflight_complete",
+                passed=True,
+                workflow_id=state.plan.workflow_id,
+            )
+            return {
+                "preflight_eval": EvaluationResult(
+                    passed=True,
+                    score=1.0,
+                    issues=[],
+                    explanation=f"Plan validation passed for workflow '{state.plan.workflow_id}'",
+                )
+            }
+
+        except Exception as e:
+            telemetry.log_error("orchestrator_preflight_eval_failed", error=e)
+            raise
 
 
 def execute_workflow(state: OrchestratorState) -> dict:
@@ -136,6 +175,7 @@ def execute_workflow(state: OrchestratorState) -> dict:
     Checkpoint 2.4: bias_text uses real BiasTextGraph
     Checkpoint 2.5: bias_image will use real BiasImageGraph
     Checkpoint 2.6: risk will use real RiskGraph
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -154,115 +194,134 @@ def execute_workflow(state: OrchestratorState) -> dict:
     >>> update["workflow_result"]["workflow_id"]
     'bias_text'
     """
-    if state.plan is None:
-        return {
-            "workflow_result": None,
-            "errors": state.errors + ["Cannot execute: no plan available"],
-        }
+    with telemetry.timer(
+        "orchestrator.execute_workflow",
+        workflow_id=state.plan.workflow_id if state.plan else "none",
+    ):
+        telemetry.log_info(
+            "orchestrator_execute_start",
+            run_id=state.run_id or "unknown",
+            workflow_id=state.plan.workflow_id if state.plan else None,
+        )
 
-    workflow_id = state.plan.workflow_id
-
-    try:
-        if workflow_id == "bias_text":
-            # Checkpoint 2.4: Real BiasTextGraph
-            text_graph = create_bias_text_graph()
-
-            # Extract text content
-            text = (
-                state.content
-                if isinstance(state.content, str)
-                else state.content.decode("utf-8", errors="ignore")
-            )
-
-            # Invoke subgraph with options from plan
-            subgraph_result = text_graph.invoke(
-                {
-                    "text": text,
-                    "options": state.options,
-                    "run_id": state.run_id,  # Propagate run_id for tracing
-                }
-            )
-
-            # Package result
-            # Note: summary is optional (conditional node in BiasTextGraph)
-            result = {
-                "workflow_id": "bias_text",
-                "bias_analysis": subgraph_result["bias_analysis"],
-                "summary": subgraph_result.get("summary"),  # Optional field
-                "highlighted_html": subgraph_result["highlighted_html"],
+        if state.plan is None:
+            telemetry.log_error("execute_workflow_failed", reason="no_plan")
+            return {
+                "workflow_result": None,
+                "errors": state.errors + ["Cannot execute: no plan available"],
             }
 
-        elif workflow_id == "bias_image":
-            # Checkpoint 2.5: Real BiasImageGraph
-            image_graph = create_bias_image_graph()
+        workflow_id = state.plan.workflow_id
 
-            # Extract image bytes
-            image_bytes = (
-                state.content
-                if isinstance(state.content, bytes)
-                else state.content.encode("utf-8")
-            )
+        try:
+            if workflow_id == "bias_text":
+                # Checkpoint 2.4: Real BiasTextGraph
+                with telemetry.timer("orchestrator.bias_text_subgraph"):
+                    text_graph = create_bias_text_graph()
 
-            # Invoke subgraph with options from plan
-            subgraph_result = image_graph.invoke(
-                {
-                    "image_bytes": image_bytes,
-                    "options": state.options,
-                    "run_id": state.run_id,  # Propagate run_id for tracing
+                    # Extract text content
+                    text = (
+                        state.content
+                        if isinstance(state.content, str)
+                        else state.content.decode("utf-8", errors="ignore")
+                    )
+
+                    # Invoke subgraph with options from plan
+                    subgraph_result = text_graph.invoke(
+                        {
+                            "text": text,
+                            "options": state.options,
+                            "run_id": state.run_id,  # Propagate run_id for tracing
+                        }
+                    )
+
+                # Package result
+                # Note: summary is optional (conditional node in BiasTextGraph)
+                result = {
+                    "workflow_id": "bias_text",
+                    "bias_analysis": subgraph_result["bias_analysis"],
+                    "summary": subgraph_result.get("summary"),  # Optional field
+                    "highlighted_html": subgraph_result["highlighted_html"],
                 }
-            )
 
-            # Package result
-            # Note: summary is optional (conditional node in BiasImageGraph)
-            result = {
-                "workflow_id": "bias_image",
-                "ocr_text": subgraph_result["ocr_text"],
-                "caption_text": subgraph_result["caption_text"],
-                "merged_text": subgraph_result["merged_text"],
-                "bias_analysis": subgraph_result["bias_analysis"],
-                "summary": subgraph_result.get("summary"),  # Optional field
-                "highlighted_html": subgraph_result["highlighted_html"],
-            }
-        elif workflow_id == "risk":
-            # Checkpoint 2.6: Real RiskGraph
-            risk_graph = create_risk_graph()
+            elif workflow_id == "bias_image":
+                # Checkpoint 2.5: Real BiasImageGraph
+                with telemetry.timer("orchestrator.bias_image_subgraph"):
+                    image_graph = create_bias_image_graph()
 
-            # Extract scenario text
-            scenario_text = (
-                state.content
-                if isinstance(state.content, str)
-                else state.content.decode("utf-8", errors="ignore")
-            )
+                    # Extract image bytes
+                    image_bytes = (
+                        state.content
+                        if isinstance(state.content, bytes)
+                        else state.content.encode("utf-8")
+                    )
 
-            # Invoke subgraph with options from plan
-            subgraph_result = risk_graph.invoke(
-                {
-                    "scenario_text": scenario_text,
-                    "options": state.options,
-                    "run_id": state.run_id,  # Propagate run_id for tracing
+                    # Invoke subgraph with options from plan
+                    subgraph_result = image_graph.invoke(
+                        {
+                            "image_bytes": image_bytes,
+                            "options": state.options,
+                            "run_id": state.run_id,  # Propagate run_id for tracing
+                        }
+                    )
+
+                # Package result
+                # Note: summary is optional (conditional node in BiasImageGraph)
+                result = {
+                    "workflow_id": "bias_image",
+                    "ocr_text": subgraph_result["ocr_text"],
+                    "caption_text": subgraph_result["caption_text"],
+                    "merged_text": subgraph_result["merged_text"],
+                    "bias_analysis": subgraph_result["bias_analysis"],
+                    "summary": subgraph_result.get("summary"),  # Optional field
+                    "highlighted_html": subgraph_result["highlighted_html"],
                 }
+            elif workflow_id == "risk":
+                # Checkpoint 2.6: Real RiskGraph
+                with telemetry.timer("orchestrator.risk_subgraph"):
+                    risk_graph = create_risk_graph()
+
+                    # Extract scenario text
+                    scenario_text = (
+                        state.content
+                        if isinstance(state.content, str)
+                        else state.content.decode("utf-8", errors="ignore")
+                    )
+
+                    # Invoke subgraph with options from plan
+                    subgraph_result = risk_graph.invoke(
+                        {
+                            "scenario_text": scenario_text,
+                            "options": state.options,
+                            "run_id": state.run_id,  # Propagate run_id for tracing
+                        }
+                    )
+
+                # Package result
+                result = {
+                    "workflow_id": "risk",
+                    "embedding": subgraph_result["embedding"],
+                    "risks": subgraph_result["risks"],
+                    "rmf_recommendations": subgraph_result["rmf_recommendations"],
+                    "joined_table": subgraph_result["joined_table"],
+                    "html_table": subgraph_result["html_table"],
+                    "csv_path": subgraph_result["csv_path"],
+                }
+            else:
+                telemetry.log_error("unknown_workflow_id", workflow_id=workflow_id)
+                raise ValueError(f"Unknown workflow_id: {workflow_id}")
+
+            telemetry.log_info("orchestrator_execute_complete", workflow_id=workflow_id)
+            return {"workflow_result": result}
+
+        except Exception as e:
+            telemetry.log_error(
+                "orchestrator_execute_workflow_failed", workflow_id=workflow_id, error=e
             )
-
-            # Package result
-            result = {
-                "workflow_id": "risk",
-                "embedding": subgraph_result["embedding"],
-                "risks": subgraph_result["risks"],
-                "rmf_recommendations": subgraph_result["rmf_recommendations"],
-                "joined_table": subgraph_result["joined_table"],
-                "html_table": subgraph_result["html_table"],
-                "csv_path": subgraph_result["csv_path"],
+            return {
+                "workflow_result": None,
+                "errors": state.errors + [f"Workflow execution failed: {e!s}"],
             }
-        else:
-            raise ValueError(f"Unknown workflow_id: {workflow_id}")
-
-        return {"workflow_result": result}
-
-    except Exception as e:
-        return {
-            "workflow_result": None,
-            "errors": state.errors + [f"Workflow execution failed: {e!s}"],
-        }
 
 
 def posthoc_eval(state: OrchestratorState) -> dict:
@@ -273,6 +332,7 @@ def posthoc_eval(state: OrchestratorState) -> dict:
 
     Phase 2-6: Stub that always passes with default score.
     Phase 7+: Real LLM-based quality assessment with refinement hints.
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -291,31 +351,47 @@ def posthoc_eval(state: OrchestratorState) -> dict:
     >>> update["posthoc_eval"].passed
     True
     """
-    # Phase 2-6: Always pass (stub)
-    # Phase 7+: Add LLM-based quality assessment:
-    #   - Evaluate completeness, accuracy, actionability
-    #   - Return refinement hints if quality is low
-    #   - Enable refinement loop via settings.enable_refinement
-
-    if state.workflow_result is None:
-        return {
-            "posthoc_eval": EvaluationResult(
-                passed=False,
-                score=0.0,
-                issues=["No workflow result to evaluate"],
-                explanation="Workflow execution failed",
-            )
-        }
-
-    # Stub: Always pass with default score
-    return {
-        "posthoc_eval": EvaluationResult(
-            passed=True,
-            score=0.85,  # Default acceptable quality
-            issues=[],
-            explanation="Phase 2-6 stub: Output accepted without evaluation",
+    with telemetry.timer("orchestrator.posthoc_eval"):
+        telemetry.log_info(
+            "orchestrator_posthoc_start",
+            run_id=state.run_id or "unknown",
+            has_result=state.workflow_result is not None,
         )
-    }
+
+        try:
+            # Phase 2-6: Always pass (stub)
+            # Phase 7+: Add LLM-based quality assessment:
+            #   - Evaluate completeness, accuracy, actionability
+            #   - Return refinement hints if quality is low
+            #   - Enable refinement loop via settings.enable_refinement
+
+            if state.workflow_result is None:
+                telemetry.log_warning(
+                    "posthoc_eval_failed", reason="no_workflow_result"
+                )
+                return {
+                    "posthoc_eval": EvaluationResult(
+                        passed=False,
+                        score=0.0,
+                        issues=["No workflow result to evaluate"],
+                        explanation="Workflow execution failed",
+                    )
+                }
+
+            # Stub: Always pass with default score
+            telemetry.log_info("orchestrator_posthoc_complete", passed=True, score=0.85)
+            return {
+                "posthoc_eval": EvaluationResult(
+                    passed=True,
+                    score=0.85,  # Default acceptable quality
+                    issues=[],
+                    explanation="Phase 2-6 stub: Output accepted without evaluation",
+                )
+            }
+
+        except Exception as e:
+            telemetry.log_error("orchestrator_posthoc_eval_failed", error=e)
+            raise
 
 
 def decide_action(state: OrchestratorState) -> dict:
@@ -330,6 +406,8 @@ def decide_action(state: OrchestratorState) -> dict:
             - posthoc_eval.passed → accept
             - posthoc_eval.passed=False AND refinement_count < max → refine
             - posthoc_eval.passed=False AND refinement_count >= max → fail
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -348,37 +426,72 @@ def decide_action(state: OrchestratorState) -> dict:
     >>> update["decision"]
     'accept'
     """
-    if state.posthoc_eval is None:
-        return {
-            "decision": "fail",
-            "errors": state.errors + ["Cannot decide: no posthoc evaluation"],
-        }
+    with telemetry.timer("orchestrator.decide_action"):
+        telemetry.log_info(
+            "orchestrator_decide_start",
+            run_id=state.run_id or "unknown",
+            refinement_count=state.refinement_count,
+            refinement_enabled=settings.enable_refinement,
+        )
 
-    # Phase 2-6: Refinement disabled, always accept
-    if not settings.enable_refinement:
-        return {"decision": "accept"}
+        try:
+            if state.posthoc_eval is None:
+                telemetry.log_error("decide_action_failed", reason="no_posthoc_eval")
+                return {
+                    "decision": "fail",
+                    "errors": state.errors + ["Cannot decide: no posthoc evaluation"],
+                }
 
-    # Phase 7+: Refinement enabled, make decision based on evaluation
-    if state.posthoc_eval.passed:
-        return {"decision": "accept"}
+            # Phase 2-6: Refinement disabled, always accept
+            if not settings.enable_refinement:
+                telemetry.log_info(
+                    "orchestrator_decide_complete",
+                    decision="accept",
+                    reason="refinement_disabled",
+                )
+                return {"decision": "accept"}
 
-    # Evaluation failed - check if we can refine
-    if state.refinement_count < settings.max_refinement_iterations:
-        return {
-            "decision": "refine",
-            "warnings": state.warnings
-            + [
-                f"Refinement {state.refinement_count + 1}/{settings.max_refinement_iterations} triggered"
-            ],
-        }
-    return {
-        "decision": "fail",
-        "errors": state.errors
-        + [
-            f"Max refinements ({settings.max_refinement_iterations}) reached, "
-            "output still does not meet quality threshold"
-        ],
-    }
+            # Phase 7+: Refinement enabled, make decision based on evaluation
+            if state.posthoc_eval.passed:
+                telemetry.log_info(
+                    "orchestrator_decide_complete",
+                    decision="accept",
+                    reason="eval_passed",
+                )
+                return {"decision": "accept"}
+
+            # Evaluation failed - check if we can refine
+            if state.refinement_count < settings.max_refinement_iterations:
+                telemetry.log_info(
+                    "orchestrator_decide_complete",
+                    decision="refine",
+                    refinement_count=state.refinement_count + 1,
+                )
+                return {
+                    "decision": "refine",
+                    "warnings": state.warnings
+                    + [
+                        f"Refinement {state.refinement_count + 1}/{settings.max_refinement_iterations} triggered"
+                    ],
+                }
+
+            telemetry.log_warning(
+                "orchestrator_decide_complete",
+                decision="fail",
+                reason="max_refinements_reached",
+            )
+            return {
+                "decision": "fail",
+                "errors": state.errors
+                + [
+                    f"Max refinements ({settings.max_refinement_iterations}) reached, "
+                    "output still does not meet quality threshold"
+                ],
+            }
+
+        except Exception as e:
+            telemetry.log_error("orchestrator_decide_action_failed", error=e)
+            raise
 
 
 def apply_refinement(state: OrchestratorState) -> dict:
@@ -390,6 +503,7 @@ def apply_refinement(state: OrchestratorState) -> dict:
 
     Phase 2-6: This node is unreachable (refinement disabled).
     Phase 7+: Applies refinement hints and increments refinement_count.
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -413,24 +527,47 @@ def apply_refinement(state: OrchestratorState) -> dict:
     >>> update["refinement_count"]
     1
     """
-    if state.posthoc_eval is None or state.plan is None:
-        return {"errors": state.errors + ["Cannot refine: missing evaluation or plan"]}
+    with telemetry.timer("orchestrator.apply_refinement"):
+        telemetry.log_info(
+            "orchestrator_refine_start",
+            run_id=state.run_id or "unknown",
+            current_refinement_count=state.refinement_count,
+        )
 
-    # Extract refinement hints
-    hints = state.posthoc_eval.refinement_hints
+        try:
+            if state.posthoc_eval is None or state.plan is None:
+                telemetry.log_error(
+                    "apply_refinement_failed", reason="missing_eval_or_plan"
+                )
+                return {
+                    "errors": state.errors
+                    + ["Cannot refine: missing evaluation or plan"]
+                }
 
-    # Update plan with hints (merge into tool_preferences)
-    updated_preferences = {**state.plan.tool_preferences, **hints}
+            # Extract refinement hints
+            hints = state.posthoc_eval.refinement_hints
 
-    # Create updated plan (Pydantic models are immutable)
-    updated_plan = state.plan.model_copy(
-        update={"tool_preferences": updated_preferences}
-    )
+            # Update plan with hints (merge into tool_preferences)
+            updated_preferences = {**state.plan.tool_preferences, **hints}
 
-    return {
-        "plan": updated_plan,
-        "refinement_count": state.refinement_count + 1,
-    }
+            # Create updated plan (Pydantic models are immutable)
+            updated_plan = state.plan.model_copy(
+                update={"tool_preferences": updated_preferences}
+            )
+
+            telemetry.log_info(
+                "orchestrator_refine_complete",
+                new_refinement_count=state.refinement_count + 1,
+                hints_applied=len(hints),
+            )
+            return {
+                "plan": updated_plan,
+                "refinement_count": state.refinement_count + 1,
+            }
+
+        except Exception as e:
+            telemetry.log_error("orchestrator_apply_refinement_failed", error=e)
+            raise
 
 
 def finalize(state: OrchestratorState) -> dict:
@@ -438,6 +575,8 @@ def finalize(state: OrchestratorState) -> dict:
 
     Constructs the final result dictionary with all relevant outputs,
     metadata, and observability information.
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -456,36 +595,58 @@ def finalize(state: OrchestratorState) -> dict:
     >>> update["final_result"]["status"]
     'success'
     """
-    # Determine status based on decision
-    if state.decision == "accept":
-        status = "success"
-    elif state.decision == "fail":
-        status = "failed"
-    else:
-        # Should not reach here, but handle gracefully
-        status = "unknown"
+    with telemetry.timer("orchestrator.finalize"):
+        telemetry.log_info(
+            "orchestrator_finalize_start",
+            run_id=state.run_id or "unknown",
+            decision=state.decision,
+            refinement_count=state.refinement_count,
+        )
 
-    # Package final result
-    final_result = {
-        "status": status,
-        "workflow_id": state.plan.workflow_id if state.plan else None,
-        "output": state.workflow_result,
-        "refinement_count": state.refinement_count,
-        "errors": state.errors,
-        "warnings": state.warnings,
-        "run_id": state.run_id,
-        # Metadata for observability
-        "metadata": {
-            "plan_reasoning": state.plan.reasoning if state.plan else None,
-            "plan_confidence": state.plan.confidence if state.plan else None,
-            "preflight_score": (
-                state.preflight_eval.score if state.preflight_eval else None
-            ),
-            "posthoc_score": state.posthoc_eval.score if state.posthoc_eval else None,
-        },
-    }
+        try:
+            # Determine status based on decision
+            if state.decision == "accept":
+                status = "success"
+            elif state.decision == "fail":
+                status = "failed"
+            else:
+                # Should not reach here, but handle gracefully
+                status = "unknown"
 
-    return {"final_result": final_result}
+            # Package final result
+            final_result = {
+                "status": status,
+                "workflow_id": state.plan.workflow_id if state.plan else None,
+                "output": state.workflow_result,
+                "refinement_count": state.refinement_count,
+                "errors": state.errors,
+                "warnings": state.warnings,
+                "run_id": state.run_id,
+                # Metadata for observability
+                "metadata": {
+                    "plan_reasoning": state.plan.reasoning if state.plan else None,
+                    "plan_confidence": state.plan.confidence if state.plan else None,
+                    "preflight_score": (
+                        state.preflight_eval.score if state.preflight_eval else None
+                    ),
+                    "posthoc_score": state.posthoc_eval.score
+                    if state.posthoc_eval
+                    else None,
+                },
+            }
+
+            telemetry.log_info(
+                "orchestrator_finalize_complete",
+                status=status,
+                workflow_id=final_result["workflow_id"],
+                error_count=len(state.errors),
+                warning_count=len(state.warnings),
+            )
+            return {"final_result": final_result}
+
+        except Exception as e:
+            telemetry.log_error("orchestrator_finalize_failed", error=e)
+            raise
 
 
 # ============================================================================

@@ -27,6 +27,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasImageState
+from fairsense_agentix.services.telemetry import telemetry
 from fairsense_agentix.tools import get_tool_registry
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
@@ -163,6 +164,7 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
 
     Phase 4+: Uses tool registry to get OCR implementation (fake or real).
     Phase 5+: Real OCR integration with confidence thresholds.
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -181,36 +183,60 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
     >>> "ocr_text" in update
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
-
-    # Extract options
-    language = state.options.get("ocr_language", "eng")
-    confidence_threshold = state.options.get("ocr_confidence", 0.5)
-
-    # Validate parameters
-    if not isinstance(confidence_threshold, (int, float)) or not (
-        0.0 <= confidence_threshold <= 1.0
-    ):
-        confidence_threshold = 0.5  # Use default for invalid values
-    if not isinstance(language, str) or not language:
-        language = "eng"  # Use default for invalid values
-
-    # Use OCR tool from registry with error handling
-    try:
-        ocr_text = registry.ocr.extract(
-            image_bytes=state.image_bytes,
-            language=language,
-            confidence_threshold=confidence_threshold,
+    with telemetry.timer("bias_image.extract_ocr", image_size=len(state.image_bytes)):
+        telemetry.log_info(
+            "bias_image_ocr_start",
+            image_size=len(state.image_bytes),
+            run_id=state.run_id or "unknown",
         )
-    except Exception:
-        # TODO Phase 8: Log OCR failure with telemetry
-        # Fallback: Empty string allows workflow to continue with caption-only
-        # OCR can fail for many reasons (bad image format, corrupted data, etc.)
-        # Since caption runs in parallel, we can continue with single data source
-        ocr_text = ""
 
-    return {"ocr_text": ocr_text}
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
+
+            # Extract options
+            language = state.options.get("ocr_language", "eng")
+            confidence_threshold = state.options.get("ocr_confidence", 0.5)
+
+            # Validate parameters
+            if not isinstance(confidence_threshold, (int, float)) or not (
+                0.0 <= confidence_threshold <= 1.0
+            ):
+                telemetry.log_warning(
+                    "invalid_ocr_confidence",
+                    confidence_threshold=confidence_threshold,
+                    using_default=0.5,
+                )
+                confidence_threshold = 0.5  # Use default for invalid values
+            if not isinstance(language, str) or not language:
+                telemetry.log_warning(
+                    "invalid_ocr_language",
+                    language=language,
+                    using_default="eng",
+                )
+                language = "eng"  # Use default for invalid values
+
+            # Use OCR tool from registry with error handling
+            try:
+                with telemetry.timer("bias_image.ocr_tool", language=language):
+                    ocr_text = registry.ocr.extract(
+                        image_bytes=state.image_bytes,
+                        language=language,
+                        confidence_threshold=confidence_threshold,
+                    )
+                telemetry.log_info("ocr_extraction_complete", text_length=len(ocr_text))
+            except Exception as e:
+                telemetry.log_error("ocr_extraction_failed", error=e)
+                # Fallback: Empty string allows workflow to continue with caption-only
+                # OCR can fail for many reasons (bad image format, corrupted data)
+                # Since caption runs in parallel, continue with single data source
+                ocr_text = ""
+
+            return {"ocr_text": ocr_text}
+
+        except Exception as e:
+            telemetry.log_error("bias_image_extract_ocr_failed", error=e)
+            raise
 
 
 def generate_caption(state: BiasImageState) -> dict[str, str]:
@@ -224,6 +250,7 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
 
     Phase 4+: Uses tool registry to get caption implementation (fake or real).
     Phase 5+: Real captioning using BLIP-2 or similar models.
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -242,29 +269,52 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
     >>> "caption_text" in update
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
-
-    # Extract options
-    max_length = state.options.get("caption_max_length", 100)
-
-    # Validate max_length parameter
-    if not isinstance(max_length, int) or max_length <= 0:
-        max_length = 100  # Use default for invalid values
-
-    # Use caption tool from registry with error handling
-    try:
-        caption_text = registry.caption.caption(
-            image_bytes=state.image_bytes, max_length=max_length
+    with telemetry.timer(
+        "bias_image.generate_caption", image_size=len(state.image_bytes)
+    ):
+        telemetry.log_info(
+            "bias_image_caption_start",
+            image_size=len(state.image_bytes),
+            run_id=state.run_id or "unknown",
         )
-    except Exception:
-        # TODO Phase 8: Log caption failure with telemetry
-        # Fallback: Empty string allows workflow to continue with OCR-only
-        # Caption models can fail (model loading error, OOM, invalid image, etc.)
-        # Since OCR runs in parallel, we can continue with single data source
-        caption_text = ""
 
-    return {"caption_text": caption_text}
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
+
+            # Extract options
+            max_length = state.options.get("caption_max_length", 100)
+
+            # Validate max_length parameter
+            if not isinstance(max_length, int) or max_length <= 0:
+                telemetry.log_warning(
+                    "invalid_caption_max_length",
+                    max_length=max_length,
+                    using_default=100,
+                )
+                max_length = 100  # Use default for invalid values
+
+            # Use caption tool from registry with error handling
+            try:
+                with telemetry.timer("bias_image.caption_tool", max_length=max_length):
+                    caption_text = registry.caption.caption(
+                        image_bytes=state.image_bytes, max_length=max_length
+                    )
+                telemetry.log_info(
+                    "caption_generation_complete", text_length=len(caption_text)
+                )
+            except Exception as e:
+                telemetry.log_error("caption_generation_failed", error=e)
+                # Fallback: Empty string allows workflow to continue with OCR-only
+                # Caption models can fail (model loading error, OOM, invalid image)
+                # Since OCR runs in parallel, continue with single data source
+                caption_text = ""
+
+            return {"caption_text": caption_text}
+
+        except Exception as e:
+            telemetry.log_error("bias_image_generate_caption_failed", error=e)
+            raise
 
 
 def merge_text(state: BiasImageState) -> dict[str, str]:
@@ -273,6 +323,8 @@ def merge_text(state: BiasImageState) -> dict[str, str]:
     Merges the extracted OCR text and generated caption into a single
     text input for bias analysis. Performs deduplication to avoid
     redundancy.
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -295,28 +347,51 @@ def merge_text(state: BiasImageState) -> dict[str, str]:
     >>> "merged_text" in update
     True
     """
-    # Phase 2: Simple concatenation
-    # Phase 5+: Smart merging with deduplication and formatting
-
-    ocr_text = state.ocr_text or ""
-    caption_text = state.caption_text or ""
-
-    # If BOTH extraction methods failed, we can't continue
-    if not ocr_text and not caption_text:
-        # TODO Phase 8: Log dual-extraction failure with telemetry
-        # Raise error that orchestrator will catch and handle
-        raise ValueError(
-            "Both OCR and caption extraction failed - no text available for analysis"
+    with telemetry.timer("bias_image.merge_text"):
+        telemetry.log_info(
+            "bias_image_merge_start",
+            run_id=state.run_id or "unknown",
+            has_ocr=bool(state.ocr_text),
+            has_caption=bool(state.caption_text),
         )
 
-    # Simple merge with section headers
-    merged = f"""**OCR Extracted Text:**
+        try:
+            # Phase 2: Simple concatenation
+            # Phase 5+: Smart merging with deduplication and formatting
+
+            ocr_text = state.ocr_text or ""
+            caption_text = state.caption_text or ""
+
+            # If BOTH extraction methods failed, we can't continue
+            if not ocr_text and not caption_text:
+                telemetry.log_error(
+                    "dual_extraction_failed",
+                    ocr_empty=not ocr_text,
+                    caption_empty=not caption_text,
+                )
+                # Raise error that orchestrator will catch and handle
+                raise ValueError(
+                    "Both OCR and caption extraction failed - no text available for analysis"
+                )
+
+            # Simple merge with section headers
+            merged = f"""**OCR Extracted Text:**
 {ocr_text}
 
 **Image Caption:**
 {caption_text}"""
 
-    return {"merged_text": merged}
+            telemetry.log_info(
+                "bias_image_merge_complete",
+                merged_length=len(merged),
+                ocr_length=len(ocr_text),
+                caption_length=len(caption_text),
+            )
+            return {"merged_text": merged}
+
+        except Exception as e:
+            telemetry.log_error("bias_image_merge_text_failed", error=e)
+            raise
 
 
 def analyze_bias(state: BiasImageState) -> dict[str, str]:
@@ -332,6 +407,7 @@ def analyze_bias(state: BiasImageState) -> dict[str, str]:
     Phase 5+: Real LLM call with bias detection prompt.
     Phase 6.2: Uses bias_analysis_v1.txt prompt template with structured output
                and evidence_source tracking (caption vs ocr_text).
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -350,32 +426,62 @@ def analyze_bias(state: BiasImageState) -> dict[str, str]:
     >>> "bias_analysis" in update
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
+    with telemetry.timer(
+        "bias_image.analyze_bias", text_length=len(state.merged_text or "")
+    ):
+        telemetry.log_info(
+            "bias_image_analyze_start",
+            text_length=len(state.merged_text or ""),
+            run_id=state.run_id or "unknown",
+        )
 
-    # Extract options
-    merged_text = state.merged_text or ""
-    temperature = state.options.get("temperature", 0.3)
-    max_tokens = state.options.get("llm_max_tokens", 2000)
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
 
-    # Validate parameters
-    if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 1.0):
-        temperature = 0.3  # Use default for invalid values
-    if not isinstance(max_tokens, int) or max_tokens <= 0:
-        max_tokens = 2000  # Use default for invalid values
+            # Extract options
+            merged_text = state.merged_text or ""
+            temperature = state.options.get("temperature", 0.3)
+            max_tokens = state.options.get("llm_max_tokens", 2000)
 
-    # Phase 6.2: Load prompt template for bias analysis
-    # Template instructs LLM to return precise character positions
-    prompt_template_path = (
-        Path(__file__).parent.parent / "prompts" / "templates" / "bias_analysis_v1.txt"
-    )
+            # Validate parameters
+            if not isinstance(temperature, (int, float)) or not (
+                0.0 <= temperature <= 1.0
+            ):
+                telemetry.log_warning(
+                    "invalid_temperature",
+                    temperature=temperature,
+                    using_default=0.3,
+                )
+                temperature = 0.3  # Use default for invalid values
+            if not isinstance(max_tokens, int) or max_tokens <= 0:
+                telemetry.log_warning(
+                    "invalid_max_tokens",
+                    max_tokens=max_tokens,
+                    using_default=2000,
+                )
+                max_tokens = 2000  # Use default for invalid values
 
-    try:
-        with open(prompt_template_path) as f:
-            prompt_template = f.read()
-    except FileNotFoundError:
-        # Fallback to hardcoded prompt if template not found
-        prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
+            # Phase 6.2: Load prompt template for bias analysis
+            # Template instructs LLM to return precise character positions
+            prompt_template_path = (
+                Path(__file__).parent.parent
+                / "prompts"
+                / "templates"
+                / "bias_analysis_v1.txt"
+            )
+
+            try:
+                with open(prompt_template_path) as f:
+                    prompt_template = f.read()
+            except FileNotFoundError:
+                telemetry.log_warning(
+                    "prompt_template_not_found",
+                    path=str(prompt_template_path),
+                    using_fallback=True,
+                )
+                # Fallback to hardcoded prompt if template not found
+                prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
 
 Your task is to carefully analyze the provided text and identify ANY instances of bias across these categories:
 - **Gender bias**: Gendered language, stereotypes, exclusionary terms
@@ -391,26 +497,37 @@ Your task is to carefully analyze the provided text and identify ANY instances o
 
 Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [...], "overall_assessment": str, "risk_level": str}}"""
 
-    # Build prompt with merged text
-    prompt = prompt_template.format(text=merged_text)
+            # Build prompt with merged text
+            prompt = prompt_template.format(text=merged_text)
 
-    # Call LLM via registry with structured output
-    bias_analysis = registry.llm.predict(
-        prompt=prompt, temperature=temperature, max_tokens=max_tokens
-    )
+            # Call LLM via registry with structured output
+            with telemetry.timer("bias_image.llm_call", temperature=temperature):
+                bias_analysis = registry.llm.predict(
+                    prompt=prompt, temperature=temperature, max_tokens=max_tokens
+                )
 
-    # Convert structured output to JSON string if needed
-    # With .with_structured_output(), LLM returns Pydantic objects
-    from pydantic import BaseModel  # noqa: PLC0415
+            # Convert structured output to JSON string if needed
+            # With .with_structured_output(), LLM returns Pydantic objects
+            from pydantic import BaseModel  # noqa: PLC0415
 
-    if isinstance(bias_analysis, BaseModel):
-        # Structured output: convert to formatted JSON string
-        bias_analysis_str = bias_analysis.model_dump_json(indent=2)
-    else:
-        # Plain string output (fake tools or legacy)
-        bias_analysis_str = bias_analysis
+            if isinstance(bias_analysis, BaseModel):
+                # Structured output: convert to formatted JSON string
+                bias_analysis_str = bias_analysis.model_dump_json(indent=2)
+                telemetry.log_info("bias_analysis_structured", format="pydantic_json")
+            else:
+                # Plain string output (fake tools or legacy)
+                bias_analysis_str = bias_analysis
+                telemetry.log_info("bias_analysis_unstructured", format="string")
 
-    return {"bias_analysis": bias_analysis_str}
+            telemetry.log_info(
+                "bias_image_analyze_complete",
+                analysis_length=len(bias_analysis_str),
+            )
+            return {"bias_analysis": bias_analysis_str}
+
+        except Exception as e:
+            telemetry.log_error("bias_image_analyze_bias_failed", error=e)
+            raise
 
 
 def summarize(state: BiasImageState) -> dict[str, str | None]:
@@ -418,6 +535,8 @@ def summarize(state: BiasImageState) -> dict[str, str | None]:
 
     Creates a short executive summary of the bias analysis. Useful for
     quick insights or when merged text is long.
+
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -436,30 +555,51 @@ def summarize(state: BiasImageState) -> dict[str, str | None]:
     >>> "summary" in update
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
-
-    if state.bias_analysis is None:
-        return {"summary": None}
-
-    # Use summarizer tool to generate summary with error handling
-    max_length = state.options.get("summary_max_length", 200)
-
-    # Validate max_length parameter
-    if not isinstance(max_length, int) or max_length <= 0:
-        max_length = 200  # Use default for invalid values
-
-    try:
-        summary = registry.summarizer.summarize(
-            text=state.bias_analysis, max_length=max_length
+    with telemetry.timer("bias_image.summarize"):
+        telemetry.log_info(
+            "bias_image_summarize_start", run_id=state.run_id or "unknown"
         )
-    except Exception:
-        # TODO Phase 8: Log summarization failure with telemetry
-        # Fallback: None (summary is already optional in the workflow)
-        # If summarization fails, workflow continues without summary
-        summary = None
 
-    return {"summary": summary}
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
+
+            if state.bias_analysis is None:
+                telemetry.log_warning("summarize_skipped", reason="no_bias_analysis")
+                return {"summary": None}
+
+            # Use summarizer tool to generate summary with error handling
+            max_length = state.options.get("summary_max_length", 200)
+
+            # Validate max_length parameter
+            if not isinstance(max_length, int) or max_length <= 0:
+                telemetry.log_warning(
+                    "invalid_max_length",
+                    max_length=max_length,
+                    using_default=200,
+                )
+                max_length = 200  # Use default for invalid values
+
+            try:
+                with telemetry.timer("bias_image.summarizer_tool"):
+                    summary = registry.summarizer.summarize(
+                        text=state.bias_analysis, max_length=max_length
+                    )
+                telemetry.log_info(
+                    "bias_image_summarize_complete",
+                    summary_length=len(summary) if summary else 0,
+                )
+            except Exception as e:
+                telemetry.log_error("summarization_failed", error=e)
+                # Fallback: None (summary is already optional in the workflow)
+                # If summarization fails, workflow continues without summary
+                summary = None
+
+            return {"summary": summary}
+
+        except Exception as e:
+            telemetry.log_error("bias_image_summarize_failed", error=e)
+            raise
 
 
 def highlight(state: BiasImageState) -> dict[str, str]:
@@ -471,6 +611,7 @@ def highlight(state: BiasImageState) -> dict[str, str]:
 
     Phase 6.2: Extracts precise character positions from bias_analysis
                with evidence source tracking (caption vs OCR).
+    Phase 6.4: Added telemetry for observability and performance tracking.
 
     Parameters
     ----------
@@ -491,40 +632,60 @@ def highlight(state: BiasImageState) -> dict[str, str]:
     >>> "<html>" in update["highlighted_html"]
     True
     """
-    # Get tools from registry
-    registry = get_tool_registry()
-
-    merged_text = state.merged_text or ""
-
-    # Phase 6.2: Extract spans from bias analysis with evidence source tracking
-    spans: list[tuple[int, int, str]] = []
-
-    if state.bias_analysis:
-        # Extract (start_char, end_char, bias_type) tuples from analysis
-        # This handles mapping from OCR/caption positions to merged_text
-        spans = _extract_spans_from_analysis(
-            bias_analysis=state.bias_analysis,
-            merged_text=merged_text,
-            ocr_text=state.ocr_text or "",
-            caption_text=state.caption_text or "",
+    with telemetry.timer("bias_image.highlight"):
+        telemetry.log_info(
+            "bias_image_highlight_start", run_id=state.run_id or "unknown"
         )
 
-    # Get bias type colors from configuration
-    bias_types = settings.get_bias_type_colors()
+        try:
+            # Get tools from registry
+            registry = get_tool_registry()
 
-    # Use formatter tool to generate highlighted HTML with error handling
-    try:
-        highlighted_html = registry.formatter.highlight(
-            text=merged_text, spans=spans, bias_types=bias_types
-        )
-    except Exception:
-        # TODO Phase 8: Log formatting failure with telemetry
-        # Fallback: Plain HTML with unformatted text
-        # Formatting is presentation layer - if it fails, provide plain text
-        # rather than killing the entire workflow
-        highlighted_html = f"<pre>{merged_text}</pre>"
+            merged_text = state.merged_text or ""
 
-    return {"highlighted_html": highlighted_html}
+            # Phase 6.2: Extract spans from bias analysis with evidence source tracking
+            spans: list[tuple[int, int, str]] = []
+
+            if state.bias_analysis:
+                # Extract (start_char, end_char, bias_type) tuples from analysis
+                # This handles mapping from OCR/caption positions to merged_text
+                with telemetry.timer("bias_image.extract_spans"):
+                    spans = _extract_spans_from_analysis(
+                        bias_analysis=state.bias_analysis,
+                        merged_text=merged_text,
+                        ocr_text=state.ocr_text or "",
+                        caption_text=state.caption_text or "",
+                    )
+                telemetry.log_info("spans_extracted", span_count=len(spans))
+            else:
+                telemetry.log_warning(
+                    "highlight_no_analysis", reason="no_bias_analysis"
+                )
+
+            # Get bias type colors from configuration
+            bias_types = settings.get_bias_type_colors()
+
+            # Use formatter tool to generate highlighted HTML with error handling
+            try:
+                with telemetry.timer("bias_image.formatter_tool"):
+                    highlighted_html = registry.formatter.highlight(
+                        text=merged_text, spans=spans, bias_types=bias_types
+                    )
+                telemetry.log_info(
+                    "bias_image_highlight_complete", html_length=len(highlighted_html)
+                )
+            except Exception as e:
+                telemetry.log_error("highlighting_failed", error=e)
+                # Fallback: Plain HTML with unformatted text
+                # Formatting is presentation layer - if it fails, provide plain text
+                # rather than killing the entire workflow
+                highlighted_html = f"<pre>{merged_text}</pre>"
+
+            return {"highlighted_html": highlighted_html}
+
+        except Exception as e:
+            telemetry.log_error("bias_image_highlight_failed", error=e)
+            raise
 
 
 # Note: Quality assessment removed from subgraph
