@@ -1,8 +1,11 @@
 #!/usr/bin/env python
-"""Build FAISS indexes from CSV datasets.
+"""Build FAISS indexes from CSV datasets using LangChain.
+
+Phase 6.0: Updated to use LangChain's FAISS vector store for simpler index
+building and better integration with retriever patterns.
 
 This script reads AI risks and RMF datasets from CSV files, generates embeddings,
-and builds FAISS indexes for semantic search.
+and builds FAISS indexes for semantic search using LangChain's .from_documents() API.
 
 Usage
 -----
@@ -13,24 +16,25 @@ Requirements
 - data/raw/ai_risks.csv
 - data/raw/ai_rmf.csv
 
-Outputs
+Outputs (LangChain format)
 -------
-- data/indexes/risks.faiss
+- data/indexes/risks/index.faiss
+- data/indexes/risks/index.pkl
 - data/indexes/risks_meta.json
-- data/indexes/rmf.faiss
+- data/indexes/rmf/index.faiss
+- data/indexes/rmf/index.pkl
 - data/indexes/rmf_meta.json
 """
 
-import json
 from pathlib import Path
 from typing import TypedDict
 
-import faiss
-import numpy as np
 import pandas as pd
+from langchain_core.documents import Document
 
 from fairsense_agentix.configs import settings
-from fairsense_agentix.tools.embeddings import SentenceTransformerEmbedder
+from fairsense_agentix.tools.embeddings import LangChainEmbedder
+from fairsense_agentix.tools.faiss_index import LangChainFAISSTool
 
 
 class DatasetConfig(TypedDict):
@@ -45,9 +49,12 @@ def build_index(
     csv_path: Path,
     text_column: str,
     output_name: str,
-    embedder: SentenceTransformerEmbedder,
+    embedder: LangChainEmbedder,
 ) -> None:
-    """Build FAISS index from CSV dataset.
+    """Build FAISS index from CSV dataset using LangChain.
+
+    Phase 6.0: Simplified using LangChain's .from_documents() API instead of
+    manual numpy/faiss operations.
 
     Parameters
     ----------
@@ -56,9 +63,9 @@ def build_index(
     text_column : str
         Name of column containing text to embed
     output_name : str
-        Base name for output files (e.g., "risks" → "risks.faiss")
-    embedder : SentenceTransformerEmbedder
-        Embedder for generating vectors
+        Base name for output files (e.g., "risks" → "risks/")
+    embedder : LangChainEmbedder
+        LangChain embedder for generating vectors
     """
     print(f"\n{'=' * 60}")
     print(f"Building index: {output_name}")
@@ -76,61 +83,76 @@ def build_index(
             f"Available columns: {df.columns.tolist()}"
         )
 
-    # Generate embeddings
-    print(f"Generating embeddings for column '{text_column}'...")
-    texts = df[text_column].tolist()
-    vectors = []
+    # Convert DataFrame to LangChain Documents
+    print(f"Creating LangChain documents from column '{text_column}'...")
+    documents = []
+    metadata_list = []
 
-    for i, text in enumerate(texts):
-        if (i + 1) % 10 == 0:
-            print(f"  Progress: {i + 1}/{len(texts)}")
+    for _, row in df.iterrows():
+        # Extract text content
+        text_content = str(row[text_column])
 
-        vector = embedder.encode(str(text))
-        vectors.append(vector)
+        # Prepare metadata (all columns except text column)
+        metadata = row.to_dict()
+        metadata_list.append(metadata)
 
-    vectors_array = np.array(vectors, dtype="float32")
-    print(f"  Generated {len(vectors)} vectors of dimension {vectors_array.shape[1]}")
+        # Create LangChain Document
+        doc = Document(
+            page_content=text_content,
+            metadata=metadata,
+        )
+        documents.append(doc)
 
-    # Build FAISS index (IndexFlatIP for inner product / cosine similarity)
-    print("Building FAISS index...")
-    dimension = embedder.dimension
-    index = faiss.IndexFlatIP(dimension)
-    index.add(vectors_array)
-    print(f"  Index built with {index.ntotal} vectors")
+    print(f"  Created {len(documents)} documents")
 
-    # Save index
-    index_path = Path("data/indexes") / f"{output_name}.faiss"
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(index, str(index_path))
-    print(f"  Saved index to {index_path}")
+    # Build FAISS index using LangChain (much simpler!)
+    print("Building LangChain FAISS index...")
+    print(f"  (Embedding {len(documents)} documents...)")
 
-    # Prepare metadata (all columns as JSON-serializable dicts)
-    print("Preparing metadata...")
-    metadata = df.to_dict(orient="records")
+    faiss_tool = LangChainFAISSTool.from_documents(
+        documents=documents,
+        embeddings=embedder.embeddings,  # Access underlying LangChain embeddings
+        metadata=metadata_list,
+    )
 
-    # Save metadata
-    metadata_path = Path("data/indexes") / f"{output_name}_meta.json"
-    with open(metadata_path, "w") as f:
-        json.dump(metadata, f, indent=2)
-    print(f"  Saved metadata to {metadata_path}")
+    print(f"  ✓ Index built with {len(documents)} vectors")
+
+    # Save index (LangChain format: folder with index.faiss + index.pkl)
+    output_dir = Path("data/indexes")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Saving index to {output_dir}/{output_name}/...")
+    faiss_tool.save_local(
+        folder_path=output_dir,
+        index_name=output_name,
+    )
+
+    print(f"  ✓ Saved index to {output_dir}/{output_name}/index.faiss")
+    print(f"  ✓ Saved docstore to {output_dir}/{output_name}/index.pkl")
+    print(f"  ✓ Saved metadata to {output_dir}/{output_name}_meta.json")
 
     print(f"✓ Successfully built {output_name} index!")
 
 
 def main() -> None:
-    """Build FAISS indexes for all configured datasets."""
+    """Build FAISS indexes for all configured datasets using LangChain.
+
+    Phase 6.0: Updated to use LangChainEmbedder and LangChainFAISSTool for
+    simpler index building with .from_documents() API.
+    """
     print("\n" + "=" * 60)
-    print("FAISS Index Builder")
+    print("FAISS Index Builder (LangChain)")
     print("=" * 60)
 
-    # Initialize embedder
-    print(f"\nInitializing embedder: {settings.embedding_model}")
-    embedder = SentenceTransformerEmbedder(
+    # Initialize LangChain embedder
+    print(f"\nInitializing LangChain embedder: {settings.embedding_model}")
+    embedder = LangChainEmbedder(
         model_name=settings.embedding_model,
         dimension=settings.embedding_dimension,
+        normalize=True,  # For cosine similarity
     )
-    print(f"  Model loaded: {embedder.model_name}")
-    print(f"  Dimension: {embedder.dimension}")
+    print(f"  ✓ Model loaded: {embedder.model_name}")
+    print(f"  ✓ Dimension: {embedder.dimension}")
 
     # Define datasets to process
     datasets: list[DatasetConfig] = [
@@ -165,12 +187,15 @@ def main() -> None:
     print("\n" + "=" * 60)
     print("✓ All indexes built successfully!")
     print("=" * 60)
-    print("\nBuilt indexes:")
-    print("  - data/indexes/risks.faiss")
+    print("\nBuilt indexes (LangChain format):")
+    print("  - data/indexes/risks/index.faiss")
+    print("  - data/indexes/risks/index.pkl")
     print("  - data/indexes/risks_meta.json")
-    print("  - data/indexes/rmf.faiss")
+    print("  - data/indexes/rmf/index.faiss")
+    print("  - data/indexes/rmf/index.pkl")
     print("  - data/indexes/rmf_meta.json")
-    print("\nYou can now use these indexes with FAISSIndexTool!")
+    print("\nYou can now use these indexes with LangChainFAISSTool!")
+    print("Retriever pattern available: faiss_tool.as_retriever()")
 
 
 if __name__ == "__main__":

@@ -31,6 +31,8 @@ dependencies = [
     # Phase 5.3: Image Captioning
     "transformers>=4.35.0",  # Hugging Face transformers (BLIP/BLIP-2 models)
     "accelerate>=0.20.0",  # Fast model loading and inference
+    # Phase 6.0: LangChain FAISS Refactor
+    "langchain-huggingface>=0.1.0",  # LangChain HuggingFace embeddings integration
 ]
 
 [build-system]
