@@ -37,6 +37,7 @@ on:
 
 jobs:
   unit-tests:
+    if: false # disable this job until disk issue fixed
     runs-on: ubuntu-latest
 
     steps:
