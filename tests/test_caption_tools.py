@@ -146,6 +146,10 @@ class TestRegistryCaptionResolution:
         Why: Test only needs to verify caption selection logic
         What This Enables: Fast test without real tool dependencies
         """
+        from fairsense_agentix.tools.caption.blip2_tool import (  # noqa: PLC0415
+            BLIP2CaptionTool,
+        )
+
         settings = Settings(
             caption_model="auto",
             ocr_tool="fake",
@@ -154,16 +158,21 @@ class TestRegistryCaptionResolution:
 
         # Mock torch to simulate GPU availability
         # Design Choice: Allow test to pass even if BLIP-2 loading fails
-        # Why: Test environment may not have GPU, BLIP-2 will fall back
+        # Why: Test environment may not have GPU, BLIP-2 will fall back to fake
         # What This Enables: Test verifies selection logic without requiring GPU
         with (
             patch("torch.cuda.is_available", return_value=True),
             contextlib.suppress(ToolConfigurationError),
         ):
-            # Should select blip2 for GPU
-            # In test environment without GPU, BLIP-2 fails to load
-            # This is expected and test still passes (verified selection logic)
-            _registry = create_tool_registry(settings)
+            # Should attempt to select blip2 for GPU
+            # In test environment without GPU, may fall back to fake
+            registry = create_tool_registry(settings)
+
+            # Verify: Either BLIP-2 loaded successfully, or fell back to fake
+            # Both outcomes are acceptable in test environment
+            assert isinstance(registry.caption, (BLIP2CaptionTool, FakeCaptionTool)), (
+                "auto mode with GPU should select BLIP-2 or fallback to fake"
+            )
 
     def test_force_cpu_overrides_gpu_detection(self):
         """Verify force_cpu flag forces CPU model even with GPU.
@@ -172,6 +181,10 @@ class TestRegistryCaptionResolution:
         Why: Test only needs to verify CPU override logic
         What This Enables: Fast test without real tool dependencies
         """
+        from fairsense_agentix.tools.caption.blip_tool import (  # noqa: PLC0415
+            BLIPCaptionTool,
+        )
+
         settings = Settings(
             caption_model="auto",
             caption_force_cpu=True,
@@ -180,9 +193,26 @@ class TestRegistryCaptionResolution:
         )
 
         # force_cpu should bypass GPU detection entirely
-        with patch("torch.cuda.is_available", return_value=True):
-            # Should select BLIP (not BLIP-2) even though GPU available
-            _registry = create_tool_registry(settings)
+        with (
+            patch("torch.cuda.is_available", return_value=True),
+            contextlib.suppress(ToolConfigurationError),
+        ):
+            # Should select BLIP (CPU model) even though GPU available
+            # May fall back to fake if BLIP not available in test environment
+            registry = create_tool_registry(settings)
+
+            # Verify: force_cpu selects CPU model (BLIP) or fallback (fake)
+            # Should NOT select BLIP-2 (GPU model)
+            from fairsense_agentix.tools.caption.blip2_tool import (  # noqa: PLC0415
+                BLIP2CaptionTool,
+            )
+
+            assert not isinstance(registry.caption, BLIP2CaptionTool), (
+                "force_cpu should NOT select BLIP-2 (GPU model)"
+            )
+            assert isinstance(registry.caption, (BLIPCaptionTool, FakeCaptionTool)), (
+                "force_cpu should select BLIP (CPU) or fallback to fake"
+            )
 
 
 class TestBLIPCaptionTool:
@@ -339,20 +369,49 @@ class TestBLIP2CaptionTool:
         call_args = mock_model_cls.call_args
         assert call_args[1]["torch_dtype"] == torch.float16
 
+    @patch("transformers.Blip2Processor.from_pretrained")
+    @patch("transformers.Blip2ForConditionalGeneration.from_pretrained")
     @patch("torch.cuda.is_available")
-    def test_warns_when_gpu_unavailable(self, mock_cuda):
-        """Verify warning when GPU requested but unavailable."""
+    def test_warns_when_gpu_unavailable(
+        self, mock_cuda, mock_model_cls, mock_processor_cls, caplog
+    ):
+        """Verify warning logged when GPU requested but unavailable.
+
+        Design Choice: Use preload=True to trigger _load_model() during init
+        Why: The warning is logged in _load_model(), which only runs with preload=True
+        What This Tests: Warning properly alerts users about degraded performance
+        """
+        import logging  # noqa: PLC0415
+
         from fairsense_agentix.tools.caption.blip2_tool import (  # noqa: PLC0415
             BLIP2CaptionTool,
         )
 
         mock_cuda.return_value = False
+        mock_model = Mock()
+        mock_model.to.return_value = mock_model
+        mock_model.eval.return_value = mock_model
+        mock_model_cls.return_value = mock_model
+        mock_processor_cls.return_value = Mock()
 
-        # Should warn about slow CPU performance
-        _captioner = BLIP2CaptionTool(use_gpu=True, preload=False)
+        # Use preload=True to trigger model loading (and warning) during init
+        with caplog.at_level(logging.WARNING):
+            captioner = BLIP2CaptionTool(use_gpu=True, preload=True)
 
-        # Device should fallback to CPU
-        # (In real code, logger.warning called)
+        # Verify warning was logged about GPU unavailability
+        assert any(
+            "GPU requested but unavailable" in record.message
+            or (
+                "unavailable" in record.message.lower()
+                and "cpu" in record.message.lower()
+            )
+            for record in caplog.records
+        ), (
+            f"Should log warning about GPU unavailability. Got: {[r.message for r in caplog.records]}"
+        )
+
+        # Verify fallback to CPU occurred
+        assert captioner._device == "cpu", "Device should fallback to CPU"
 
 
 class TestCaptionCaching:
