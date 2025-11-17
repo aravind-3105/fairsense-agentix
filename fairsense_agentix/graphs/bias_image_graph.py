@@ -394,7 +394,7 @@ def merge_text(state: BiasImageState) -> dict[str, str]:
             raise
 
 
-def analyze_bias(state: BiasImageState) -> dict[str, str]:
+def analyze_bias(state: BiasImageState) -> dict:
     """LLM node: Analyze merged text for various forms of bias.
 
     Uses LLM to identify and explain bias in the merged OCR + caption text
@@ -502,28 +502,39 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
 
             # Call LLM via registry with structured output
             with telemetry.timer("bias_image.llm_call", temperature=temperature):
-                bias_analysis = registry.llm.predict(
+                llm_output = registry.llm.predict(
                     prompt=prompt, temperature=temperature, max_tokens=max_tokens
                 )
 
-            # Convert structured output to JSON string if needed
-            # With .with_structured_output(), LLM returns Pydantic objects
-            from pydantic import BaseModel  # noqa: PLC0415
-
-            if isinstance(bias_analysis, BaseModel):
-                # Structured output: convert to formatted JSON string
-                bias_analysis_str = bias_analysis.model_dump_json(indent=2)
-                telemetry.log_info("bias_analysis_structured", format="pydantic_json")
+            # Parse LLM output into BiasAnalysisOutput (same as bias_text_graph)
+            if isinstance(llm_output, BiasAnalysisOutput):
+                # Already structured (real LLM)
+                bias_analysis = llm_output
+                telemetry.log_info("bias_analysis_structured", format="pydantic_object")
+            elif isinstance(llm_output, str):
+                # JSON string (fake LLM) - parse into structured object
+                try:
+                    bias_analysis = BiasAnalysisOutput.model_validate_json(llm_output)
+                    telemetry.log_info(
+                        "bias_analysis_parsed", format="json_to_pydantic"
+                    )
+                except Exception as e:
+                    telemetry.log_error("bias_analysis_parse_failed", error=e)
+                    raise ValueError(
+                        f"Failed to parse LLM output into BiasAnalysisOutput: {e}"
+                    ) from e
             else:
-                # Plain string output (fake tools or legacy)
-                bias_analysis_str = bias_analysis
-                telemetry.log_info("bias_analysis_unstructured", format="string")
+                raise TypeError(
+                    f"Unexpected LLM output type: {type(llm_output)}. "
+                    "Expected BiasAnalysisOutput or JSON string."
+                )
 
             telemetry.log_info(
                 "bias_image_analyze_complete",
-                analysis_length=len(bias_analysis_str),
+                bias_detected=bias_analysis.bias_detected,
+                instance_count=len(bias_analysis.bias_instances),
             )
-            return {"bias_analysis": bias_analysis_str}
+            return {"bias_analysis": bias_analysis}
 
         except Exception as e:
             telemetry.log_error("bias_image_analyze_bias_failed", error=e)
@@ -581,9 +592,15 @@ def summarize(state: BiasImageState) -> dict[str, str | None]:
                 max_length = 200  # Use default for invalid values
 
             try:
+                # Convert BiasAnalysisOutput to string for summarization
+                if isinstance(state.bias_analysis, BiasAnalysisOutput):
+                    text_to_summarize = state.bias_analysis.overall_assessment
+                else:
+                    text_to_summarize = str(state.bias_analysis)
+
                 with telemetry.timer("bias_image.summarizer_tool"):
                     summary = registry.summarizer.summarize(
-                        text=state.bias_analysis, max_length=max_length
+                        text=text_to_summarize, max_length=max_length
                     )
                 telemetry.log_info(
                     "bias_image_summarize_complete",

@@ -31,6 +31,6 @@ data/indexes/README.md
 .cache/langchain.db
 run_demo.sh
 test_demo.py
-
+demo_simple.py
 *.csv
 *.json

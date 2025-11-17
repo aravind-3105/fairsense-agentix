@@ -10,6 +10,7 @@ Comprehensive integration tests will be added after Phase 2 completion.
 """
 
 from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
 
 class TestBiasImageGraphBasic:
@@ -45,8 +46,8 @@ class TestBiasImageGraphBasic:
         assert "Image Caption" in result["merged_text"]
 
         # Verify analysis completed
-        assert result["bias_analysis"] is not None
-        assert "Bias Analysis Report" in result["bias_analysis"]
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
 
         # Verify summary and HTML
         assert result["summary"] is not None
@@ -78,7 +79,7 @@ class TestBiasImageGraphBasic:
 
         # Verify complete workflow
         assert result["merged_text"] is not None
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["summary"] is not None
         assert result["highlighted_html"] is not None
 
@@ -114,6 +115,6 @@ class TestBiasImageGraphBasic:
         )
 
         # Verify execution completed with options
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["options"]["ocr_tool"] == "tesseract"
         assert result["options"]["caption_model"] == "blip2"

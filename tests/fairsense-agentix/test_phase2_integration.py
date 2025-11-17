@@ -17,6 +17,7 @@ verifying the full integration:
 import pytest
 
 from fairsense_agentix.graphs.orchestrator_graph import create_orchestrator_graph
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
 
 @pytest.mark.integration_test
@@ -69,7 +70,9 @@ class TestPhase2Integration:
         assert result["workflow_result"] is not None
         assert result["workflow_result"]["workflow_id"] == "bias_text"
         assert result["workflow_result"]["bias_analysis"] is not None
-        assert "Bias Analysis Report" in result["workflow_result"]["bias_analysis"]
+        assert isinstance(
+            result["workflow_result"]["bias_analysis"], BiasAnalysisOutput
+        )
         assert result["workflow_result"]["summary"] is not None
         assert result["workflow_result"]["highlighted_html"] is not None
         assert "<html>" in result["workflow_result"]["highlighted_html"]
@@ -142,7 +145,9 @@ class TestPhase2Integration:
 
         # Verify bias analysis on merged text
         assert result["workflow_result"]["bias_analysis"] is not None
-        assert "Bias Analysis Report" in result["workflow_result"]["bias_analysis"]
+        assert isinstance(
+            result["workflow_result"]["bias_analysis"], BiasAnalysisOutput
+        )
         assert result["workflow_result"]["summary"] is not None
         assert result["workflow_result"]["highlighted_html"] is not None
 

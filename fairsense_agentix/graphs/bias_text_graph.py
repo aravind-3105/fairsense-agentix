@@ -84,18 +84,12 @@ def _extract_spans_from_analysis(
     >>> _extract_spans_from_analysis(analysis, "salesman needed")
     [(0, 8, 'gender')]
     """
-    # Parse analysis if string
-    if isinstance(bias_analysis, str):
-        try:
-            # Try parsing as JSON into BiasAnalysisOutput
-            analysis = BiasAnalysisOutput.model_validate_json(bias_analysis)
-        except Exception:
-            # Failed to parse - return empty spans
-            # This handles fake LLM outputs or malformed JSON
-            return []
-    else:
-        # Already a Pydantic object
-        analysis = bias_analysis
+    # bias_analysis should always be BiasAnalysisOutput now (not string)
+    if not isinstance(bias_analysis, BiasAnalysisOutput):
+        # This shouldn't happen with the new design
+        return []
+
+    analysis = bias_analysis
 
     # Extract spans with validation
     spans: list[tuple[int, int, str]] = []
@@ -231,31 +225,53 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
             prompt = prompt_template.format(text=text)
 
             # Call LLM via registry with structured output
-            # For real LLMs, this will use .with_structured_output(BiasAnalysisOutput)
-            # For fake LLMs, this returns a string that we'll try to parse
+            # Real LLMs use .with_structured_output() and return BiasAnalysisOutput
+            # Fake LLM now returns JSON string that we parse into BiasAnalysisOutput
             with telemetry.timer("bias_text.llm_call", temperature=temperature):
-                bias_analysis = registry.llm.predict(
+                llm_output = registry.llm.predict(
                     prompt=prompt, temperature=temperature, max_tokens=max_tokens
                 )
 
-            # Convert structured output to JSON string if needed
-            # With .with_structured_output(), LLM returns Pydantic objects
-            from pydantic import BaseModel  # noqa: PLC0415
+            # Parse LLM output into BiasAnalysisOutput
+            # Real LLM: already BiasAnalysisOutput object
+            # Fake LLM: JSON string that needs parsing
+            from fairsense_agentix.tools.llm.output_schemas import (  # noqa: PLC0415
+                BiasAnalysisOutput,
+            )
 
-            if isinstance(bias_analysis, BaseModel):
-                # Structured output: convert to formatted JSON string
-                bias_analysis_str = bias_analysis.model_dump_json(indent=2)
-                telemetry.log_info("bias_analysis_structured", format="pydantic_json")
+            if isinstance(llm_output, BiasAnalysisOutput):
+                # Already structured (real LLM with .with_structured_output())
+                bias_analysis = llm_output
+                telemetry.log_info("bias_analysis_structured", format="pydantic_object")
+            elif isinstance(llm_output, str):
+                # JSON string (fake LLM) - parse into structured object
+                try:
+                    bias_analysis = BiasAnalysisOutput.model_validate_json(llm_output)
+                    telemetry.log_info(
+                        "bias_analysis_parsed", format="json_to_pydantic"
+                    )
+                except Exception as e:
+                    telemetry.log_error(
+                        "bias_analysis_parse_failed",
+                        error=e,
+                        output_preview=llm_output[:100],
+                    )
+                    raise ValueError(
+                        f"Failed to parse LLM output into BiasAnalysisOutput: {e}"
+                    ) from e
             else:
-                # Plain string output (fake tools or legacy)
-                bias_analysis_str = bias_analysis
-                telemetry.log_info("bias_analysis_unstructured", format="string")
+                # Unexpected type
+                raise TypeError(
+                    f"Unexpected LLM output type: {type(llm_output)}. "
+                    "Expected BiasAnalysisOutput or JSON string."
+                )
 
             telemetry.log_info(
                 "bias_text_analyze_complete",
-                analysis_length=len(bias_analysis_str),
+                bias_detected=bias_analysis.bias_detected,
+                instance_count=len(bias_analysis.bias_instances),
             )
-            return {"bias_analysis": bias_analysis_str}
+            return {"bias_analysis": bias_analysis}
 
         except Exception as e:
             telemetry.log_error("bias_text_analyze_failed", error=e)
@@ -317,9 +333,17 @@ def summarize(state: BiasTextState) -> dict:
                 max_length = 200  # Use default for invalid values
 
             try:
+                # Convert BiasAnalysisOutput to string for summarization
+                if isinstance(state.bias_analysis, BiasAnalysisOutput):
+                    # Use overall_assessment as summary source
+                    text_to_summarize = state.bias_analysis.overall_assessment
+                else:
+                    # Fallback (shouldn't happen)
+                    text_to_summarize = str(state.bias_analysis)
+
                 with telemetry.timer("bias_text.summarizer_tool"):
                     summary = registry.summarizer.summarize(
-                        text=state.bias_analysis, max_length=max_length
+                        text=text_to_summarize, max_length=max_length
                     )
                 telemetry.log_info(
                     "bias_text_summarize_complete",

@@ -12,10 +12,10 @@ Phase 6.1: Added golden output tests with text fixtures for comprehensive
 Comprehensive integration tests will be added after Phase 2 completion.
 """
 
-import json
 from pathlib import Path
 
 from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
 
 class TestBiasTextGraphBasic:
@@ -42,9 +42,9 @@ class TestBiasTextGraphBasic:
         )
 
         # Verify required outputs
-        assert result["bias_analysis"] is not None
-        assert len(result["bias_analysis"]) > 0
-        assert "Bias Analysis Report" in result["bias_analysis"]
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
 
         # Summary should NOT be generated for short text (< 500 chars)
         # Conditional routing skips summarize node
@@ -70,7 +70,7 @@ class TestBiasTextGraphBasic:
         )
 
         # Verify execution completed
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["summary"] is not None
         assert result["highlighted_html"] is not None
 
@@ -89,7 +89,7 @@ class TestBiasTextGraphBasic:
         )
 
         # Verify execution completed with options
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["options"]["temperature"] == 0.5
 
         # Verify enable_summary=True triggers summarization even for short text
@@ -125,26 +125,13 @@ class TestBiasTextGraphGoldenOutputs:
         result = graph.invoke({"text": text, "options": {}})
 
         # Verify bias analysis exists
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
 
-        # Try parsing as JSON (for real LLM with structured output)
-        try:
-            analysis = json.loads(result["bias_analysis"])
-
-            # Structural assertions (flexible, no exact matching)
-            assert isinstance(analysis, dict)
-            assert (
-                "bias_detected" in analysis
-                or "Bias Analysis" in result["bias_analysis"]
-            )
-
-            # If structured output available, check structure
-            if "bias_detected" in analysis:
-                assert isinstance(analysis.get("bias_instances", []), list)
-
-        except json.JSONDecodeError:
-            # Fake LLM returns unstructured text - just verify non-empty
-            assert len(result["bias_analysis"]) > 0
+        # Verify bias analysis is structured object (now always structured)
+        analysis = result["bias_analysis"]
+        assert hasattr(analysis, "bias_detected")
+        assert hasattr(analysis, "bias_instances")
+        assert isinstance(analysis.bias_instances, list)
 
         # HTML highlighting always generated
         assert result["highlighted_html"] is not None
@@ -165,16 +152,13 @@ class TestBiasTextGraphGoldenOutputs:
         result = graph.invoke({"text": text, "options": {}})
 
         # Verify execution completed
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["highlighted_html"] is not None
 
-        # Try parsing as JSON
-        try:
-            analysis = json.loads(result["bias_analysis"])
-            assert isinstance(analysis, dict)
-        except json.JSONDecodeError:
-            # Fake LLM - just verify non-empty
-            assert len(result["bias_analysis"]) > 0
+        # Verify bias analysis is structured object (now always structured)
+        analysis = result["bias_analysis"]
+        assert hasattr(analysis, "bias_detected")
+        assert hasattr(analysis, "bias_instances")
 
         # HTML contains original text
         assert "Marketing Manager" in result["highlighted_html"]
@@ -190,7 +174,7 @@ class TestBiasTextGraphGoldenOutputs:
         result = graph.invoke({"text": text, "options": {}})
 
         # Verify execution completed
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["highlighted_html"] is not None
 
         # HTML contains fixture text
@@ -208,7 +192,7 @@ class TestBiasTextGraphGoldenOutputs:
         result = graph.invoke({"text": text, "options": {}})
 
         # Verify execution completed
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["highlighted_html"] is not None
 
         # HTML contains fixture text
@@ -225,7 +209,7 @@ class TestBiasTextGraphGoldenOutputs:
         result = graph.invoke({"text": text, "options": {}})
 
         # Verify execution completed
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["highlighted_html"] is not None
 
         # HTML contains fixture text
@@ -244,23 +228,16 @@ class TestBiasTextGraphGoldenOutputs:
         result = graph.invoke({"text": text, "options": {}})
 
         # Verify execution completed
-        assert result["bias_analysis"] is not None
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert result["highlighted_html"] is not None
 
-        # Try parsing as JSON
-        try:
-            analysis = json.loads(result["bias_analysis"])
-
-            # If structured output, verify multiple instances can be detected
-            if "bias_instances" in analysis:
-                instances = analysis["bias_instances"]
-                assert isinstance(instances, list)
-                # Multiple bias fixture should ideally detect multiple issues
-                # But we use flexible assertion (>= 0) since fake LLM may vary
-
-        except json.JSONDecodeError:
-            # Fake LLM - just verify non-empty
-            assert len(result["bias_analysis"]) > 0
+        # Verify bias analysis is structured object (now always structured)
+        analysis = result["bias_analysis"]
+        assert hasattr(analysis, "bias_detected")
+        assert hasattr(analysis, "bias_instances")
+        assert isinstance(analysis.bias_instances, list)
+        # Multiple bias fixture should ideally detect multiple issues
+        # But we use flexible assertion (>= 0) since fake LLM may vary
 
         # HTML contains fixture text
         assert "Senior Developer" in result["highlighted_html"]

@@ -23,10 +23,16 @@ Examples
     >>> state = OrchestratorState(input_type="text", content="Sample text", plan=plan)
 """
 
-from typing import Any, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    pass
 
 
 class SelectionPlan(BaseModel):
@@ -303,9 +309,9 @@ class BiasTextState(BaseModel):
         description="Configuration options for workflow",
     )
 
-    bias_analysis: str | None = Field(
+    bias_analysis: Any = Field(
         default=None,
-        description="Detailed bias analysis from LLM",
+        description="Structured bias analysis from LLM (BiasAnalysisOutput object)",
     )
 
     summary: str | None = Field(
@@ -384,9 +390,9 @@ class BiasImageState(BaseModel):
     )
 
     # Analysis (same as BiasTextState after merge)
-    bias_analysis: str | None = Field(
+    bias_analysis: Any = Field(
         default=None,
-        description="Detailed bias analysis from LLM",
+        description="Structured bias analysis from LLM (BiasAnalysisOutput object)",
     )
 
     summary: str | None = Field(
