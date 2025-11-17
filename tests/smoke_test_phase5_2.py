@@ -307,15 +307,23 @@ class TestRegistryConfiguration:
         assert isinstance(registry.llm, FakeLLMTool)
 
     def test_provider_validation(self):
-        """Test invalid provider raises clear error."""
-        settings = Settings(llm_provider="invalid_provider")
+        """Test invalid provider raises clear error from Pydantic validation.
 
+        This validates:
+        - Settings validates llm_provider against allowed Literal values
+        - Error message is clear and mentions validation issue
+        """
+        # Pydantic should reject invalid provider at Settings creation
         with pytest.raises(Exception) as exc_info:
-            get_tool_registry(settings)
+            Settings(llm_provider="invalid_provider")
 
-        # Error should mention valid options
+        # Error should mention validation issue
         error_msg = str(exc_info.value).lower()
-        assert "unknown" in error_msg or "invalid" in error_msg
+        assert (
+            "validation" in error_msg
+            or "literal" in error_msg
+            or "invalid" in error_msg
+        )
 
 
 @pytest.mark.integration_test
