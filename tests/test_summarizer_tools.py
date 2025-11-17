@@ -19,6 +19,9 @@ from fairsense_agentix.tools.registry import reset_tool_registry
 from fairsense_agentix.tools.summarizer import LLMSummarizer
 
 
+pytestmark = pytest.mark.unit
+
+
 # ============================================================================
 # Protocol Compliance Tests
 # ============================================================================
@@ -134,6 +137,7 @@ class TestRegistryResolution:
 
         assert isinstance(registry.summarizer, FakeSummarizerTool)
 
+    @pytest.mark.requires_api
     def test_openai_provider_returns_llm_summarizer(self):
         """Test registry returns LLMSummarizer for OpenAI provider."""
         from fairsense_agentix.tools.registry import (  # noqa: PLC0415
@@ -149,6 +153,7 @@ class TestRegistryResolution:
 
         assert isinstance(registry.summarizer, LLMSummarizer)
 
+    @pytest.mark.requires_api
     def test_anthropic_provider_returns_llm_summarizer(self):
         """Test registry returns LLMSummarizer for Anthropic provider."""
         from fairsense_agentix.tools.registry import (  # noqa: PLC0415

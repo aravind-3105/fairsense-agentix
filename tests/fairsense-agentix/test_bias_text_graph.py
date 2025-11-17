@@ -14,10 +14,13 @@ Comprehensive integration tests will be added after Phase 2 completion.
 
 from pathlib import Path
 
+import pytest
+
 from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
 
+@pytest.mark.integration
 class TestBiasTextGraphBasic:
     """Basic smoke tests for BiasTextGraph."""
 
@@ -98,6 +101,7 @@ class TestBiasTextGraphBasic:
         assert len(result["summary"]) > 0
 
 
+@pytest.mark.integration
 class TestBiasTextGraphGoldenOutputs:
     """Golden output tests for BiasTextGraph with text fixtures.
 

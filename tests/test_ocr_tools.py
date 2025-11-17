@@ -29,6 +29,9 @@ from fairsense_agentix.tools.interfaces import OCRTool
 from fairsense_agentix.tools.registry import create_tool_registry, reset_tool_registry
 
 
+pytestmark = pytest.mark.unit
+
+
 class TestOCRProtocolCompliance:
     """Test that OCR tools satisfy the OCRTool protocol.
 
@@ -122,6 +125,7 @@ class TestRegistryOCRResolution:
 
         assert isinstance(registry.ocr, FakeOCRTool)
 
+    @pytest.mark.requires_models
     def test_auto_mode_selects_based_on_gpu(self):
         """Verify auto mode detects GPU and selects appropriate tool.
 
@@ -142,6 +146,7 @@ class TestRegistryOCRResolution:
             # If PaddleOCR available, should use it on GPU
             # In test environment, falls back to fake since PaddleOCR has import issues
 
+    @pytest.mark.requires_models
     def test_force_cpu_overrides_gpu_detection(self):
         """Verify force_cpu flag forces CPU even with GPU available.
 

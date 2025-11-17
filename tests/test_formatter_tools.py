@@ -12,6 +12,9 @@ from fairsense_agentix.tools.formatter import HTMLFormatter
 from fairsense_agentix.tools.interfaces import FormatterTool
 
 
+pytestmark = pytest.mark.unit
+
+
 # ============================================================================
 # Protocol Compliance Tests
 # ============================================================================

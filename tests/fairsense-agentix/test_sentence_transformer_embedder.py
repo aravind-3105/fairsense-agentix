@@ -8,6 +8,7 @@ from fairsense_agentix.tools.exceptions import EmbeddingError
 from fairsense_agentix.tools.interfaces import EmbedderTool
 
 
+@pytest.mark.requires_models
 class TestSentenceTransformerEmbedderConstruction:
     """Test embedder initialization."""
 
@@ -35,6 +36,7 @@ class TestSentenceTransformerEmbedderConstruction:
         assert "got 384" in str(exc_info.value)
 
 
+@pytest.mark.requires_models
 class TestProtocolSatisfaction:
     """Test that embedder satisfies EmbedderTool protocol."""
 
@@ -68,6 +70,7 @@ class TestProtocolSatisfaction:
         assert embedder.dimension == 384
 
 
+@pytest.mark.requires_models
 class TestEncoding:
     """Test text encoding functionality."""
 
@@ -141,6 +144,7 @@ class TestEncoding:
         assert norm > 0  # But not zero
 
 
+@pytest.mark.requires_models
 class TestErrorHandling:
     """Test error handling in embedder."""
 
@@ -167,6 +171,7 @@ class TestErrorHandling:
         assert "empty text" in str(exc_info.value).lower()
 
 
+@pytest.mark.requires_models
 class TestSemanticSimilarity:
     """Test that embeddings capture semantic meaning."""
 

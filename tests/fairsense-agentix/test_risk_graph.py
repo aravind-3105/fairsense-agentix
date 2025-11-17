@@ -15,9 +15,12 @@ Comprehensive integration tests will be added after Phase 2 completion.
 import csv
 from pathlib import Path
 
+import pytest
+
 from fairsense_agentix.graphs.risk_graph import create_risk_graph
 
 
+@pytest.mark.integration
 class TestRiskGraphBasic:
     """Basic smoke tests for RiskGraph."""
 
@@ -135,6 +138,7 @@ class TestRiskGraphBasic:
         assert result["options"]["embedding_model"] == "custom-model"
 
 
+@pytest.mark.integration
 class TestRiskGraphDeterministicFixtures:
     """Deterministic fixture tests for RiskGraph.
 
@@ -253,6 +257,7 @@ class TestRiskGraphDeterministicFixtures:
         assert len(result["joined_table"]) == 15
 
 
+@pytest.mark.integration
 class TestRiskGraphGoldenOutputs:
     """Golden output tests for RiskGraph HTML and CSV formats.
 

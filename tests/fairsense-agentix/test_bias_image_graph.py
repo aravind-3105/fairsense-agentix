@@ -9,10 +9,13 @@ These tests verify:
 Comprehensive integration tests will be added after Phase 2 completion.
 """
 
+import pytest
+
 from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
 
+@pytest.mark.integration
 class TestBiasImageGraphBasic:
     """Basic smoke tests for BiasImageGraph."""
 

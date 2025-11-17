@@ -20,6 +20,7 @@ from fairsense_agentix.graphs.risk_graph import create_risk_graph
 # ============================================================================
 
 
+@pytest.mark.stress
 class TestBiasTextGraphStress:
     """Stress tests for BiasTextGraph with extreme inputs."""
 
@@ -144,6 +145,7 @@ class TestBiasTextGraphStress:
 # ============================================================================
 
 
+@pytest.mark.stress
 class TestBiasImageGraphStress:
     """Stress tests for BiasImageGraph with extreme inputs."""
 
@@ -205,6 +207,7 @@ class TestBiasImageGraphStress:
 # ============================================================================
 
 
+@pytest.mark.stress
 class TestRiskGraphStress:
     """Stress tests for RiskGraph with extreme inputs."""
 
@@ -338,6 +341,7 @@ class TestRiskGraphStress:
 # ============================================================================
 
 
+@pytest.mark.stress
 class TestOrchestratorGraphStress:
     """Stress tests for OrchestratorGraph with extreme routing."""
 
@@ -419,6 +423,7 @@ class TestOrchestratorGraphStress:
 # ============================================================================
 
 
+@pytest.mark.stress
 class TestResourceLimits:
     """Tests for resource limits and constraints."""
 

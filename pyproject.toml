@@ -159,7 +159,13 @@ max-doc-length = 88
 
 [tool.pytest.ini_options]
 markers = [
-    "integration_test: marks tests as integration tests",
+    "unit: Fast unit tests (no models, no I/O, < 0.5s each)",
+    "integration: Integration tests with fake tools (graphs, workflows)",
+    "integration_test: marks tests as integration tests (deprecated, use 'integration')",
+    "stress: Stress tests with extreme inputs (not run in CI)",
+    "requires_models: Tests requiring real ML models (not run in CI)",
+    "requires_api: Tests requiring API keys (not run in CI)",
+    "slow: Tests taking > 1s (reviewed periodically)",
 ]
 
 [tool.coverage]

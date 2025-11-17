@@ -2,7 +2,12 @@
 
 import time
 
+import pytest
+
 from fairsense_agentix.services.telemetry import TelemetryService
+
+
+pytestmark = pytest.mark.unit
 
 
 class TestTelemetryService:

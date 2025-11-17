@@ -16,6 +16,9 @@ from fairsense_agentix.tools.interfaces import PersistenceTool
 from fairsense_agentix.tools.persistence import CSVWriter
 
 
+pytestmark = pytest.mark.unit
+
+
 # ============================================================================
 # Protocol Compliance Tests
 # ============================================================================

@@ -71,6 +71,7 @@ def tiny_faiss_index(tmp_path, embedder):
     return index_path, metadata_path, documents
 
 
+@pytest.mark.requires_models
 class TestFAISSIndexToolConstruction:
     """Test FAISS index tool initialization."""
 
@@ -154,6 +155,7 @@ class TestFAISSIndexToolConstruction:
         assert "doesn't match" in str(exc_info.value).lower()
 
 
+@pytest.mark.requires_models
 class TestProtocolSatisfaction:
     """Test that tool satisfies FAISSIndexTool protocol."""
 
@@ -183,6 +185,7 @@ class TestProtocolSatisfaction:
         assert callable(tool.search)
 
 
+@pytest.mark.requires_models
 class TestSearch:
     """Test search functionality."""
 
@@ -273,6 +276,7 @@ class TestSearch:
         assert "dimension mismatch" in str(exc_info.value).lower()
 
 
+@pytest.mark.requires_models
 class TestSemanticSearch:
     """Test semantic search quality."""
 

@@ -33,6 +33,9 @@ from fairsense_agentix.tools.interfaces import CaptionTool
 from fairsense_agentix.tools.registry import create_tool_registry, reset_tool_registry
 
 
+pytestmark = pytest.mark.unit
+
+
 class TestCaptionProtocolCompliance:
     """Test that caption tools satisfy the CaptionTool protocol.
 
@@ -135,6 +138,7 @@ class TestRegistryCaptionResolution:
 
         assert isinstance(registry.caption, FakeCaptionTool)
 
+    @pytest.mark.requires_models
     def test_auto_mode_selects_blip2_with_gpu(self):
         """Verify auto mode selects BLIP-2 when GPU available.
 

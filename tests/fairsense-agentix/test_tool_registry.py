@@ -32,6 +32,9 @@ from fairsense_agentix.tools import (
 )
 
 
+pytestmark = pytest.mark.unit
+
+
 # ============================================================================
 # Registry Construction Tests
 # ============================================================================

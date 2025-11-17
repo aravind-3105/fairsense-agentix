@@ -64,10 +64,12 @@ jobs:
 
       - name: Run unit tests
         run: |
-          uv run pytest -m "not integration_test" \
+          uv run pytest -m "unit" \
             --cov fairsense_agentix \
             --cov-report=xml \
-            tests
+            --maxfail=10 \
+            -v \
+            tests/
 
       # # Uncomment this once this repo is configured on Codecov
       # - name: Upload coverage to Codecov
@@ -78,7 +80,12 @@ jobs:
       #     fail_ci_if_error: true
       #     verbose: true
 
-      - name: Cleanup workspace
+      - name: Cleanup disk space
         if: always()
         run: |
-          rm -rf .venv .uv || true
+          rm -rf .venv
+          rm -rf .uv
+          rm -rf ~/.cache/huggingface
+          rm -rf ~/.cache/torch
+          rm -rf ~/.cache/pip
+          df -h
