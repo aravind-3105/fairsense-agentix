@@ -195,20 +195,58 @@ class TestPhase52Integration:
         assert "risks" in result or "risk_table" in result
 
     def test_registry_singleton_behavior(self):
-        """Verify registry singleton pattern.
+        """Verify get_tool_registry() singleton pattern.
 
         This validates:
-        - get_tool_registry() returns same instance
-        - Tools are reused across calls
+        - get_tool_registry() returns same instance across calls
+        - Tools are reused (no recreation)
+        - Singleton persists across multiple calls
         """
-        settings = Settings(llm_provider="fake")
-
-        registry1 = get_tool_registry(settings)
-        registry2 = get_tool_registry(settings)
+        registry1 = get_tool_registry()
+        registry2 = get_tool_registry()
 
         # Same instance
         assert registry1 is registry2, "Registry should be singleton"
         assert registry1.llm is registry2.llm, "Tools should be reused"
+
+        # Third call also returns same instance
+        registry3 = get_tool_registry()
+        assert registry1 is registry3, "Singleton should persist"
+
+    def test_registry_creation_with_custom_settings(self):
+        """Verify create_tool_registry() works with custom settings.
+
+        This validates:
+        - create_tool_registry() accepts settings parameter
+        - Settings are properly applied to created tools
+        - Each call creates a new instance (not singleton)
+        """
+        from fairsense_agentix.tools.fake import FakeLLMTool  # noqa: PLC0415
+
+        settings = Settings(llm_provider="fake")
+
+        # create_tool_registry() accepts settings and creates new instances
+        registry1 = create_tool_registry(settings)
+        registry2 = create_tool_registry(settings)
+
+        # Different instances (create_tool_registry always creates new)
+        assert registry1 is not registry2, (
+            "create_tool_registry should create new instances"
+        )
+
+        # But both should have correct tool types
+        assert isinstance(registry1.llm, FakeLLMTool), (
+            "Registry 1 should have FakeLLMTool"
+        )
+        assert isinstance(registry2.llm, FakeLLMTool), (
+            "Registry 2 should have FakeLLMTool"
+        )
+
+        # Both should work correctly
+        result1 = registry1.llm.predict("Test prompt")
+        result2 = registry2.llm.predict("Test prompt")
+        assert isinstance(result1, str)
+        assert isinstance(result2, str)
 
     def test_multiple_predict_calls(self):
         """Test multiple predict calls work correctly.
