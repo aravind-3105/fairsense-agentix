@@ -8,7 +8,12 @@ These tests verify:
 Comprehensive integration tests will be added after Phase 2 completion.
 """
 
+import pytest
+
 from fairsense_agentix.services.router import create_selection_plan
+
+
+pytestmark = pytest.mark.unit
 
 
 class TestRouterBasic:

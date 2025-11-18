@@ -6,12 +6,14 @@ Tests focus on complete workflows, not implementation details.
 These tests are marked with @pytest.mark.integration_test to run separately in CI.
 """
 
+import numpy as np
 import pytest
 
 from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
 from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
 from fairsense_agentix.graphs.risk_graph import create_risk_graph
 from fairsense_agentix.tools import reset_tool_registry
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
 
 # ============================================================================
@@ -40,8 +42,7 @@ class TestBiasTextGraphIntegration:
 
         # Verify complete pipeline execution
         assert "bias_analysis" in result
-        assert isinstance(result["bias_analysis"], str)
-        assert len(result["bias_analysis"]) > 0
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
 
         # Summary should be None for short text (conditional not triggered)
         assert result.get("summary") is None
@@ -106,7 +107,7 @@ class TestBiasImageGraphIntegration:
 
         # Verify downstream pipeline
         assert "bias_analysis" in result
-        assert isinstance(result["bias_analysis"], str)
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert "summary" in result
         assert isinstance(result["summary"], str)
         assert "highlighted_html" in result
@@ -143,7 +144,10 @@ class TestRiskGraphIntegration:
 
         # Verify complete sequential pipeline
         assert "embedding" in result
-        assert isinstance(result["embedding"], list)
+        # Design Choice: Accept both list and numpy array for embeddings
+        # Why: Real embedders return numpy arrays, fake returns list
+        # What This Enables: Test works with both fake and real tools
+        assert isinstance(result["embedding"], (list, np.ndarray))
         assert len(result["embedding"]) > 0
 
         assert "risks" in result

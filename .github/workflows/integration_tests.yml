@@ -54,11 +54,15 @@ jobs:
           python-version-file: ".python-version"
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --group dev --no-default-groups
 
       - name: Run integration tests
         run: |
-          uv run pytest -m "integration_test" --cov fairsense_agentix --cov-report=xml tests
+          uv run pytest -m "integration or integration_test" \
+            --cov fairsense_agentix \
+            --cov-report=xml \
+            -v \
+            tests/
 
       # # Uncomment this once this repo is configured on Codecov
       # - name: Upload coverage to Codecov
@@ -68,3 +72,13 @@ jobs:
       #     slug: VectorInstitute/aieng-template-uv
       #     fail_ci_if_error: true
       #     verbose: true
+
+      - name: Cleanup disk space
+        if: always()
+        run: |
+          rm -rf .venv
+          rm -rf .uv
+          rm -rf ~/.cache/huggingface
+          rm -rf ~/.cache/torch
+          rm -rf ~/.cache/pip
+          df -h

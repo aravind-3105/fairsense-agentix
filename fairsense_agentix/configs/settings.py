@@ -101,6 +101,10 @@ class Settings(BaseSettings):
         Highlight color for disability bias (hex code)
     bias_color_socioeconomic : str
         Highlight color for socioeconomic bias (hex code)
+    output_dir : Path
+        Directory for saved output files (CSV, JSON, HTML)
+    summarizer_max_length : int
+        Maximum length for generated summaries (characters)
     """
 
     model_config = SettingsConfigDict(
@@ -148,38 +152,72 @@ class Settings(BaseSettings):
         description="Timeout for LLM API calls",
     )
 
+    llm_cache_enabled: bool = Field(
+        default=True,
+        description="Enable LangChain SQLite caching for LLM responses",
+    )
+
+    llm_cache_path: Path = Field(
+        default=Path(".cache/langchain.db"),
+        description="Path to SQLite cache database for LLM responses",
+    )
+
     # ===========================
-    # OCR Configuration
+    # OCR Configuration (Phase 5.3)
     # ===========================
-    ocr_tool: Literal["tesseract", "paddleocr", "fake"] = Field(
-        default="fake",
-        description="OCR tool to use for text extraction from images",
+    ocr_tool: Literal["auto", "paddleocr", "tesseract", "fake"] = Field(
+        default="auto",
+        description=(
+            "OCR tool: auto (GPU-adaptive), paddleocr (GPU/best), "
+            "tesseract (CPU/fast), fake (testing)"
+        ),
+    )
+
+    ocr_force_cpu: bool = Field(
+        default=False,
+        description="Force CPU for OCR even if GPU available (for testing/debugging)",
     )
 
     ocr_language: str = Field(
         default="eng",
-        description="Language code for OCR (e.g., 'eng', 'fra', 'spa')",
+        description="Language code for OCR (e.g., 'eng', 'fra', 'spa', 'chi_sim')",
     )
 
     ocr_confidence_threshold: float = Field(
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Minimum confidence threshold for OCR results",
+        description="Minimum confidence threshold for OCR results (0.0-1.0)",
     )
 
     # ===========================
-    # Image Captioning Configuration
+    # Image Captioning Configuration (Phase 5.3)
     # ===========================
-    caption_model: Literal["blip", "blip2", "llava", "fake"] = Field(
-        default="fake",
-        description="Image captioning model to use",
+    caption_model: Literal["auto", "blip2", "blip", "fake"] = Field(
+        default="auto",
+        description=(
+            "Caption model: auto (GPU-adaptive), blip2 (GPU/best), "
+            "blip (CPU/fast), fake (testing)"
+        ),
+    )
+
+    caption_force_cpu: bool = Field(
+        default=False,
+        description="Force CPU for captioning even if GPU available (for testing/debugging)",
+    )
+
+    caption_preload: bool = Field(
+        default=True,
+        description=(
+            "Preload model at startup (true: fast calls, slow startup; "
+            "false: fast startup, slow first call)"
+        ),
     )
 
     caption_max_length: int = Field(
         default=100,
         gt=0,
-        description="Maximum length for generated captions",
+        description="Maximum caption length in tokens",
     )
 
     # ===========================
@@ -339,6 +377,20 @@ class Settings(BaseSettings):
         description="Highlight color for socioeconomic bias (purple)",
     )
 
+    # ===========================
+    # Output & Persistence Configuration (Phase 5.4)
+    # ===========================
+    output_dir: Path = Field(
+        default=Path("outputs"),
+        description="Directory for saved output files (CSV, JSON, HTML)",
+    )
+
+    summarizer_max_length: int = Field(
+        default=200,
+        gt=0,
+        description="Maximum length for generated summaries (characters)",
+    )
+
     def get_bias_type_colors(self) -> dict[str, str]:
         """Get bias type to color mapping.
 
@@ -365,7 +417,9 @@ class Settings(BaseSettings):
             "socioeconomic": self.bias_color_socioeconomic,
         }
 
-    @field_validator("faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir")
+    @field_validator(
+        "faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir", "output_dir"
+    )
     @classmethod
     def expand_path(cls, v: Path) -> Path:
         """Expand and resolve paths to absolute paths.

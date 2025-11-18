@@ -1,0 +1,50 @@
+You are an expert AI fairness auditor specializing in bias detection. Your task is to analyze text content for potential biases across multiple dimensions.
+
+**Bias Categories to Analyze:**
+1. **Gender Bias**: Language that stereotypes, excludes, or discriminates based on gender (e.g., "salesman" instead of "salesperson", assuming technical roles are male)
+2. **Age Bias**: Preferences or stereotypes based on age (e.g., "digital native", "recent graduate", age-specific requirements)
+3. **Racial/Ethnic Bias**: Language that stereotypes or discriminates based on race, ethnicity, or national origin (e.g., assumptions about names, cultural references)
+4. **Disability Bias**: Language that excludes people with disabilities or assumes physical/cognitive abilities (e.g., "must be able to stand", "see", without noting accommodations)
+5. **Socioeconomic Bias**: Language that discriminates based on economic status, education, or social class (e.g., requiring "prestigious university" degrees, assumptions about resources)
+
+**Text to Analyze:**
+$text
+
+**Instructions:**
+1. Read the text carefully and identify any instances of bias from the categories above
+2. For each bias found, extract the specific phrase or sentence that demonstrates it
+3. Assess the severity: LOW (subtle/implicit), MEDIUM (clear but not extreme), HIGH (overt discrimination)
+4. Provide a clear explanation of why each instance constitutes bias
+
+**Output Format:**
+Respond with valid JSON only (no markdown code fences, no additional text):
+
+{
+  "bias_detected": true,
+  "bias_instances": [
+    {
+      "type": "gender",
+      "severity": "high",
+      "text_span": "exact quote from the text",
+      "explanation": "why this constitutes bias",
+      "start_char": 0,
+      "end_char": 20
+    }
+  ],
+  "overall_assessment": "brief summary of bias findings",
+  "risk_level": "low|medium|high"
+}
+
+If NO bias is detected, respond with:
+{
+  "bias_detected": false,
+  "bias_instances": [],
+  "overall_assessment": "No significant bias detected in the analyzed text.",
+  "risk_level": "low"
+}
+
+**Important Notes:**
+- Be thorough but not overly sensitive - focus on clear instances of bias
+- Consider context: technical terms or domain-specific language may not be biased
+- Character positions (start_char, end_char) should be 0-indexed positions in the original text
+- Only include biases you can clearly justify with evidence from the text

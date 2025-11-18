@@ -12,6 +12,27 @@ dependencies = [
     "pydantic-settings>=2.7.1",
     "langgraph>=0.2.56",
     "langchain-core>=0.3.0",
+    # Phase 5.1: Embeddings + FAISS
+    "sentence-transformers>=3.0.0",
+    "torch>=2.0.0,<2.6.0",  # Cap at <2.6 due to manylinux_2_27 compatibility (server limitation)
+    "faiss-cpu>=1.7.4",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",  # For CSV handling in build script
+    # Phase 5.2: LLM Adapters (LangChain-based)
+    "langchain>=0.3.0",  # Core LangChain functionality
+    "langchain-openai>=0.2.0",  # OpenAI/GPT-4 integration (brings openai as dependency)
+    "langchain-anthropic>=0.2.0",  # Anthropic/Claude integration (brings anthropic as dependency)
+    "langchain-community>=0.3.0",  # Community integrations (callbacks, cache, etc.)
+    "tiktoken>=0.7.0,<0.12.0",  # OpenAI tokenizer (constrain to version with prebuilt wheels)
+    # Phase 5.3: OCR Tools
+    "pytesseract>=0.3.10",  # Tesseract OCR wrapper (CPU-friendly, 100+ languages)
+    "paddleocr>=2.7.0",  # PaddleOCR (GPU-accelerated, excellent accuracy)
+    "pillow>=10.0.0",  # Image processing (PIL, used by OCR and captioning)
+    # Phase 5.3: Image Captioning
+    "transformers>=4.35.0",  # Hugging Face transformers (BLIP/BLIP-2 models)
+    "accelerate>=0.20.0",  # Fast model loading and inference
+    # Phase 6.0: LangChain FAISS Refactor
+    "langchain-huggingface>=0.1.0",  # LangChain HuggingFace embeddings integration
 ]
 
 [build-system]
@@ -138,7 +159,13 @@ max-doc-length = 88
 
 [tool.pytest.ini_options]
 markers = [
-    "integration_test: marks tests as integration tests",
+    "unit: Fast unit tests (no models, no I/O, < 0.5s each)",
+    "integration: Integration tests with fake tools (graphs, workflows)",
+    "integration_test: marks tests as integration tests (deprecated, use 'integration')",
+    "stress: Stress tests with extreme inputs (not run in CI)",
+    "requires_models: Tests requiring real ML models (not run in CI)",
+    "requires_api: Tests requiring API keys (not run in CI)",
+    "slow: Tests taking > 1s (reviewed periodically)",
 ]
 
 [tool.coverage]

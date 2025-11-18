@@ -4,11 +4,14 @@ import time
 
 import pytest
 
-from fairsense_agentix.services.cache import (
+from fairsense_agentix.services.cache import (  # noqa: PLC0415
     CacheService,
     FilesystemCacheBackend,
     MemoryCacheBackend,
 )
+
+
+pytestmark = pytest.mark.unit
 
 
 class TestMemoryCacheBackend:

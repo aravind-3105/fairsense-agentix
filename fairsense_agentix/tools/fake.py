@@ -26,6 +26,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 
 if TYPE_CHECKING:
     from fairsense_agentix.tools.interfaces import EmbedderTool
@@ -164,7 +166,11 @@ class FakeLLMTool:
         max_tokens: int = 2000,
         timeout: int = 60,
     ) -> str:
-        """Generate fake LLM prediction."""
+        """Generate fake LLM prediction.
+
+        Returns structured JSON matching BiasAnalysisOutput schema for
+        deterministic behavior that mimics real LLM structured outputs.
+        """
         self.call_count += 1
         self.last_call_args = {
             "prompt_len": len(prompt),
@@ -176,34 +182,36 @@ class FakeLLMTool:
         if self.return_text is not None:
             return self.return_text
 
-        # Generate deterministic bias analysis
-        return f"""**Bias Analysis Report**
+        # Generate deterministic structured output matching BiasAnalysisOutput
+        # Use hash of prompt for deterministic but varied outputs
+        import hashlib  # noqa: PLC0415
 
-**Input Text**: {prompt[:100]}...
-**Text Length**: {len(prompt)} characters
+        prompt_hash = int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
+        seed = prompt_hash % 100 / 100.0  # Deterministic seed in [0, 1)
 
-**Bias Assessment**:
-
-1. **Gender Bias**: No explicit gender bias detected. The text uses neutral language.
-
-2. **Age Bias**: No age-related bias detected. No age-specific terms or requirements found.
-
-3. **Racial/Ethnic Bias**: No racial or ethnic bias detected. Language is inclusive.
-
-4. **Disability Bias**: No disability-related bias detected.
-
-5. **Socioeconomic Bias**: Minimal bias detected. Text is generally accessible.
-
-**Overall Assessment**: The text demonstrates good awareness of potential bias.
-Minor improvements could be made to enhance inclusivity.
-
-**Recommendations**:
-- Consider adding explicit diversity statements
-- Review job requirements for hidden biases
-- Ensure accessible language throughout
-
-**Confidence**: 0.85
-"""
+        return json.dumps(
+            {
+                "bias_detected": True,
+                "bias_instances": [
+                    {
+                        "type": "age",
+                        "severity": "medium",
+                        "text_span": "sample text",
+                        "visual_element": "",
+                        "explanation": f"Deterministic fake bias instance (seed={seed:.2f})",
+                        "start_char": 0,
+                        "end_char": 11,
+                        "evidence_source": "text",
+                    }
+                ],
+                "overall_assessment": (
+                    "Fake LLM deterministic output. The text demonstrates "
+                    f"potential bias patterns (analysis seed={seed:.2f})."
+                ),
+                "risk_level": "medium",
+            },
+            indent=2,
+        )
 
     def get_token_count(self, text: str) -> int:
         """Estimate token count (simple word-based approximation)."""
@@ -242,7 +250,8 @@ class FakeSummarizerTool:
         }
 
         if self.return_summary is not None:
-            return self.return_summary
+            # Truncate custom summary to max_length (consistent with real)
+            return self.return_summary[:max_length]
 
         # Deterministic summary
         summary = (
@@ -279,7 +288,7 @@ class FakeEmbedderTool:
         self.call_count = 0
         self.last_call_args: dict[str, Any] = {}
 
-    def encode(self, text: str) -> list[float]:
+    def encode(self, text: str) -> np.ndarray:
         """Generate fake embedding vector."""
         self.call_count += 1
         self.last_call_args = {"text_len": len(text)}
@@ -287,9 +296,8 @@ class FakeEmbedderTool:
         # Generate deterministic vector based on text hash
         # Use hash to get different but consistent vectors for different texts
         text_hash = hash(text)
-        return [
-            (text_hash + i) % 1000 / 1000.0 for i in range(self._dimension)
-        ]  # vector
+        vector = [(text_hash + i) % 1000 / 1000.0 for i in range(self._dimension)]
+        return np.array(vector, dtype="float32")
 
     @property
     def dimension(self) -> int:
@@ -379,7 +387,8 @@ class FakeFAISSIndexTool:
         """Perform fake text-based search."""
         embedder = FakeEmbedderTool() if self.embedder is None else self.embedder
         query_vector = embedder.encode(query_text)
-        return self.search(query_vector, top_k)
+        # Convert numpy array to list for search() protocol compatibility
+        return self.search(query_vector.tolist(), top_k)
 
     @property
     def index_path(self) -> Path:

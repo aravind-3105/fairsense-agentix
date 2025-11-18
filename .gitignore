@@ -23,3 +23,14 @@ wheels/
 # Claude Files
 /planning_files
 CLAUDE.md
+*.faiss
+*.index
+data/indexes/*.json
+data/indexes/README.md
+.env
+.cache/langchain.db
+run_demo.sh
+test_demo.py
+demo_simple.py
+*.csv
+*.json

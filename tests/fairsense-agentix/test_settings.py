@@ -8,6 +8,9 @@ from pydantic import ValidationError
 from fairsense_agentix.configs.settings import Settings, settings
 
 
+pytestmark = pytest.mark.unit
+
+
 class TestSettings:
     """Test suite for Settings class."""
 
