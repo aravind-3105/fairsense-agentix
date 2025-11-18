@@ -321,14 +321,26 @@ class Settings(BaseSettings):
     # Workflow & Orchestration Configuration
     # ===========================
     enable_refinement: bool = Field(
-        default=False,
-        description="Enable refinement loop (Phase 2-6: False, Phase 7+: True)",
+        default=True,
+        description="Enable refinement loop (Phase 7+: True by default)",
     )
 
     max_refinement_iterations: int = Field(
-        default=2,
+        default=1,
         ge=0,
         description="Maximum refinement iterations for evaluator feedback loops",
+    )
+
+    evaluator_enabled: bool = Field(
+        default=True,
+        description="Enable LLM-based evaluators for post-hoc quality checks",
+    )
+
+    bias_evaluator_min_score: int = Field(
+        default=75,
+        ge=0,
+        le=100,
+        description="Minimum score (0-100) required for bias evaluator to pass output",
     )
 
     workflow_timeout_seconds: int = Field(

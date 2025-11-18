@@ -26,7 +26,7 @@ Example:
     {...}
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -36,8 +36,12 @@ from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
 from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
 from fairsense_agentix.graphs.risk_graph import create_risk_graph
 from fairsense_agentix.graphs.state import EvaluationResult, OrchestratorState
+from fairsense_agentix.services import (
+    EvaluationContext,
+    evaluate_bias_output,
+    telemetry,
+)
 from fairsense_agentix.services.router import create_selection_plan
-from fairsense_agentix.services.telemetry import telemetry
 
 
 # ============================================================================
@@ -378,20 +382,56 @@ def posthoc_eval(state: OrchestratorState) -> dict:
                     )
                 }
 
-            # Stub: Always pass with default score
-            telemetry.log_info("orchestrator_posthoc_complete", passed=True, score=0.85)
-            return {
-                "posthoc_eval": EvaluationResult(
-                    passed=True,
-                    score=0.85,  # Default acceptable quality
-                    issues=[],
-                    explanation="Phase 2-6 stub: Output accepted without evaluation",
+            workflow_id = state.workflow_result.get("workflow_id")
+
+            if (
+                workflow_id in {"bias_text", "bias_image"}
+                and settings.evaluator_enabled
+            ):
+                original_text = _extract_bias_source_text(state, workflow_id)
+                evaluation = evaluate_bias_output(
+                    state.workflow_result,
+                    original_text=original_text,
+                    options=state.options,
+                    context=EvaluationContext(
+                        workflow_id=workflow_id,
+                        run_id=state.run_id,
+                    ),
                 )
-            }
+            else:
+                evaluation = EvaluationResult(
+                    passed=True,
+                    score=0.9,
+                    issues=[],
+                    explanation="Evaluator not required for this workflow",
+                )
+
+            telemetry.log_info(
+                "orchestrator_posthoc_complete",
+                passed=evaluation.passed,
+                score=evaluation.score,
+                workflow_id=workflow_id,
+            )
+            return {"posthoc_eval": evaluation}
 
         except Exception as e:
             telemetry.log_error("orchestrator_posthoc_eval_failed", error=e)
             raise
+
+
+def _extract_bias_source_text(
+    state: OrchestratorState, workflow_id: str | None
+) -> str | None:
+    """Return best-effort source text for evaluator prompts."""
+    if workflow_id == "bias_text" and isinstance(state.content, str):
+        return state.content
+    if workflow_id == "bias_image":
+        merged_text = (
+            state.workflow_result.get("merged_text") if state.workflow_result else None
+        )
+        if isinstance(merged_text, str):
+            return merged_text
+    return None
 
 
 def decide_action(state: OrchestratorState) -> dict:
@@ -545,10 +585,30 @@ def apply_refinement(state: OrchestratorState) -> dict:
                 }
 
             # Extract refinement hints
-            hints = state.posthoc_eval.refinement_hints
+            hints = state.posthoc_eval.refinement_hints or {}
+            preference_hints = hints.get("tool_preferences")
+            option_hints = hints.get("options")
 
-            # Update plan with hints (merge into tool_preferences)
-            updated_preferences = {**state.plan.tool_preferences, **hints}
+            # Backwards compatibility: legacy hints map directly to preferences
+            if preference_hints is None and option_hints is None and hints:
+                preference_hints = hints
+
+            updated_preferences = {**state.plan.tool_preferences}
+            if preference_hints:
+                updated_preferences.update(preference_hints)
+
+            updated_options = {**state.options}
+            if option_hints:
+                for key, value in option_hints.items():
+                    if isinstance(value, list) and isinstance(
+                        updated_options.get(key), list
+                    ):
+                        updated_options[key] = [
+                            *updated_options[key],
+                            *value,
+                        ]
+                    else:
+                        updated_options[key] = value
 
             # Create updated plan (Pydantic models are immutable)
             updated_plan = state.plan.model_copy(
@@ -562,6 +622,7 @@ def apply_refinement(state: OrchestratorState) -> dict:
             )
             return {
                 "plan": updated_plan,
+                "options": updated_options,
                 "refinement_count": state.refinement_count + 1,
             }
 
@@ -614,6 +675,20 @@ def finalize(state: OrchestratorState) -> dict:
                 status = "unknown"
 
             # Package final result
+            metadata: dict[str, Any] = {
+                "plan_reasoning": state.plan.reasoning if state.plan else None,
+                "plan_confidence": state.plan.confidence if state.plan else None,
+                "preflight_score": (
+                    state.preflight_eval.score if state.preflight_eval else None
+                ),
+                "posthoc_score": state.posthoc_eval.score
+                if state.posthoc_eval
+                else None,
+            }
+
+            if state.posthoc_eval and state.posthoc_eval.metadata:
+                metadata["evaluators"] = state.posthoc_eval.metadata
+
             final_result = {
                 "status": status,
                 "workflow_id": state.plan.workflow_id if state.plan else None,
@@ -622,17 +697,7 @@ def finalize(state: OrchestratorState) -> dict:
                 "errors": state.errors,
                 "warnings": state.warnings,
                 "run_id": state.run_id,
-                # Metadata for observability
-                "metadata": {
-                    "plan_reasoning": state.plan.reasoning if state.plan else None,
-                    "plan_confidence": state.plan.confidence if state.plan else None,
-                    "preflight_score": (
-                        state.preflight_eval.score if state.preflight_eval else None
-                    ),
-                    "posthoc_score": state.posthoc_eval.score
-                    if state.posthoc_eval
-                    else None,
-                },
+                "metadata": metadata,
             }
 
             telemetry.log_info(

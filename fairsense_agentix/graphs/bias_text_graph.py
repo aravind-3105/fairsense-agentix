@@ -224,6 +224,15 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
             # Build prompt with text
             prompt = prompt_template.format(text=text)
 
+            critique_feedback = state.options.get("bias_prompt_feedback")
+            if isinstance(critique_feedback, list) and critique_feedback:
+                feedback_section = "\n".join(f"- {item}" for item in critique_feedback)
+                prompt += (
+                    "\nEvaluator feedback to address:\n"
+                    f"{feedback_section}\n"
+                    "Ensure the refreshed analysis explicitly incorporates the feedback above.\n"
+                )
+
             # Call LLM via registry with structured output
             # Real LLMs use .with_structured_output() and return BiasAnalysisOutput
             # Fake LLM now returns JSON string that we parse into BiasAnalysisOutput

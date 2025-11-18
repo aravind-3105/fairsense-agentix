@@ -152,6 +152,11 @@ class EvaluationResult(BaseModel):
         description="Human-readable reasoning for evaluation",
     )
 
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Evaluator-specific metadata (e.g., raw critique payloads)",
+    )
+
 
 class OrchestratorState(BaseModel):
     """State for orchestrator supergraph.

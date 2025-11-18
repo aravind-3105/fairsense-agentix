@@ -110,6 +110,24 @@ class TestOrchestratorGraphBasic:
         assert "rmf_recommendations" in result["workflow_result"]
         assert "html_table" in result["workflow_result"]
 
+    def test_text_workflow_refines_when_evaluator_fails(self) -> None:
+        """Bias evaluator score below threshold should trigger refinement loop."""
+        graph = create_orchestrator_graph()
+
+        result = graph.invoke(
+            {
+                "input_type": "text",
+                "content": "Sample job posting text with biased language",
+                "options": {"force_bias_eval_score": 60},
+            }
+        )
+
+        assert result["final_result"]["refinement_count"] == 1
+        assert result["decision"] == "accept"
+        assert result["final_result"]["status"] == "success"
+        evaluators_meta = result["final_result"]["metadata"]["evaluators"]
+        assert evaluators_meta["bias"]["score"] >= 75
+
 
 @pytest.mark.integration_test
 class TestOrchestratorConditionalRouting:
