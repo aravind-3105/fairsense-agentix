@@ -90,7 +90,7 @@ class TestBiasImageGraphIntegration:
         result = graph.invoke(
             {
                 "image_bytes": b"fake_image_data",
-                "options": {},
+                "options": {"validate_image_bytes": False},
             }
         )
 
@@ -207,7 +207,9 @@ class TestCrossGraphIntegration:
             {"scenario_text": "Test scenario", "run_id": "test-r1", "options": {}}
         )
         text_result = text_graph.invoke({"text": "Test text", "options": {}})
-        image_result = image_graph.invoke({"image_bytes": b"test_image", "options": {}})
+        image_result = image_graph.invoke(
+            {"image_bytes": b"test_image", "options": {"validate_image_bytes": False}}
+        )
 
         # All should produce valid outputs
         assert "bias_analysis" in text_result

@@ -14,11 +14,11 @@ pipeline can inject into its next LLM prompt (e.g., “Explicitly check for disa
 “Call out mitigation steps for each bias instance”, “Verify spans reference exact text”).
 
 Return JSON in this exact structure:
-{
+{{
   "score": <int 0-100>,
   "justification": "<short explanation>",
   "suggested_changes": ["<actionable change 1>", "<actionable change 2>", ...]
-}
+}}
 
 ### CONTEXT ###
 Bias analysis JSON:

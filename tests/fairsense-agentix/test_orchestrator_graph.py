@@ -70,7 +70,7 @@ class TestOrchestratorGraphBasic:
             {
                 "input_type": "image",
                 "content": b"fake_image_bytes",
-                "options": {},
+                "options": {"validate_image_bytes": False},
             }
         )
 

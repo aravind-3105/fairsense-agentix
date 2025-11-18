@@ -107,6 +107,19 @@ FAIRSENSE_LLM_MODEL_NAME=claude-3-5-sonnet-20241022 \
 uv run uvicorn fairsense_agentix.service_api.server:app
 ```
 
+### Running tests
+
+```bash
+uv run pytest
+```
+
+During test collection we automatically override any `.env` values that point at
+real providers/devices so the suite always uses the lightweight `fake`
+toolchain. This guarantees deterministic, offline-friendly tests even if you
+have `FAIRSENSE_LLM_PROVIDER=openai` (or Anthropic) configured locally. To opt-in
+to exercising the real stack, export `FAIRSENSE_TEST_USE_REAL=1` before running
+pytest.
+
 ## Features / Components
 
 ## Examples

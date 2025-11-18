@@ -356,6 +356,14 @@ class Settings(BaseSettings):
         description="Minimum confidence for router to select a workflow",
     )
 
+    image_validation_enabled: bool = Field(
+        default=True,
+        description=(
+            "Validate image bytes with Pillow before running OCR/caption nodes. "
+            "Disable for synthetic tests that use non-image byte strings."
+        ),
+    )
+
     # ===========================
     # Bias Detection Configuration
     # ===========================

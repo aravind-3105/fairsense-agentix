@@ -15,6 +15,7 @@ import pytest
 
 from fairsense_agentix.configs.settings import Settings
 from fairsense_agentix.tools.interfaces import LLMTool
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 from fairsense_agentix.tools.registry import (
     create_tool_registry,
     get_tool_registry,
@@ -141,8 +142,8 @@ class TestPhase52Integration:
 
         # Verify graph produced expected output structure
         assert "bias_analysis" in result, "Graph should produce bias_analysis"
-        assert isinstance(result["bias_analysis"], str), (
-            "bias_analysis should be string (from fake LLM)"
+        assert isinstance(result["bias_analysis"], BiasAnalysisOutput), (
+            "bias_analysis should be structured BiasAnalysisOutput"
         )
 
     def test_graph_integration_bias_image(self):
@@ -161,8 +162,8 @@ class TestPhase52Integration:
         # Invoke with sample input (fake image bytes)
         result = graph.invoke(
             {
-                "image": b"fake_image_data",
-                "options": {},
+                "image_bytes": b"fake_image_data",
+                "options": {"validate_image_bytes": False},
             }
         )
 

@@ -33,7 +33,7 @@ class TestBiasImageGraphBasic:
         result = graph.invoke(
             {
                 "image_bytes": b"small_image_data",
-                "options": {},
+                "options": {"validate_image_bytes": False},
             }
         )
 
@@ -67,7 +67,7 @@ class TestBiasImageGraphBasic:
         result = graph.invoke(
             {
                 "image_bytes": large_image,
-                "options": {},
+                "options": {"validate_image_bytes": False},
             }
         )
 
@@ -93,7 +93,7 @@ class TestBiasImageGraphBasic:
         result = graph.invoke(
             {
                 "image_bytes": b"test_image_bytes",
-                "options": {},
+                "options": {"validate_image_bytes": False},
             }
         )
 
@@ -113,7 +113,11 @@ class TestBiasImageGraphBasic:
         result = graph.invoke(
             {
                 "image_bytes": b"test_image",
-                "options": {"ocr_tool": "tesseract", "caption_model": "blip2"},
+                "options": {
+                    "ocr_tool": "tesseract",
+                    "caption_model": "blip2",
+                    "validate_image_bytes": False,
+                },
             }
         )
 

@@ -484,8 +484,16 @@ class TestCaptionSettings:
     - Defaults must be sensible
     """
 
-    def test_default_caption_settings(self):
+    def test_default_caption_settings(self, monkeypatch):
         """Verify sensible defaults for caption configuration."""
+        for env_var in (
+            "FAIRSENSE_CAPTION_MODEL",
+            "FAIRSENSE_CAPTION_PRELOAD",
+            "FAIRSENSE_CAPTION_MAX_LENGTH",
+            "FAIRSENSE_CAPTION_FORCE_CPU",
+        ):
+            monkeypatch.delenv(env_var, raising=False)
+
         settings = Settings()
 
         assert settings.caption_model == "auto"  # GPU-adaptive

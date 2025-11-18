@@ -120,6 +120,7 @@ class TestPhase2Integration:
                 "options": {
                     "ocr_tool": "tesseract",
                     "caption_model": "blip2",
+                    "validate_image_bytes": False,
                 },
             }
         )
