@@ -300,6 +300,9 @@ class LangChainLLMAdapter:
             if hasattr(self.model, "get_num_tokens"):
                 return self.model.get_num_tokens(text)
         except Exception:
+            # Silently fallback if LangChain token counting fails
+            # Some models don't implement get_num_tokens or may raise errors
+            # Fallback heuristic below provides reasonable approximation
             pass
 
         # Fallback: word-based heuristic (tokens ≈ words × 1.3)

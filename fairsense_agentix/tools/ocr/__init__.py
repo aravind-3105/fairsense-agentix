@@ -18,4 +18,7 @@ try:
 
     __all__.append("PaddleOCRTool")
 except ImportError:
+    # Silently ignore if PaddleOCR dependencies not installed
+    # This is expected behavior - PaddleOCR is optional (GPU-only)
+    # Registry will fallback to TesseractOCR (CPU) or FakeOCRTool
     pass

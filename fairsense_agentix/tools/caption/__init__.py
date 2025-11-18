@@ -18,4 +18,7 @@ try:
 
     __all__.append("BLIP2CaptionTool")
 except ImportError:
+    # Silently ignore if BLIP-2 dependencies not installed
+    # This is expected behavior - BLIP-2 is optional (requires transformers, torch)
+    # Registry will fallback to BLIP (CPU-friendly) or FakeCaptionTool
     pass
