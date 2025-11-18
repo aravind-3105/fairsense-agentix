@@ -33,6 +33,10 @@ dependencies = [
     "accelerate>=0.20.0",  # Fast model loading and inference
     # Phase 6.0: LangChain FAISS Refactor
     "langchain-huggingface>=0.1.0",  # LangChain HuggingFace embeddings integration
+    # Phase 9+: API + UI surface
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "python-multipart>=0.0.9",
 ]
 
 [build-system]
