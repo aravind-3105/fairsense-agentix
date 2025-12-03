@@ -26,3 +26,59 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+
+/* Custom dark scrollbar styling */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Image container styling for VLM analysis */
+.analyzed-image-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(22, 27, 34, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  max-width: 100%;
+  max-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analyzed-image {
+  max-width: 100%;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+  opacity: 0.92;
+  transition: opacity 0.2s ease;
+  object-fit: contain;
+}
+
+.analyzed-image:hover {
+  opacity: 1;
+}

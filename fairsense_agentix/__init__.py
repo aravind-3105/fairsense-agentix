@@ -57,3 +57,27 @@ __all__ = [
     # Advanced
     "create_orchestrator_graph",
 ]
+
+# ==============================================================================
+# Eager Loading: Preload models at import time for fast first use
+# ==============================================================================
+# This loads all models (LLM, OCR, embeddings, FAISS) when the module is
+# imported, making all subsequent function calls instant (~0.03s instead of ~30s).
+#
+# Trade-off: Import takes 30-60s, but every analyze_text() call is instant.
+# Perfect for: Production servers, demos, notebooks (import once, use many times)
+#
+# To disable: Set FAIRSENSE_DISABLE_EAGER_LOADING=true in environment
+import os as _os
+
+
+if _os.getenv("FAIRSENSE_DISABLE_EAGER_LOADING", "").lower() not in (
+    "true",
+    "1",
+    "yes",
+):
+    from fairsense_agentix.tools.registry import get_tool_registry as _get_registry
+
+    # Force singleton creation (preloads all models)
+    _ = _get_registry()
+    del _get_registry  # Clean up namespace

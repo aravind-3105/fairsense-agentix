@@ -7,7 +7,9 @@ from typing import Literal, cast
 
 
 InputType = Literal["text", "image", "csv"]
-WorkflowHint = Literal["bias_text", "bias_image", "risk", "text", "image", "csv"]
+WorkflowHint = Literal[
+    "bias_text", "bias_image", "bias_image_vlm", "risk", "text", "image", "csv"
+]
 
 
 def detect_input_type(content: object) -> InputType:
@@ -34,6 +36,7 @@ def normalize_input_hint(hint: WorkflowHint | None) -> InputType | None:
     mapping: dict[str, InputType] = {
         "bias_text": "text",
         "bias_image": "image",
+        "bias_image_vlm": "image",
         "risk": "csv",
     }
     return mapping.get(hint, cast(InputType, hint))

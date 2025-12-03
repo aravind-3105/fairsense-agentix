@@ -47,9 +47,9 @@ class TestBiasTextGraphIntegration:
         # Summary should be None for short text (conditional not triggered)
         assert result.get("summary") is None
 
-        # Verify highlight output
+        # Verify highlight output - returns <div> fragment for SPA embedding
         assert "highlighted_html" in result
-        assert "<html>" in result["highlighted_html"]
+        assert "<div" in result["highlighted_html"]
 
     def test_bias_text_graph_conditional_summarization(self):
         """BiasTextGraph should conditionally run summarization."""
@@ -111,7 +111,7 @@ class TestBiasImageGraphIntegration:
         assert "summary" in result
         assert isinstance(result["summary"], str)
         assert "highlighted_html" in result
-        assert "<html>" in result["highlighted_html"]
+        assert "<div" in result["highlighted_html"]
 
 
 # ============================================================================

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Loader2, Play, Upload, Sparkles, Activity } from "lucide-react";
-import { analyze, analyzeFile, connectToStream, WorkflowID } from "./api";
+import { analyzeStart, analyzeFileStart, connectToStream, WorkflowID } from "./api";
 
 type Mode = "text" | "image" | "csv";
 
@@ -44,31 +44,50 @@ export default function App() {
     setLoading(true);
     setTimeline([]);
     setResult(null);
-    try {
-      const payload =
-        mode === "image"
-          ? await analyzeFile(file as File, "bias_image")
-          : await analyze({
-              content: input,
-              input_type: mode === "csv" ? "risk" : undefined
-            });
 
-      setResult(payload);
-      if (payload?.run_id) {
-        const ws = connectToStream(payload.run_id, (evt) => {
-          try {
-            const data = JSON.parse(evt.data);
-            setTimeline((prev) => [...prev, data]);
-          } catch {
-            // ignore malformed payloads
+    try {
+      // Step 1: Start analysis and get run_id immediately (fixes race condition!)
+      const startResponse =
+        mode === "image"
+          ? await analyzeFileStart(file as File, "bias_image")
+          : await analyzeStart({
+            content: input,
+            input_type: mode === "csv" ? "risk" : undefined
+          });
+
+      const runId = startResponse.run_id;
+
+      // Step 2: Connect WebSocket BEFORE analysis completes (this is the fix!)
+      const ws = connectToStream(runId, (evt) => {
+        try {
+          const data = JSON.parse(evt.data);
+
+          // Check if this is the completion event
+          if (data.event === "analysis_complete" && data.context?.result) {
+            // Extract final result from completion event
+            setResult(data.context.result);
+            setLoading(false); // Stop loading spinner
           }
-        });
-        wsRef.current = ws;
-      }
+
+          // Check if this is an error event
+          if (data.event === "analysis_error") {
+            alert(`Analysis failed: ${data.context?.message || "Unknown error"}`);
+            setLoading(false); // Stop loading spinner
+          }
+
+          // Add all events to timeline (including intermediate agent events)
+          setTimeline((prev) => [...prev, data]);
+        } catch {
+          // ignore malformed payloads
+        }
+      });
+
+      wsRef.current = ws;
+
+      // Step 3: Analysis is now running in background, events will stream in!
     } catch (err) {
       console.error(err);
       alert("Analysis failed. Check logs for details.");
-    } finally {
       setLoading(false);
     }
   }
@@ -88,7 +107,7 @@ export default function App() {
           <div>
             <h1 className="text-3xl font-semibold">FairSense AgentiX</h1>
             <p className="text-slate-400">
-              Agentic fairness & AI-risk analysis visualized like a modern chat experience.
+              Agentic fairness & AI-risk analysis platform
             </p>
           </div>
         </div>
@@ -151,12 +170,29 @@ export default function App() {
         <div className="space-y-6">
           <ResultPanel result={result} />
           {highlightHtml && (
-            <div className="glass p-4">
-              <h3 className="mb-3 text-sm uppercase tracking-wide text-slate-400">
-                Highlighted Text
-              </h3>
+            <div className="glass p-5 space-y-5">
+              <header>
+                <h3 className="text-sm uppercase tracking-wide text-slate-400 flex items-center gap-2">
+                  <span className="inline-block w-1 h-4 bg-accent-200 rounded-full" />
+                  {result?.bias_result?.image_base64 ? "Visual Analysis" : "Highlighted Text"}
+                </h3>
+              </header>
+
+              <BiasLegend />
+
+              {/* Display image if available (for VLM image analysis) */}
+              {result?.bias_result?.image_base64 && (
+                <div className="analyzed-image-container">
+                  <img
+                    src={result.bias_result.image_base64}
+                    alt="Analyzed image"
+                    className="analyzed-image"
+                  />
+                </div>
+              )}
+
               <div
-                className="prose prose-invert max-w-none"
+                className="prose prose-invert max-w-none text-sm leading-relaxed custom-scrollbar max-h-[500px] overflow-y-auto pr-2"
                 dangerouslySetInnerHTML={highlightHtml}
               />
             </div>
@@ -214,6 +250,8 @@ function ImageDropzone({
 }
 
 function TimelinePanel({ events }: { events: TimelineEntry[] }) {
+  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
+
   if (!events.length) {
     return (
       <div className="glass px-4 py-6 text-center text-slate-400">
@@ -221,31 +259,128 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
       </div>
     );
   }
+
+  const toggleEvent = (idx: number) => {
+    setExpandedEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+  };
+
   return (
-    <div className="glass p-4 space-y-3 max-h-[360px] overflow-auto">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+    <div className="glass p-4 space-y-3 flex flex-col max-h-[calc(100vh-32rem)] min-h-[200px]">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-300 flex-shrink-0">
         <Activity size={16} /> Agent Timeline
       </h3>
-      <ol className="space-y-3 text-sm">
-        {events.map((evt, idx) => (
-          <li key={`${evt.timestamp}-${idx}`} className="rounded-lg bg-panel/60 p-3">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="uppercase tracking-wider text-xs">{evt.event}</span>
-              <span className="text-xs">
-                {new Date(evt.timestamp * 1000).toLocaleTimeString()}
-              </span>
-            </div>
-            {evt.context?.message && (
-              <p className="text-slate-200">{String(evt.context.message)}</p>
-            )}
-          </li>
-        ))}
+      <ol className="space-y-3 text-sm overflow-y-auto custom-scrollbar flex-1 pr-2">
+        {events.map((evt, idx) => {
+          const isExpanded = expandedEvents.has(idx);
+          const hasContext = evt.context && Object.keys(evt.context).length > 0;
+
+          // Extract key context fields for display
+          const contextEntries = evt.context ? Object.entries(evt.context) : [];
+          const contextFieldsToShow = contextEntries.filter(
+            ([key]) => !["run_id", "result"].includes(key)
+          );
+
+          return (
+            <li key={`${evt.timestamp}-${idx}`} className="rounded-xl bg-slate-900/40 border border-slate-800/40 p-3 hover:bg-slate-900/60 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="uppercase tracking-wider text-xs font-bold text-slate-300">{evt.event}</span>
+                <span className="text-xs text-slate-500">
+                  {new Date(evt.timestamp * 1000).toLocaleTimeString()}
+                </span>
+              </div>
+
+              {evt.context?.message && (
+                <p className="text-slate-300 mt-2 text-xs leading-relaxed">{String(evt.context.message)}</p>
+              )}
+
+              {hasContext && contextFieldsToShow.length > 0 && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => toggleEvent(idx)}
+                    className="flex items-center gap-1 text-xs text-accent-200 hover:text-accent-100 transition"
+                  >
+                    <Activity size={12} />
+                    <span>{isExpanded ? "Hide" : "Show"} details</span>
+                    <Play
+                      size={10}
+                      className={clsx(
+                        "transition-transform",
+                        isExpanded ? "rotate-90" : "rotate-0"
+                      )}
+                    />
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-2 space-y-1 pl-3 border-l-2 border-slate-700">
+                      {contextFieldsToShow.map(([key, value]) => (
+                        <div key={key} className="text-xs">
+                          <span className="text-slate-500 font-mono">{key}:</span>{" "}
+                          <span className="text-slate-300">
+                            {typeof value === "object" && value !== null
+                              ? JSON.stringify(value, null, 2)
+                              : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
 }
 
+function BiasLegend() {
+  const biasTypes = [
+    { type: "Gender", color: "#FFB3BA", description: "Gendered language or stereotypes" },
+    { type: "Age", color: "#FFDFBA", description: "Age-related discrimination" },
+    { type: "Racial", color: "#FFFFBA", description: "Racial or ethnic bias" },
+    { type: "Disability", color: "#BAE1FF", description: "Ableist language" },
+    { type: "Socioeconomic", color: "#E0BBE4", description: "Class-based assumptions" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-slate-700/30 bg-slate-800/20 p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        Bias Type Legend
+      </p>
+      <div className="flex flex-wrap gap-3">
+        {biasTypes.map(({ type, color, description }) => (
+          <div
+            key={type}
+            className="flex items-center gap-2 text-sm text-slate-300 transition-colors hover:text-slate-100"
+            title={description}
+          >
+            <span
+              className="inline-block h-3 w-3 rounded-sm"
+              style={{
+                backgroundColor: `${color}40`,
+                border: `1.5px solid ${color}`,
+              }}
+            />
+            <span className="text-xs">{type}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ResultPanel({ result }: { result: any | null }) {
+  const [imageExpanded, setImageExpanded] = useState(false);
+
   if (!result) {
     return (
       <div className="glass p-6 text-slate-400">
@@ -258,18 +393,23 @@ function ResultPanel({ result }: { result: any | null }) {
     const risks = result.risk_result?.risks ?? [];
     return (
       <div className="glass p-5 space-y-4">
-        <header>
+        <header className="space-y-2">
           <p className="pill">Risk Insights</p>
-          <h3 className="text-xl font-semibold">Top Risks</h3>
+          <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
+            <span className="inline-block w-1 h-5 bg-accent-200 rounded-full" />
+            Top Risks
+          </h3>
         </header>
         <div className="space-y-3">
           {risks.slice(0, 5).map((risk: any, idx: number) => (
-            <div key={idx} className="rounded-lg border border-slate-800 p-3">
-              <div className="flex justify-between text-sm text-slate-400">
-                <span>{risk.name}</span>
-                <span>Score: {risk.score?.toFixed(2)}</span>
+            <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4 space-y-2 hover:border-slate-700/70 transition-colors">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold text-slate-200">{risk.name}</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-200/20 text-accent-200">
+                  {risk.score?.toFixed(2)}
+                </span>
               </div>
-              <p className="text-slate-300">{risk.description}</p>
+              <p className="text-xs text-slate-400 leading-relaxed">{risk.description}</p>
             </div>
           ))}
         </div>
@@ -280,28 +420,68 @@ function ResultPanel({ result }: { result: any | null }) {
   const summary = result.bias_result?.summary;
   const instances = result.bias_result?.bias_instances ?? [];
 
+  // Try multiple possible paths for image_base64
+  const imageBase64 = result.bias_result?.image_base64 || result.image_base64 || result.workflow_result?.image_base64;
+
   return (
     <div className="glass p-5 space-y-4">
-      <header>
+      <header className="space-y-2">
         <p className="pill">Bias Insights</p>
-        <h3 className="text-xl font-semibold">
+        <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
+          <span className="inline-block w-1 h-5 bg-accent-200 rounded-full" />
           {result.bias_result?.status === "success"
             ? "Analysis Complete"
             : "Analysis"}
         </h3>
       </header>
-      {summary && <p className="text-slate-200">{summary}</p>}
-      <div className="space-y-2">
-        {instances.slice(0, 5).map((inst: any, idx: number) => (
-          <div key={idx} className="rounded-lg border border-slate-800 p-3">
-            <div className="flex items-center justify-between text-sm text-slate-400">
-              <span className="font-semibold uppercase">{inst.type}</span>
-              <span>{inst.severity}</span>
+
+      {/* Collapsible image viewer for visual analysis */}
+      {imageBase64 && (
+        <div className="space-y-2">
+          <button
+            onClick={() => setImageExpanded(!imageExpanded)}
+            className="flex items-center gap-2 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+          >
+            <Upload size={14} />
+            <span>{imageExpanded ? "Hide" : "View"} Analyzed Image</span>
+            <Play
+              size={10}
+              className={clsx(
+                "transition-transform",
+                imageExpanded ? "rotate-90" : "rotate-0"
+              )}
+            />
+          </button>
+
+          {imageExpanded && (
+            <div className="analyzed-image-container">
+              <img
+                src={imageBase64}
+                alt="Analyzed content"
+                className="analyzed-image"
+              />
             </div>
-            <p className="text-slate-300">
-              <em>{inst.text_span}</em>
+          )}
+        </div>
+      )}
+
+      {summary && <p className="text-slate-300 text-sm leading-relaxed">{summary}</p>}
+      <div className="space-y-3">
+        {instances.slice(0, 5).map((inst: any, idx: number) => (
+          <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4 space-y-2 hover:border-slate-700/70 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wide text-slate-300">{inst.type}</span>
+              <span className={clsx(
+                "px-2 py-0.5 rounded-full text-xs font-medium",
+                inst.severity === "high" && "bg-red-500/20 text-red-300",
+                inst.severity === "medium" && "bg-yellow-500/20 text-yellow-300",
+                inst.severity === "low" && "bg-blue-500/20 text-blue-300"
+              )}>{inst.severity}</span>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              <em>"{inst.visual_element || inst.text_span}"</em>
             </p>
-            <p className="text-slate-400">{inst.explanation}</p>
+            <p className="text-xs text-slate-400 leading-relaxed">{inst.explanation}</p>
           </div>
         ))}
       </div>

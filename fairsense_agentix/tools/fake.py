@@ -351,7 +351,12 @@ class FakeFAISSIndexTool:
         query_vector: list[float],
         top_k: int = 5,
     ) -> list[dict[str, Any]]:
-        """Perform fake vector search."""
+        """Perform fake vector search.
+
+        Phase 7.2: Updated to return appropriate data structure
+        for risks vs RMF indexes.
+        Detects index type from path and returns fields that pass risk evaluator checks.
+        """
         self.call_count += 1
         self.last_call_args = {
             "query_vector_dim": len(query_vector),
@@ -366,16 +371,43 @@ class FakeFAISSIndexTool:
         vector_sum = sum(query_vector)
         results = []
 
+        # Detect if this is RMF index or risks index
+        is_rmf_index = "rmf" in str(self._index_path).lower()
+
+        # RMF functions to cycle through (Phase 7.2: ensures RMF breadth check passes)
+        rmf_functions = ["Govern", "Map", "Measure", "Manage"]
+
         for i in range(top_k):
-            results.append(
-                {
-                    "id": f"item_{i}",
-                    "text": f"Risk {i + 1}: Bias in training data (seed={vector_sum:.2f})",
-                    "score": 0.95 - (i * 0.1),  # Descending scores
-                    "severity": "high" if i < 2 else "medium",
-                    "category": "fairness",
-                }
-            )
+            if is_rmf_index:
+                # RMF recommendation format (with function field for evaluator)
+                results.append(
+                    {
+                        "id": f"RMF{i:03d}",
+                        "rmf_id": f"RMF{i:03d}",
+                        "text": f"RMF Recommendation {i + 1}: Implement controls (seed={vector_sum:.2f})",
+                        "recommendation": f"RMF Recommendation {i + 1}: Implement controls (seed={vector_sum:.2f})",
+                        "function": rmf_functions[
+                            i % 4
+                        ],  # Cycle through all 4 functions
+                        "category": f"Category {(i % 3) + 1}",
+                        "score": 0.95 - (i * 0.1),  # Descending scores
+                        "relevance_score": 0.95 - (i * 0.1),
+                    }
+                )
+            else:
+                # Risk format (original behavior)
+                results.append(
+                    {
+                        "id": f"RISK{i:03d}",
+                        "risk_id": f"RISK{i:03d}",
+                        "text": f"Risk {i + 1}: Bias in training data (seed={vector_sum:.2f})",
+                        "description": f"Risk {i + 1}: Bias in training data (seed={vector_sum:.2f})",
+                        "score": 0.95 - (i * 0.1),  # Descending scores
+                        "severity": "high" if i < 2 else "medium",
+                        "category": "fairness",
+                        "likelihood": "medium",
+                    }
+                )
 
         return results
 
@@ -463,6 +495,25 @@ class FakeFormatterTool:
     <p><em>Note: This is a Phase 4 fake. Real highlighting will be implemented in Phase 5+.</em></p>
 </body>
 </html>"""
+
+    def highlight_fragment(
+        self,
+        text: str,
+        spans: list[tuple[int, int, str]],
+        bias_types: dict[str, str],
+    ) -> str:
+        """Generate fake highlighted HTML fragment (not complete document).
+
+        Returns an HTML fragment suitable for embedding in a larger document.
+        This is the dark-mode compatible version without full HTML structure.
+        """
+        self.call_count_highlight += 1
+
+        # Simple fragment with inline styles (dark-mode compatible)
+        return f"""<div style="background-color: #1a1a1a; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; font-family: 'Inter', sans-serif; line-height: 1.6;">
+    <p style="margin: 0;">{text}</p>
+    <p style="margin-top: 1rem; font-size: 0.875rem; opacity: 0.7;"><em>Note: This is a fake formatter for testing.</em></p>
+</div>"""
 
     def table(
         self,

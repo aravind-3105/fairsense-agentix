@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import uuid
-from typing import Annotated, Any, cast
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Annotated, Any, AsyncIterator, cast
 
 import anyio
 from fastapi import (
@@ -19,10 +22,15 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 
-from fairsense_agentix import FairSense
+# Import logging config for side effects (suppress verbose HTTP logs)
+from fairsense_agentix import (
+    FairSense,
+    logging_config,  # noqa: F401 (imported for side effects)
+)
 from fairsense_agentix.service_api.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    AnalyzeStartResponse,
     BatchItem,
     BatchRequest,
     BatchStatus,
@@ -36,24 +44,63 @@ from fairsense_agentix.services import telemetry
 from fairsense_agentix.services.event_bus import AgentEventBus
 
 
-app = FastAPI(title="FairSense AgentiX API", version="0.1.0")
+# Module-level state (initialized in lifespan)
+engine: FairSense
+event_bus: AgentEventBus
+batch_jobs: dict[str, BatchStatus] = {}
+batch_lock = asyncio.Lock()
+# Store analysis results for async retrieval
+analysis_results: dict[str, AnalyzeResponse | None] = {}
+analysis_lock = asyncio.Lock()
+
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan: startup warmup and shutdown cleanup.
+
+    Startup Phase:
+    - Preloads all models and tools (LLM, OCR, embeddings, FAISS indexes)
+    - This takes 30-45s but makes subsequent requests instant
+    - Attaches event loop for WebSocket streaming
+
+    Shutdown Phase:
+    - Cleanup resources if needed
+    """
+    global engine, event_bus  # noqa: PLW0603
+
+    # STARTUP: Preload models and tools
+    print("🔥 FairSense AgentiX starting up...")
+    print("⏳ Preloading models and tools (this takes 30-45s)...")
+
+    # Initialize FairSense (triggers eager tool loading via api.py __init__)
+    engine = FairSense()
+    print("✅ FairSense engine initialized with all models loaded")
+
+    # Initialize event bus for WebSocket streaming
+    event_bus = AgentEventBus(telemetry)
+    loop = asyncio.get_running_loop()
+    event_bus.attach_loop(loop)
+    print("✅ Event bus attached to event loop")
+
+    print("🚀 Server ready! All requests will be fast now.")
+
+    yield  # Server runs here
+
+    # SHUTDOWN: Cleanup
+    print("🛑 Shutting down FairSense AgentiX...")
+
+
+app = FastAPI(
+    title="FairSense AgentiX API",
+    version="0.1.0",
+    lifespan=lifespan,  # Use modern lifespan pattern
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-engine = FairSense()
-event_bus = AgentEventBus(telemetry)
-batch_jobs: dict[str, BatchStatus] = {}
-batch_lock = asyncio.Lock()
-
-
-@app.on_event("startup")
-async def _startup() -> None:
-    loop = asyncio.get_running_loop()
-    event_bus.attach_loop(loop)
 
 
 def get_engine() -> FairSense:
@@ -86,9 +133,121 @@ async def analyze_upload(
 ) -> AnalyzeResponse:
     """Run analysis for uploaded binary/text files."""
     data = await file.read()
-    detected = input_type or detect_input_type(file.filename or data)
-    payload: str | bytes = data if detected == "image" else data.decode("utf-8")
+    # Convert filename string to Path for proper extension detection
+    detected = input_type or detect_input_type(
+        Path(file.filename) if file.filename else data
+    )
+
+    # Handle image vs text with proper error handling
+    if detected == "image":
+        payload: str | bytes = data
+    else:
+        # Attempt UTF-8 decode for text/csv files
+        try:
+            payload = data.decode("utf-8")
+        except UnicodeDecodeError as e:
+            # File appears to be binary but was detected as text
+            # This can happen with images that have wrong file extensions
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"File '{file.filename}' could not be decoded as text. "
+                    "If this is an image, please rename it with a proper extension "
+                    "(.png, .jpg, .jpeg, .gif, .bmp, .webp) or explicitly set "
+                    "input_type='image' in your request."
+                ),
+            ) from e
+
     return await _run_analysis(fs, detected, payload, {})
+
+
+@app.post("/v1/analyze/start", response_model=AnalyzeStartResponse)
+async def analyze_start(
+    request: AnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    fs: Annotated[FairSense, Depends(get_engine)],
+) -> AnalyzeStartResponse:
+    """Start analysis and return run_id immediately for WebSocket connection.
+
+    This endpoint solves the WebSocket race condition by:
+    1. Generating run_id before analysis starts
+    2. Returning run_id immediately for WebSocket connection
+    3. Running analysis in background task that publishes events
+    """
+    run_id = str(uuid.uuid4())
+
+    # Mark analysis as pending
+    async with analysis_lock:
+        analysis_results[run_id] = None
+
+    # Detect input type
+    hinted = normalize_input_hint(request.input_type)
+    input_type = hinted or detect_input_type(request.content)
+
+    # Start analysis in background
+    background_tasks.add_task(
+        _run_analysis_background,
+        run_id,
+        fs,
+        input_type,
+        request.content,
+        request.options,
+    )
+
+    return AnalyzeStartResponse(run_id=run_id)
+
+
+@app.post("/v1/analyze/upload/start", response_model=AnalyzeStartResponse)
+async def analyze_upload_start(
+    background_tasks: BackgroundTasks,
+    fs: Annotated[FairSense, Depends(get_engine)],
+    file: Annotated[UploadFile, File(...)],
+    input_type: InputType | None = None,
+) -> AnalyzeStartResponse:
+    """Start file upload analysis and return run_id immediately.
+
+    Returns run_id for WebSocket connection.
+    """
+    run_id = str(uuid.uuid4())
+
+    # Mark analysis as pending
+    async with analysis_lock:
+        analysis_results[run_id] = None
+
+    # Read and process file
+    data = await file.read()
+    detected = input_type or detect_input_type(
+        Path(file.filename) if file.filename else data
+    )
+
+    # Handle image vs text with proper error handling
+    if detected == "image":
+        payload: str | bytes = data
+    else:
+        try:
+            payload = data.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"File '{file.filename}' could not be decoded as text. "
+                    "If this is an image, please rename it with a proper extension "
+                    "(.png, .jpg, .jpeg, .gif, .bmp, .webp) or explicitly set "
+                    "input_type='image' in your request."
+                ),
+            ) from e
+
+    # Start analysis in background
+    background_tasks.add_task(
+        _run_analysis_background,
+        run_id,
+        fs,
+        detected,
+        payload,
+        {},
+    )
+
+    return AnalyzeStartResponse(run_id=run_id)
 
 
 @app.post("/v1/batch", response_model=BatchStatus, status_code=202)
@@ -161,8 +320,23 @@ async def _run_analysis(
     input_type: InputType,
     content: str | bytes,
     options: dict[str, Any],
+    run_id: str | None = None,
 ) -> AnalyzeResponse:
-    """Dispatch to the correct FairSense API based on input type."""
+    """Dispatch to the correct FairSense API based on input type.
+
+    Parameters
+    ----------
+    fs : FairSense
+        FairSense instance
+    input_type : InputType
+        Type of input (text, image, csv)
+    content : str | bytes
+        Input content
+    options : dict[str, Any]
+        Analysis options
+    run_id : str | None, optional
+        Pre-generated run ID for tracing (fixes WebSocket event streaming)
+    """
     if input_type == "image":
         image_bytes = (
             content
@@ -170,7 +344,7 @@ async def _run_analysis(
             else str(content).encode("utf-8")
         )
         bias_result = await anyio.to_thread.run_sync(
-            lambda: fs.analyze_image(cast(bytes, image_bytes), **options)
+            lambda: fs.analyze_image(cast(bytes, image_bytes), run_id=run_id, **options)
         )
         return AnalyzeResponse.from_bias_result(bias_result)
 
@@ -186,6 +360,76 @@ async def _run_analysis(
         return AnalyzeResponse.from_risk_result(risk_result)
 
     bias_result = await anyio.to_thread.run_sync(
-        lambda: fs.analyze_text(text_content, **options)
+        lambda: fs.analyze_text(text_content, run_id=run_id, **options)
     )
     return AnalyzeResponse.from_bias_result(bias_result)
+
+
+async def _run_analysis_background(
+    run_id: str,
+    fs: FairSense,
+    input_type: InputType,
+    content: str | bytes,
+    options: dict[str, Any],
+) -> None:
+    """Background task that runs analysis and publishes result through WebSocket.
+
+    This function:
+    1. Runs the analysis with our pre-generated run_id
+       (fixes WebSocket event streaming!)
+    2. Stores the result in analysis_results dict
+    3. Publishes a final 'complete' event through WebSocket with the full result
+    """
+    try:
+        print(f"[DEBUG] Background task started for run_id={run_id}")
+
+        # Run the analysis WITH our run_id so all telemetry uses it
+        result = await _run_analysis(fs, input_type, content, options, run_id=run_id)
+
+        print(
+            f"[DEBUG] Analysis completed, result run_id={result.metadata['run_id']}, our run_id={run_id}"
+        )
+
+        # Store result for potential polling
+        async with analysis_lock:
+            analysis_results[run_id] = result
+
+        # Publish completion event through WebSocket
+        completion_payload = {
+            "run_id": run_id,
+            "timestamp": time.time(),  # Use Unix timestamp, not event loop time
+            "event": "analysis_complete",
+            "level": "info",
+            "context": {
+                "message": "Analysis completed successfully",
+                "result": result.model_dump(),
+            },
+        }
+
+        # Manually inject completion event into event_bus queue
+        if event_bus._loop:
+            queue = event_bus._queues.get(run_id)
+            if queue:
+                event_bus._loop.call_soon_threadsafe(
+                    event_bus._enqueue, queue, completion_payload
+                )
+
+    except Exception as e:  # pragma: no cover - best effort error handling
+        # Publish error event through WebSocket
+        error_payload = {
+            "run_id": run_id,
+            "timestamp": time.time(),  # Use Unix timestamp, not event loop time
+            "event": "analysis_error",
+            "level": "error",
+            "context": {
+                "message": f"Analysis failed: {str(e)}",
+                "error_type": type(e).__name__,
+            },
+        }
+
+        if event_bus._loop:
+            queue = event_bus._queues.get(run_id)
+            if queue:
+                event_bus._loop.call_soon_threadsafe(
+                    event_bus._enqueue, queue, error_payload
+                )

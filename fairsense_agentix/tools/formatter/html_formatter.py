@@ -110,6 +110,65 @@ class HTMLFormatter:
             f"HTMLFormatter initialized with {len(self.default_color_map)} bias colors"
         )
 
+    def highlight_fragment(
+        self,
+        text: str,
+        spans: list[tuple[int, int, str]],
+        bias_types: dict[str, str],
+    ) -> str:
+        """Generate dark-mode HTML fragment (not complete document) for embedding.
+
+        Creates an HTML fragment (just the content, no DOCTYPE/html/head/body tags)
+        suitable for embedding in a dark-themed SPA. Uses dark-mode-compatible
+        inline styles and transparent backgrounds.
+
+        Parameters
+        ----------
+        text : str
+            Text to highlight (will be HTML-escaped for safety)
+        spans : list[tuple[int, int, str]]
+            List of (start_idx, end_idx, bias_type) tuples
+        bias_types : dict[str, str]
+            Mapping of bias_type to hex color code
+
+        Returns
+        -------
+        str
+            HTML fragment (not complete document) with inline dark-mode styles
+
+        Examples
+        --------
+        >>> formatter = HTMLFormatter()
+        >>> html = formatter.highlight_fragment(
+        ...     text="Looking for a rockstar developer",
+        ...     spans=[(15, 23, "gender")],
+        ...     bias_types={"gender": "#FF6B9D"},
+        ... )
+        """
+        try:
+            # Sort spans by start position
+            sorted_spans = sorted(spans, key=lambda s: (s[0], s[1]))
+
+            # Build HTML fragment with dark-mode inline styles
+            html_output = self._build_dark_fragment(text, sorted_spans, bias_types)
+
+            logger.debug(
+                f"Dark-mode HTML fragment generated (text_length={len(text)}, spans={len(spans)})"
+            )
+
+            return html_output
+
+        except Exception as e:
+            msg = "Failed to generate dark-mode HTML fragment"
+            raise FormatterError(
+                msg,
+                context={
+                    "text_length": len(text) if isinstance(text, str) else None,
+                    "span_count": len(spans) if isinstance(spans, list) else None,
+                    "error": str(e),
+                },
+            ) from e
+
     def highlight(
         self,
         text: str,
@@ -276,6 +335,97 @@ class HTMLFormatter:
                     "error_type": type(e).__name__,
                 },
             ) from e
+
+    def _build_dark_fragment(
+        self,
+        text: str,
+        spans: list[tuple[int, int, str]],
+        bias_types: dict[str, str],
+    ) -> str:
+        """Build dark-mode HTML fragment (not complete document).
+
+        Creates an HTML fragment with inline styles suitable for embedding
+        in a dark-themed SPA. No DOCTYPE/html/head/body tags.
+
+        Parameters
+        ----------
+        text : str
+            Original text to highlight
+        spans : list[tuple[int, int, str]]
+            Sorted list of (start, end, type) tuples
+        bias_types : dict[str, str]
+            Bias type to color mapping
+
+        Returns
+        -------
+        str
+            HTML fragment with inline dark-mode styles
+        """
+        # Apply spans to text with dark-mode inline styles
+        highlighted_content = self._apply_spans_dark(text, spans, bias_types)
+
+        # Return just the content div with inline styles (no full document)
+        return f"""<div style="font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace; font-size: 14px; line-height: 1.6; color: #e5e7eb; background: transparent; padding: 16px; border-radius: 6px; white-space: pre-wrap; word-break: break-word;">
+{highlighted_content}
+</div>"""
+
+    def _apply_spans_dark(
+        self,
+        original_text: str,
+        spans: list[tuple[int, int, str]],
+        bias_types: dict[str, str],
+    ) -> str:
+        """Apply span highlights with dark-mode inline styles.
+
+        Parameters
+        ----------
+        original_text : str
+            Original unescaped text
+        spans : list[tuple[int, int, str]]
+            Spans with indices into original_text
+        bias_types : dict[str, str]
+            Bias type to color mapping
+
+        Returns
+        -------
+        str
+            HTML with span elements inserted (inline dark-mode styles)
+        """
+        if not spans:
+            return html.escape(original_text)
+
+        result_parts = []
+        last_end = 0
+
+        for start, end, bias_type in spans:
+            # Validate span indices
+            if start < 0 or end > len(original_text) or start >= end:
+                logger.warning(
+                    f"Invalid span: start={start}, end={end}, text_len={len(original_text)}"
+                )
+                continue
+
+            # Add text before span (escaped)
+            if start > last_end:
+                result_parts.append(html.escape(original_text[last_end:start]))
+
+            # Add span with dark-mode inline styles
+            span_text = original_text[start:end]
+            color = bias_types.get(
+                bias_type, "#FF6B9D"
+            )  # Default pink for unknown types
+            # Use semi-transparent backgrounds that work on dark themes
+            result_parts.append(
+                f'<span style="background-color: {color}30; color: {color}; padding: 2px 4px; border-radius: 3px; font-weight: 500;">{html.escape(span_text)}</span>'
+            )
+
+            last_end = end
+
+        # Add remaining text (escaped)
+        if last_end < len(original_text):
+            result_parts.append(html.escape(original_text[last_end:]))
+
+        return "".join(result_parts)
 
     def _build_highlight_html(
         self,

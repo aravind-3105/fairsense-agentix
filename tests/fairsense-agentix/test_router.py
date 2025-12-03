@@ -34,21 +34,24 @@ class TestRouterBasic:
         assert "bias_llm" in plan.node_params
 
     def test_image_input_routes_to_bias_image(self) -> None:
-        """Test image input selects bias_image workflow."""
+        """Test image input selects bias_image_vlm workflow.
+
+        VLM is default as of Phase 6.
+        """
         plan = create_selection_plan(
             input_type="image",
             content=b"fake_image_bytes",
             options={},
         )
 
-        assert plan.workflow_id == "bias_image"
+        # VLM is now the default mode for image analysis
+        assert plan.workflow_id == "bias_image_vlm"
         assert plan.confidence == 1.0
         assert "image" in plan.reasoning.lower()
-        assert "ocr" in plan.tool_preferences
-        assert "caption" in plan.tool_preferences
-        assert "extract_ocr" in plan.node_params
-        assert "generate_caption" in plan.node_params
-        assert plan.fallbacks == ["bias_text"]  # Image can fall back to text
+        # VLM mode uses llm instead of ocr+caption
+        assert "llm" in plan.tool_preferences
+        assert "visual_analyze" in plan.node_params
+        assert plan.fallbacks == ["bias_image", "bias_text"]  # VLM can fall back
 
     def test_csv_input_routes_to_risk(self) -> None:
         """Test CSV input selects risk workflow."""

@@ -22,9 +22,13 @@ Examples
 """
 
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
+
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 # ============================================================================
@@ -233,6 +237,71 @@ class SummarizerTool(Protocol):
         ...
 
 
+@runtime_checkable
+class VLMTool(Protocol):
+    """Protocol for Vision-Language Model (VLM) tools.
+
+    Analyzes images with structured output using vision-language models
+    (GPT-4o Vision, Claude Sonnet Vision, etc.). Supports Chain-of-Thought
+    reasoning and Pydantic schema validation.
+
+    Examples
+    --------
+    >>> vlm = UnifiedVLMTool(settings)
+    >>> result = vlm.analyze_image(
+    ...     image_bytes=image_data,
+    ...     prompt="Analyze this image for bias",
+    ...     response_model=BiasVisualAnalysisOutput,
+    ... )
+    >>> print(result.bias_analysis.overall_assessment)
+    'Gender bias detected in leadership representation...'
+    """
+
+    def analyze_image(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        response_model: type["BaseModel"],
+        temperature: float = 0.3,
+        max_tokens: int = 2000,
+    ) -> "BaseModel":
+        """Analyze image with structured Pydantic output.
+
+        Sends image + prompt to Vision-Language Model and returns
+        structured output matching the provided Pydantic schema.
+
+        Parameters
+        ----------
+        image_bytes : bytes
+            Raw image data (PNG, JPEG, etc.)
+        prompt : str
+            Analysis prompt (e.g., bias detection instructions)
+        response_model : type[BaseModel]
+            Pydantic model class for structured output
+        temperature : float, optional
+            Sampling temperature (0.0 = deterministic, 1.0 = creative),
+            by default 0.3
+        max_tokens : int, optional
+            Maximum tokens to generate, by default 2000
+
+        Returns
+        -------
+        BaseModel
+            Instance of response_model with populated fields
+
+        Raises
+        ------
+        VLMError
+            If analysis fails (invalid image, API error, timeout, etc.)
+
+        Notes
+        -----
+        Both OpenAI (GPT-4o Vision) and Anthropic (Claude Sonnet Vision)
+        are supported. Provider is determined by llm_provider setting.
+        """
+        ...
+
+
 # ============================================================================
 # Embedding & Search Tools
 # ============================================================================
@@ -422,6 +491,35 @@ class FormatterTool(Protocol):
         ------
         FormatterError
             If formatting fails (invalid spans, template error, etc.)
+        """
+        ...
+
+    def highlight_fragment(
+        self,
+        text: str,
+        spans: list[tuple[int, int, str]],
+        bias_types: dict[str, str],
+    ) -> str:
+        """Generate HTML fragment (not complete document) for embedding.
+
+        Parameters
+        ----------
+        text : str
+            Text to highlight
+        spans : list[tuple[int, int, str]]
+            List of (start_idx, end_idx, bias_type) tuples
+        bias_types : dict[str, str]
+            Mapping of bias_type to color
+
+        Returns
+        -------
+        str
+            HTML fragment with highlighted spans
+
+        Raises
+        ------
+        FormatterError
+            If formatting fails
         """
         ...
 

@@ -96,6 +96,22 @@ class LLMError(ToolError):
     pass
 
 
+class VLMError(ToolError):
+    """Vision-Language Model analysis failed.
+
+    Raised when VLM image analysis fails. Common causes: invalid image format,
+    API timeout, rate limiting, unsupported provider, authentication failure.
+
+    Examples
+    --------
+    >>> raise VLMError(
+    ...     "Image analysis failed", context={"provider": "openai", "model": "gpt-4o"}
+    ... )
+    """
+
+    pass
+
+
 class EmbeddingError(ToolError):
     """Text embedding generation failed.
 

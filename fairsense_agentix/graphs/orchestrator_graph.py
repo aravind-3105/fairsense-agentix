@@ -33,6 +33,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.bias_image_graph import create_bias_image_graph
+from fairsense_agentix.graphs.bias_image_vlm_graph import create_bias_image_vlm_graph
 from fairsense_agentix.graphs.bias_text_graph import create_bias_text_graph
 from fairsense_agentix.graphs.risk_graph import create_risk_graph
 from fairsense_agentix.graphs.state import EvaluationResult, OrchestratorState
@@ -249,37 +250,128 @@ def execute_workflow(state: OrchestratorState) -> dict:
                 }
 
             elif workflow_id == "bias_image":
-                # Checkpoint 2.5: Real BiasImageGraph
-                with telemetry.timer("orchestrator.bias_image_subgraph"):
-                    image_graph = create_bias_image_graph()
+                # Extract image bytes
+                image_bytes = (
+                    state.content
+                    if isinstance(state.content, bytes)
+                    else state.content.encode("utf-8")
+                )
 
-                    # Extract image bytes
-                    image_bytes = (
-                        state.content
-                        if isinstance(state.content, bytes)
-                        else state.content.encode("utf-8")
+                # Route based on image_analysis_mode setting
+                if settings.image_analysis_mode == "vlm":
+                    # VLM-based analysis (fast, requires OpenAI or Anthropic)
+                    # Validate provider supports VLM
+                    if settings.llm_provider not in {"openai", "anthropic", "fake"}:
+                        telemetry.log_error(
+                            "vlm_mode_invalid_provider",
+                            provider=settings.llm_provider,
+                        )
+                        raise ValueError(
+                            f"VLM mode requires llm_provider to be 'openai', 'anthropic', or 'fake'. "
+                            f"Current provider: {settings.llm_provider}. "
+                            f"Either change llm_provider or set image_analysis_mode='traditional'."
+                        )
+
+                    with telemetry.timer("orchestrator.bias_image_vlm_subgraph"):
+                        vlm_graph = create_bias_image_vlm_graph()
+
+                        # Invoke VLM subgraph
+                        subgraph_result = vlm_graph.invoke(
+                            {
+                                "image_bytes": image_bytes,
+                                "options": state.options,
+                                "run_id": state.run_id,
+                            }
+                        )
+
+                    # Package result (VLM format)
+                    result = {
+                        "workflow_id": "bias_image_vlm",
+                        "vlm_analysis": subgraph_result["vlm_analysis"],
+                        "visual_description": subgraph_result[
+                            "vlm_analysis"
+                        ].visual_description,
+                        "reasoning_trace": subgraph_result[
+                            "vlm_analysis"
+                        ].reasoning_trace,
+                        "bias_analysis": subgraph_result["vlm_analysis"].bias_analysis,
+                        "summary": subgraph_result.get("summary"),
+                        "highlighted_html": subgraph_result["highlighted_html"],
+                        "image_base64": subgraph_result.get("image_base64"),
+                    }
+
+                else:
+                    # Traditional OCR + Caption analysis (slower, backward compatible)
+                    with telemetry.timer("orchestrator.bias_image_subgraph"):
+                        image_graph = create_bias_image_graph()
+
+                        # Invoke traditional subgraph
+                        subgraph_result = image_graph.invoke(
+                            {
+                                "image_bytes": image_bytes,
+                                "options": state.options,
+                                "run_id": state.run_id,
+                            }
+                        )
+
+                    # Package result (traditional format)
+                    result = {
+                        "workflow_id": "bias_image",
+                        "ocr_text": subgraph_result["ocr_text"],
+                        "caption_text": subgraph_result["caption_text"],
+                        "merged_text": subgraph_result["merged_text"],
+                        "bias_analysis": subgraph_result["bias_analysis"],
+                        "summary": subgraph_result.get("summary"),
+                        "highlighted_html": subgraph_result["highlighted_html"],
+                    }
+
+            elif workflow_id == "bias_image_vlm":
+                # VLM-based image bias analysis (direct route from router)
+                # Extract image bytes
+                image_bytes = (
+                    state.content
+                    if isinstance(state.content, bytes)
+                    else state.content.encode("utf-8")
+                )
+
+                # Validate provider supports VLM
+                if settings.llm_provider not in {"openai", "anthropic", "fake"}:
+                    telemetry.log_error(
+                        "vlm_mode_invalid_provider",
+                        provider=settings.llm_provider,
+                    )
+                    raise ValueError(
+                        f"VLM mode requires llm_provider to be 'openai', 'anthropic', or 'fake'. "
+                        f"Current provider: {settings.llm_provider}. "
+                        f"Either change llm_provider or set image_analysis_mode='traditional'."
                     )
 
-                    # Invoke subgraph with options from plan
-                    subgraph_result = image_graph.invoke(
+                with telemetry.timer("orchestrator.bias_image_vlm_subgraph"):
+                    vlm_graph = create_bias_image_vlm_graph()
+
+                    # Invoke VLM subgraph
+                    subgraph_result = vlm_graph.invoke(
                         {
                             "image_bytes": image_bytes,
                             "options": state.options,
-                            "run_id": state.run_id,  # Propagate run_id for tracing
+                            "run_id": state.run_id,
                         }
                     )
 
-                # Package result
-                # Note: summary is optional (conditional node in BiasImageGraph)
+                # Package result (VLM format)
                 result = {
-                    "workflow_id": "bias_image",
-                    "ocr_text": subgraph_result["ocr_text"],
-                    "caption_text": subgraph_result["caption_text"],
-                    "merged_text": subgraph_result["merged_text"],
-                    "bias_analysis": subgraph_result["bias_analysis"],
-                    "summary": subgraph_result.get("summary"),  # Optional field
+                    "workflow_id": "bias_image_vlm",
+                    "vlm_analysis": subgraph_result["vlm_analysis"],
+                    "visual_description": subgraph_result[
+                        "vlm_analysis"
+                    ].visual_description,
+                    "reasoning_trace": subgraph_result["vlm_analysis"].reasoning_trace,
+                    "bias_analysis": subgraph_result["vlm_analysis"].bias_analysis,
+                    "summary": subgraph_result.get("summary"),
                     "highlighted_html": subgraph_result["highlighted_html"],
+                    "image_base64": subgraph_result.get("image_base64"),
                 }
+
             elif workflow_id == "risk":
                 # Checkpoint 2.6: Real RiskGraph
                 with telemetry.timer("orchestrator.risk_subgraph"):
@@ -385,13 +477,25 @@ def posthoc_eval(state: OrchestratorState) -> dict:
             workflow_id = state.workflow_result.get("workflow_id")
 
             if (
-                workflow_id in {"bias_text", "bias_image"}
+                workflow_id in {"bias_text", "bias_image", "bias_image_vlm"}
                 and settings.evaluator_enabled
             ):
                 original_text = _extract_bias_source_text(state, workflow_id)
                 evaluation = evaluate_bias_output(
                     state.workflow_result,
                     original_text=original_text,
+                    options=state.options,
+                    context=EvaluationContext(
+                        workflow_id=workflow_id,
+                        run_id=state.run_id,
+                    ),
+                )
+            elif workflow_id == "risk" and settings.evaluator_enabled:
+                # Phase 7.2: Risk evaluator for quality checks
+                from fairsense_agentix.services.evaluator import evaluate_risk_output
+
+                evaluation = evaluate_risk_output(
+                    state.workflow_result,
                     options=state.options,
                     context=EvaluationContext(
                         workflow_id=workflow_id,
@@ -431,6 +535,15 @@ def _extract_bias_source_text(
         )
         if isinstance(merged_text, str):
             return merged_text
+    if workflow_id == "bias_image_vlm":
+        # For VLM mode, use visual_description as source text
+        visual_description = (
+            state.workflow_result.get("visual_description")
+            if state.workflow_result
+            else None
+        )
+        if isinstance(visual_description, str):
+            return visual_description
     return None
 
 

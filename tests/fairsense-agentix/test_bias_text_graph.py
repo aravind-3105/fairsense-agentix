@@ -53,9 +53,9 @@ class TestBiasTextGraphBasic:
         # Conditional routing skips summarize node
         assert "summary" not in result or result.get("summary") is None
 
-        # HTML generated (always runs)
+        # HTML generated (always runs) - returns <div> fragment for SPA embedding
         assert result["highlighted_html"] is not None
-        assert "<html>" in result["highlighted_html"]
+        assert "<div" in result["highlighted_html"]
         assert "Looking for a talented developer" in result["highlighted_html"]
 
     def test_long_text_analysis(self) -> None:
@@ -137,10 +137,10 @@ class TestBiasTextGraphGoldenOutputs:
         assert hasattr(analysis, "bias_instances")
         assert isinstance(analysis.bias_instances, list)
 
-        # HTML highlighting always generated
+        # HTML highlighting always generated - returns <div> fragment for SPA embedding
         assert result["highlighted_html"] is not None
         assert (
-            "<html>" in result["highlighted_html"]
+            "<div" in result["highlighted_html"]
             or "<pre>" in result["highlighted_html"]
         )
         assert "Software Engineer" in result["highlighted_html"]

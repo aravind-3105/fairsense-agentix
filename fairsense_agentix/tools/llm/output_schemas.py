@@ -97,9 +97,15 @@ class BiasInstance(BaseModel):
         description="End position in text (0-indexed) for highlighting",
     )
 
-    evidence_source: Literal["text", "caption", "ocr_text"] = Field(
+    evidence_source: Literal["text", "caption", "ocr_text", "visual"] = Field(
         default="text",
-        description="Source: text (direct), caption (image description), ocr_text (extracted)",
+        description=(
+            "Source of evidence: "
+            "text (direct text analysis), "
+            "caption (image caption), "
+            "ocr_text (OCR extraction), "
+            "visual (direct VLM visual analysis)"
+        ),
     )
 
 

@@ -14,29 +14,30 @@ dependencies = [
     "langchain-core>=0.3.0",
     # Phase 5.1: Embeddings + FAISS
     "sentence-transformers>=3.0.0",
-    "torch>=2.0.0,<2.6.0",  # Cap at <2.6 due to manylinux_2_27 compatibility (server limitation)
+    "torch>=2.0.0,<2.6.0", # Cap at <2.6 due to manylinux_2_27 compatibility (server limitation)
     "faiss-cpu>=1.7.4",
     "numpy>=1.24.0",
-    "pandas>=2.0.0",  # For CSV handling in build script
+    "pandas>=2.0.0", # For CSV handling in build script
     # Phase 5.2: LLM Adapters (LangChain-based)
-    "langchain>=0.3.0",  # Core LangChain functionality
-    "langchain-openai>=0.2.0",  # OpenAI/GPT-4 integration (brings openai as dependency)
-    "langchain-anthropic>=0.2.0",  # Anthropic/Claude integration (brings anthropic as dependency)
-    "langchain-community>=0.3.0",  # Community integrations (callbacks, cache, etc.)
-    "tiktoken>=0.7.0,<0.12.0",  # OpenAI tokenizer (constrain to version with prebuilt wheels)
+    "langchain>=0.3.0", # Core LangChain functionality
+    "langchain-openai>=0.2.0", # OpenAI/GPT-4 integration (brings openai as dependency)
+    "langchain-anthropic>=0.2.0", # Anthropic/Claude integration (brings anthropic as dependency)
+    "langchain-community>=0.3.0", # Community integrations (callbacks, cache, etc.)
+    "tiktoken>=0.7.0,<0.12.0", # OpenAI tokenizer (constrain to version with prebuilt wheels)
     # Phase 5.3: OCR Tools
-    "pytesseract>=0.3.10",  # Tesseract OCR wrapper (CPU-friendly, 100+ languages)
-    "paddleocr>=2.7.0",  # PaddleOCR (GPU-accelerated, excellent accuracy)
-    "pillow>=10.0.0",  # Image processing (PIL, used by OCR and captioning)
+    "pytesseract>=0.3.10", # Tesseract OCR wrapper (CPU-friendly, 100+ languages)
+    "paddleocr>=2.7.0", # PaddleOCR (GPU-accelerated, excellent accuracy)
+    "pillow>=10.0.0", # Image processing (PIL, used by OCR and captioning)
     # Phase 5.3: Image Captioning
-    "transformers>=4.35.0",  # Hugging Face transformers (BLIP/BLIP-2 models)
-    "accelerate>=0.20.0",  # Fast model loading and inference
+    "transformers>=4.35.0", # Hugging Face transformers (BLIP/BLIP-2 models)
+    "accelerate>=0.20.0", # Fast model loading and inference
     # Phase 6.0: LangChain FAISS Refactor
-    "langchain-huggingface>=0.1.0",  # LangChain HuggingFace embeddings integration
+    "langchain-huggingface>=0.1.0", # LangChain HuggingFace embeddings integration
     # Phase 9+: API + UI surface
     "fastapi>=0.115.0",
     "uvicorn>=0.30.0",
     "python-multipart>=0.0.9",
+    "websockets>=15.0.1",
 ]
 
 [build-system]
@@ -146,7 +147,13 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 # Ignoring undocumented public functions, public init, magic method, and magic numbers in tests folder
-"tests/*" = ["D103", "D105", "D107"]
+"tests/*" = ["D103", "D105", "D107", "PLC0415"]
+# Allow lazy/conditional imports for performance and avoiding circular dependencies
+"fairsense_agentix/graphs/*.py" = ["PLC0415"]
+"fairsense_agentix/tools/registry.py" = ["PLC0415"]
+"fairsense_agentix/tools/vlm/*.py" = ["PLC0415"]
+"fairsense_agentix/tools/caption/*.py" = ["PLC0415"]
+"fairsense_agentix/graphs/orchestrator_graph.py" = ["PLC0415"]
 
 
 [tool.ruff.lint.pep8-naming]

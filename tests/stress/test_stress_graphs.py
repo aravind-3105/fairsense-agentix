@@ -388,7 +388,7 @@ class TestOrchestratorGraphStress:
         assert result["final_result"]["status"] == "success"
 
     def test_orchestrator_with_large_image(self) -> None:
-        """Test orchestrator routing large image."""
+        """Test orchestrator routing large image (VLM is default as of Phase 6)."""
         graph = create_orchestrator_graph()
 
         large_image = b"fake_large_image" * 100000  # ~1.5MB
@@ -401,9 +401,9 @@ class TestOrchestratorGraphStress:
             }
         )
 
-        # Should route to image workflow
+        # Should route to VLM image workflow (default mode)
         assert result is not None
-        assert result["final_result"]["workflow_id"] == "bias_image"
+        assert result["final_result"]["workflow_id"] == "bias_image_vlm"
 
     def test_orchestrator_with_unicode(self) -> None:
         """Test orchestrator with Unicode content."""

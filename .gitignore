@@ -34,6 +34,7 @@ test_demo.py
 demo_simple.py
 *.json
 *.csv
-/node_modules
+*/node_modules
+/UI_images
 *.js
 *.map

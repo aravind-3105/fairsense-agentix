@@ -75,7 +75,7 @@ class TestPhase2Integration:
         )
         assert result["workflow_result"]["summary"] is not None
         assert result["workflow_result"]["highlighted_html"] is not None
-        assert "<html>" in result["workflow_result"]["highlighted_html"]
+        assert "<div" in result["workflow_result"]["highlighted_html"]
 
         # Verify posthoc evaluation ran
         assert result["posthoc_eval"] is not None
@@ -100,12 +100,11 @@ class TestPhase2Integration:
         """Test complete image bias analysis workflow end-to-end.
 
         Verifies:
-        - Orchestrator routes image input to BiasImageGraph
-        - Router creates correct SelectionPlan with OCR + caption params
-        - BiasImageGraph executes parallel extraction (OCR ∥ Caption)
-        - Text merging happens correctly
-        - Bias analysis runs on merged text
-        - Results propagate back with image-specific fields
+        - Orchestrator routes image input to BiasImageVLMGraph
+          (VLM is default as of Phase 6)
+        - Router creates correct SelectionPlan with VLM params
+        - BiasImageVLMGraph executes VLM analysis with Chain-of-Thought
+        - Results propagate back with VLM-specific fields
         - Fallback plan included in SelectionPlan
         """
         graph = create_orchestrator_graph()
@@ -118,33 +117,29 @@ class TestPhase2Integration:
                 "input_type": "image",
                 "content": large_image,
                 "options": {
-                    "ocr_tool": "tesseract",
-                    "caption_model": "blip2",
                     "validate_image_bytes": False,
                 },
             }
         )
 
-        # Verify orchestrator coordination
+        # Verify orchestrator coordination (VLM is default mode)
         assert result["plan"] is not None
-        assert result["plan"].workflow_id == "bias_image"
-        assert result["plan"].tool_preferences["ocr"] == "tesseract"
-        assert result["plan"].tool_preferences["caption"] == "blip2"
-        assert result["plan"].fallbacks == ["bias_text"]  # Image can fallback to text
+        assert result["plan"].workflow_id == "bias_image_vlm"
+        assert result["plan"].tool_preferences["llm"] is not None
+        assert result["plan"].fallbacks == [
+            "bias_image",
+            "bias_text",
+        ]  # VLM can fallback
 
-        # Verify BiasImageGraph parallel execution
-        assert result["workflow_result"]["workflow_id"] == "bias_image"
-        assert result["workflow_result"]["ocr_text"] is not None
-        assert result["workflow_result"]["caption_text"] is not None
-        assert len(result["workflow_result"]["ocr_text"]) > 0
-        assert len(result["workflow_result"]["caption_text"]) > 0
+        # Verify BiasImageVLMGraph execution
+        assert result["workflow_result"]["workflow_id"] == "bias_image_vlm"
+        assert result["workflow_result"]["vlm_analysis"] is not None
+        assert result["workflow_result"]["visual_description"] is not None
+        assert len(result["workflow_result"]["visual_description"]) > 0
+        assert result["workflow_result"]["reasoning_trace"] is not None
+        assert len(result["workflow_result"]["reasoning_trace"]) > 0
 
-        # Verify text merging happened
-        assert result["workflow_result"]["merged_text"] is not None
-        assert "OCR Extracted Text" in result["workflow_result"]["merged_text"]
-        assert "Image Caption" in result["workflow_result"]["merged_text"]
-
-        # Verify bias analysis on merged text
+        # Verify VLM analysis structure
         assert result["workflow_result"]["bias_analysis"] is not None
         assert isinstance(
             result["workflow_result"]["bias_analysis"], BiasAnalysisOutput

@@ -33,6 +33,9 @@ if _should_force_fake_stack():
         "FAIRSENSE_LLM_CACHE_ENABLED": "false",
         # Keep telemetry off to reduce noisy logs in CI.
         "FAIRSENSE_TELEMETRY_ENABLED": "false",
+        # Disable eager loading to speed up test collection and avoid
+        # loading heavy models at import time (60s -> instant).
+        "FAIRSENSE_DISABLE_EAGER_LOADING": "true",
     }
 
     for key, value in _TEST_ENV_OVERRIDES.items():

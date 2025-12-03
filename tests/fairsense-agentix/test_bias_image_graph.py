@@ -52,10 +52,10 @@ class TestBiasImageGraphBasic:
         assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
         assert isinstance(result["bias_analysis"], BiasAnalysisOutput)
 
-        # Verify summary and HTML
+        # Verify summary and HTML - returns <div> fragment for SPA embedding
         assert result["summary"] is not None
         assert result["highlighted_html"] is not None
-        assert "<html>" in result["highlighted_html"]
+        assert "<div" in result["highlighted_html"]
 
     def test_large_image_analysis(self) -> None:
         """Test execution with large image (different mock data)."""

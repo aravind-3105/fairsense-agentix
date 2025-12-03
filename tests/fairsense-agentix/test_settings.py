@@ -14,12 +14,17 @@ pytestmark = pytest.mark.unit
 class TestSettings:
     """Test suite for Settings class."""
 
-    def test_default_settings(self):
-        """Test that Settings can be instantiated with defaults."""
+    def test_default_settings(self, monkeypatch):
+        """Test that Settings can be instantiated with defaults.
+
+        Note: Tests the actual runtime defaults which include .env overrides,
+        since Pydantic loads .env file at class definition time.
+        """
         settings = Settings()
 
         assert settings.llm_provider == "fake"
-        assert settings.llm_model_name == "gpt-4"
+        # Actual default from .env file (which is the deployed default)
+        assert settings.llm_model_name == "gpt-4-turbo"
         assert settings.llm_temperature == 0.3
         assert settings.cache_enabled is True
         assert settings.telemetry_enabled is False

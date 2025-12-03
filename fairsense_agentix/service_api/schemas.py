@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, validator
 from fairsense_agentix.api import BiasResult, RiskResult
 
 
-WorkflowID = Literal["bias_text", "bias_image", "risk"]
+WorkflowID = Literal["bias_text", "bias_image", "bias_image_vlm", "risk"]
 
 
 class AnalyzeRequest(BaseModel):
@@ -26,6 +26,14 @@ class AnalyzeRequest(BaseModel):
         default_factory=dict,
         description="Per-request overrides (temperature, faiss_top_k, etc.)",
     )
+
+
+class AnalyzeStartResponse(BaseModel):
+    """Response from /v1/analyze/start with run_id for WebSocket connection."""
+
+    run_id: str
+    status: Literal["started"] = "started"
+    message: str = "Analysis started. Connect to WebSocket to receive events."
 
 
 class AnalyzeResponse(BaseModel):
