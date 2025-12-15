@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -112,6 +113,26 @@ def get_engine() -> FairSense:
 async def health() -> dict[str, str]:
     """Return readiness probe details."""
     return {"status": "ok"}
+
+
+@app.post("/v1/shutdown")
+async def shutdown(background_tasks: BackgroundTasks) -> dict[str, str]:
+    """Gracefully shutdown the server.
+
+    This endpoint triggers a clean shutdown of the backend server.
+    The launcher process will detect the shutdown and clean up ports.
+
+    Returns immediately with a success message, then shuts down after 1 second.
+    """
+
+    def _shutdown() -> None:
+        """Background task to exit cleanly after response is sent."""
+        time.sleep(1)  # Give time for response to be sent
+        print("🛑 Shutdown requested via API - exiting gracefully...")
+        os._exit(0)  # Clean exit - launcher will detect and cleanup ports
+
+    background_tasks.add_task(_shutdown)
+    return {"status": "shutting_down", "message": "Server will shutdown in 1 second"}
 
 
 @app.post("/v1/analyze", response_model=AnalyzeResponse)

@@ -22,6 +22,8 @@ Advanced (full control):
 """
 
 # High-level API (recommended)
+# Server launcher (for programmatic usage)
+from fairsense_agentix import server
 from fairsense_agentix.api import (
     BiasResult,
     FairSense,
@@ -56,6 +58,8 @@ __all__ = [
     "Settings",
     # Advanced
     "create_orchestrator_graph",
+    # Server launcher
+    "server",
 ]
 
 # ==============================================================================

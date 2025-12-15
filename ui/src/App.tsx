@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Sparkles, Activity } from "lucide-react";
-import { analyzeStart, analyzeFileStart, connectToStream, WorkflowID } from "./api";
+import { Loader2, Play, Upload, Sparkles, Activity, Power } from "lucide-react";
+import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
 
 type Mode = "text" | "image" | "csv";
 
@@ -120,6 +120,44 @@ export default function App() {
     }
   }
 
+  async function handleShutdown() {
+    // Confirmation dialog to prevent accidental shutdowns
+    const confirmed = window.confirm(
+      "Are you sure you want to shutdown the server?\n\n" +
+      "This will stop both the backend and frontend servers and clean up ports.\n" +
+      "You'll need to restart the server manually to use the application again."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      // Call the shutdown endpoint
+      const response = await fetch(`${API_BASE}/v1/shutdown`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        // Show success message briefly before server shuts down
+        alert("Server shutdown initiated. Both servers will stop in 1 second.");
+
+        // Close any open WebSocket connections
+        wsRef.current?.close();
+
+        // UI will become unresponsive as backend shuts down - this is expected
+      } else {
+        alert("Failed to shutdown server. Check console for details.");
+      }
+    } catch (err) {
+      console.error("Shutdown error:", err);
+      alert("Error communicating with server. It may have already shut down.");
+    }
+  }
+
   const highlightHtml = useMemo(() => {
     if (!result?.bias_result?.highlighted_html) {
       return null;
@@ -130,14 +168,24 @@ export default function App() {
   return (
     <main className="min-h-screen px-6 py-10 bg-base">
       <header className="mb-8">
-        <div className="flex items-center gap-3">
-          <Sparkles className="text-accent-200" />
-          <div>
-            <h1 className="text-3xl font-semibold">FairSense AgentiX</h1>
-            <p className="text-slate-400">
-              Agentic fairness & AI-risk analysis platform
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Sparkles className="text-accent-200" />
+            <div>
+              <h1 className="text-3xl font-semibold">FairSense AgentiX</h1>
+              <p className="text-slate-400">
+                Agentic fairness & AI-risk analysis platform
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleShutdown}
+            className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
+            title="Shutdown both backend and frontend servers"
+          >
+            <Power size={16} />
+            Shutdown
+          </button>
         </div>
       </header>
 
@@ -334,6 +382,10 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
             ([key]) => !["run_id", "result"].includes(key)
           );
 
+          // Extract message safely for type-checking
+          const message = evt.context?.message;
+          const messageText = message ? String(message) : null;
+
           return (
             <li key={`${evt.timestamp}-${idx}`} className="rounded-xl bg-slate-900/40 border border-slate-800/40 p-3 hover:bg-slate-900/60 transition-colors">
               <div className="flex items-center justify-between">
@@ -343,8 +395,10 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
                 </span>
               </div>
 
-              {evt.context?.message && (
-                <p className="text-slate-300 mt-2 text-xs leading-relaxed">{String(evt.context.message as string)}</p>
+              {messageText && (
+                <p className="text-slate-300 mt-2 text-xs leading-relaxed">
+                  {messageText}
+                </p>
               )}
 
               {hasContext && contextFieldsToShow.length > 0 && (

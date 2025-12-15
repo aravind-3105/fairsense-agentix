@@ -38,6 +38,8 @@ dependencies = [
     "uvicorn>=0.30.0",
     "python-multipart>=0.0.9",
     "websockets>=15.0.1",
+    # Beta: Programmatic server launcher
+    "requests>=2.31.0", # For health checks in server launcher
 ]
 
 [build-system]
