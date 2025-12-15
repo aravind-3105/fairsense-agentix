@@ -1,0 +1,1 @@
+AI platform that auto-audits small business workflows, detecting inefficiencies and generating optimized, human-readable process improvements.

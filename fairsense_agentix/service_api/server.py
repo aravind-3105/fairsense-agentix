@@ -355,7 +355,7 @@ async def _run_analysis(
     )
     if input_type == "csv":
         risk_result = await anyio.to_thread.run_sync(
-            lambda: fs.assess_risk(text_content, **options)
+            lambda: fs.assess_risk(text_content, run_id=run_id, **options)
         )
         return AnalyzeResponse.from_risk_result(risk_result)
 

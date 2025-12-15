@@ -25,6 +25,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [showLoadingBanner, setShowLoadingBanner] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -32,6 +34,32 @@ export default function App() {
       wsRef.current?.close();
     };
   }, []);
+
+  // Detect model download events from timeline and show loading banner
+  useEffect(() => {
+    const latestEvent = timeline[timeline.length - 1];
+    if (!latestEvent) return;
+
+    // Check for model download start event
+    if (latestEvent.event === "model_download_start") {
+      const modelName = latestEvent.context?.model_name || "AI model";
+      setLoadingMessage(`⏳ Downloading ${modelName} (first use only, ~30-120s)...`);
+      setShowLoadingBanner(true);
+    }
+
+    // Check for model download complete event
+    if (latestEvent.event === "model_download_complete") {
+      setShowLoadingBanner(false);
+      setLoadingMessage("");
+    }
+
+    // Check for model download failure
+    if (latestEvent.event === "model_download_failed") {
+      setShowLoadingBanner(false);
+      setLoadingMessage("");
+      // Error is already displayed in timeline, no need for banner
+    }
+  }, [timeline]);
 
   const canSubmit =
     (!loading && mode !== "image" && input.trim().length > 0) ||
@@ -112,6 +140,24 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Model Download Loading Banner */}
+      {showLoadingBanner && (
+        <div className="mb-6 bg-yellow-500/10 border-2 border-yellow-500/50 rounded-xl p-6 animate-pulse">
+          <div className="flex items-start gap-4">
+            <Loader2 className="text-yellow-400 animate-spin flex-shrink-0 mt-1" size={24} />
+            <div className="flex-1">
+              <p className="text-lg font-semibold text-yellow-300">{loadingMessage}</p>
+              <p className="text-sm text-slate-400 mt-2">
+                This is a one-time download. Future requests will be instant (~100ms).
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                The AI model is being downloaded from HuggingFace and cached locally.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
@@ -298,7 +344,7 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
               </div>
 
               {evt.context?.message && (
-                <p className="text-slate-300 mt-2 text-xs leading-relaxed">{String(evt.context.message)}</p>
+                <p className="text-slate-300 mt-2 text-xs leading-relaxed">{String(evt.context.message as string)}</p>
               )}
 
               {hasContext && contextFieldsToShow.length > 0 && (

@@ -457,6 +457,7 @@ class FairSense:
     def assess_risk(
         self,
         scenario: str,
+        run_id: str | None = None,
         **options: Any,
     ) -> RiskResult:
         """Assess AI risks in deployment scenario.
@@ -469,6 +470,8 @@ class FairSense:
         ----------
         scenario : str
             AI deployment scenario description
+        run_id : str | None, optional
+            Pre-generated run ID for tracing (if None, auto-generated)
         **options
             Optional configuration overrides:
             - top_k: Number of risks to retrieve (default 5, max 100)
@@ -493,13 +496,16 @@ class FairSense:
         """
         start_time = time.time()
 
-        result = self._graph.invoke(
-            {
-                "input_type": "csv",  # CSV triggers risk workflow
-                "content": scenario,
-                "options": options,
-            }
-        )
+        # Prepare input dict with optional run_id
+        input_dict: dict[str, Any] = {
+            "input_type": "csv",  # CSV triggers risk workflow
+            "content": scenario,
+            "options": options,
+        }
+        if run_id is not None:
+            input_dict["run_id"] = run_id
+
+        result = self._graph.invoke(input_dict)
 
         execution_time = time.time() - start_time
 
@@ -663,7 +669,7 @@ def analyze_image(image: Union[bytes, Path], **options: Any) -> BiasResult:
     return fs.analyze_image(image, **options)
 
 
-def assess_risk(scenario: str, **options: Any) -> RiskResult:
+def assess_risk(scenario: str, run_id: str | None = None, **options: Any) -> RiskResult:
     """Assess AI risks in scenario (convenience function).
 
     This function creates a new FairSense instance for each call. For better
@@ -674,6 +680,8 @@ def assess_risk(scenario: str, **options: Any) -> RiskResult:
     ----------
     scenario : str
         AI deployment scenario description
+    run_id : str | None, optional
+        Pre-generated run ID for tracing (if None, auto-generated)
     **options
         Optional configuration (see FairSense.assess_risk for details)
 
@@ -689,4 +697,4 @@ def assess_risk(scenario: str, **options: Any) -> RiskResult:
     >>> print(f"Found {len(result.risks)} risks")
     """
     fs = FairSense()
-    return fs.assess_risk(scenario, **options)
+    return fs.assess_risk(scenario, run_id=run_id, **options)
