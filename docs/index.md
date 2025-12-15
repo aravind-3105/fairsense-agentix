@@ -1,54 +1,212 @@
-# Vector AI Engineering template (uv edition) repository
+# FairSense-AgentiX
 
-This template repository can be used to bootstrap AI Engineering project repositories
-on Github! The template is meant for python codebases since Python is the most commonly
-used language by our team.
+**An agentic fairness and AI-risk analysis platform developed by the [Vector Institute](https://vectorinstitute.ai/).**
 
-The template includes:
+---
 
-- [pyproject.toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
-file to specify repository information and manage dependencies using
-[uv](https://docs.astral.sh/uv/).
+## What is FairSense-AgentiX?
 
-- [README.md](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes) which should have basic information on why the project is
-useful, installation instructions and other information on how users can get started.
+FairSense-AgentiX is an intelligent bias detection and risk assessment platform that uses **agentic AI workflows** to analyze text, images, and datasets for fairness concerns. Unlike traditional ML classifiers that operate as black boxes, FairSense employs a reasoning agent that:
 
-- [.pre-commit-config.yaml](https://pre-commit.com/) for running pre-commit hooks that
-check for code-style, apply formatting, check for type hints and run tests.
+- **Plans** its analysis strategy based on the input type
+- **Selects** the right tools for each task (OCR, vision models, embeddings, knowledge retrieval)
+- **Critiques** its own outputs and refines them iteratively
+- **Explains** its reasoning process through detailed telemetry
 
-- [.github/pull_request_template.md](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository) for PRs.
+This approach delivers more accurate, transparent, and context-aware fairness assessments than static rule-based systems.
 
-- [.github/ISSUE_TEMPLATE](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository) for bug reports and issues that can be raised on the repository.
+---
 
-- [.github/workflows](https://docs.github.com/en/actions/using-workflows) for running CI
-workflows using Github actions. The template includes CI workflows for code checks,
-documentation building and releasing python packages to PyPI.
+## Key Features
 
-- [LICENSE.md](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository) for adding a license to the project repository.
-By default, this is the [Apache-2.0 license](http://www.apache.org/licenses/). Please
-change according to your project!
+### 🤖 Agentic Reasoning
+Built on [LangGraph](https://langchain-ai.github.io/langgraph/), FairSense implements a **ReAct (Reasoning + Acting) loop** that:
 
-- [docs](https://squidfunk.github.io/mkdocs-material/) for adding project documentation. Typically
-projects should have API reference documentation, user guides and tutorials.
+- Dynamically selects analysis tools based on input characteristics
+- Iteratively refines outputs using an evaluator-critique cycle
+- Provides full transparency into decision-making via event streaming
 
-- [CONTRIBUTING.md](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors) with basic guidelines on how others can
-contribute to the repository.
+### 🔍 Multi-Modal Analysis
+Supports three analysis workflows:
 
-- [CODE_OF_CONDUCT.md](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project) with standards on how the community engages in
-a healthy and constructive manner.
+- **Text Bias Detection** - Identifies gender, racial, age, disability, and socioeconomic biases in text
+- **Image Bias Detection** - Analyzes visual content for stereotypes and representation issues using vision-language models
+- **Risk Assessment** - Evaluates ML deployment scenarios for fairness, security, and compliance risks
 
-- [.gitignore](https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files)
-with some standard file extensions to be ignored by git. Please add/modify as necessary.
+### 🛠️ Flexible Tool Ecosystem
+FairSense intelligently orchestrates a suite of specialized tools:
 
-- [codecov.yml](https://docs.codecov.com/docs/codecov-yaml) for using codecov.io to
-generate code coverage information for your repository. You would need to add codecov.io
-app as an [integration to your repository](https://docs.codecov.com/docs/how-to-create-a-github-app-for-codecov-enterprise).
+- **OCR Tools** (Tesseract, PaddleOCR) for text extraction
+- **Vision-Language Models** (BLIP, BLIP-2) for image understanding
+- **Embedding Models** for semantic search
+- **FAISS Vector Databases** for knowledge retrieval
+- **LLMs** (GPT-4, Claude) for reasoning and synthesis
 
+### 🌐 Production-Ready APIs
+- **FastAPI REST API** for programmatic access
+- **WebSocket streaming** for real-time agent telemetry
+- **React UI** with live timeline visualization
+- **Batch processing** for large-scale analysis jobs
 
-If you are starting a new project, you can navigate to the [Use this template](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) button
-on the top right corner of the [template repository home page](https://github.com/VectorInstitute/aieng-template)
-which will allow you to bootstrap your project repo using this template.
+### ⚙️ Highly Configurable
+Fine-tune every aspect of the system:
 
-Please check out the user guide page for more detailed information on using the
-template features. For existing projects, the [user guide](user_guide.md)
-can be followed to migrate to following the template more closely.
+- Swap LLM providers (OpenAI, Anthropic, custom)
+- Choose OCR/vision model backends
+- Enable/disable refinement loops
+- Customize evaluation thresholds
+- Override tool selection strategies
+
+---
+
+## How It Works
+
+FairSense implements an **11-phase agentic workflow**:
+
+```mermaid
+graph LR
+    A[Input] --> B[Plan]
+    B --> C[Tool Selection]
+    C --> D[Tool Execution]
+    D --> E[Evidence Synthesis]
+    E --> F[Evaluation]
+    F --> G{Pass?}
+    G -->|No| H[Refine Plan]
+    H --> C
+    G -->|Yes| I[Output]
+```
+
+1. **Planning** - Agent analyzes input and creates an action plan
+2. **Tool Selection** - Chooses appropriate tools (OCR, VLM, embeddings, etc.)
+3. **Execution** - Runs selected tools in parallel when possible
+4. **Synthesis** - Combines evidence from multiple sources
+5. **Evaluation** - Critiques output quality (completeness, accuracy)
+6. **Refinement** - Iteratively improves results based on critique (optional but recommended)
+
+This **critique-driven refinement loop** distinguishes FairSense from static pipelines, enabling it to handle edge cases and improve output quality dynamically.
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
+cd fairsense-AgentiX
+
+# Install dependencies with uv
+uv sync
+source .venv/bin/activate
+
+# Configure API keys (see Configuration section)
+cp .env.example .env
+# Edit .env with your FAIRSENSE_LLM_API_KEY
+```
+
+### Your First Analysis
+
+```python
+from fairsense_agentix import FairSense
+
+# Initialize the engine
+engine = FairSense()
+
+# Analyze text for bias
+result = engine.analyze_text(
+    "We're looking for a young, energetic developer to join our startup team."
+)
+
+print(f"Overall: {result.summary}")
+print(f"Found {len(result.bias_instances)} bias instances")
+for instance in result.bias_instances:
+    print(f"  - {instance.type} ({instance.severity}): {instance.text_span}")
+```
+
+### Using the Web Interface
+
+The easiest way to get started is with the integrated web interface:
+
+```bash
+# Launch both backend and frontend
+python -m fairsense_agentix.server
+
+# Or use the convenience script
+from fairsense_agentix import server
+server.start()
+```
+
+This starts:
+- **Backend API** at `http://localhost:8000`
+- **React UI** at `http://localhost:5173`
+
+The UI provides:
+- Text input field and image drag-and-drop
+- Live agent timeline showing reasoning steps
+- Downloadable results (HTML highlights, CSV tables)
+- Batch job management
+
+---
+
+## Documentation
+
+- **[Getting Started](getting_started.md)** - Installation, configuration, and first steps
+- **[User Guide](user_guide.md)** - Detailed usage examples for text, image, and risk analysis
+- **[API Reference](api.md)** - Python API and REST API documentation
+- **[Server Guide](server.md)** - Running the FastAPI backend and React UI
+
+---
+
+## Architecture
+
+FairSense-AgentiX is built on a modern Python stack:
+
+- **LangGraph** - Agentic workflow orchestration
+- **LangChain** - LLM abstractions and tool integrations
+- **FastAPI** - REST API and WebSocket server
+- **React + Vite** - Modern web UI with TypeScript
+- **Pydantic** - Type-safe configuration and data validation
+- **FAISS** - Vector similarity search for knowledge retrieval
+
+---
+
+## Use Cases
+
+FairSense-AgentiX is designed for:
+
+- **Content Moderation** - Detect biased language in user-generated content
+- **Hiring & HR** - Audit job postings for discriminatory language
+- **Marketing** - Review ad copy for inclusive language
+- **ML Model Audits** - Assess fairness risks before deployment
+- **Policy Compliance** - Ensure content meets DEI standards
+- **Research** - Study patterns of bias in large text/image corpora
+
+---
+
+## License
+
+FairSense-AgentiX is released under the [Apache-2.0 License](https://github.com/VectorInstitute/fairsense-AgentiX/blob/main/LICENSE.md).
+
+---
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](https://github.com/VectorInstitute/fairsense-AgentiX/blob/main/CONTRIBUTING.md) for details on:
+
+- Code style (PEP 8, numpy docstrings)
+- Pre-commit hooks (ruff, mypy, pytest)
+- Testing requirements
+- Pull request process
+
+---
+
+## Support
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/VectorInstitute/fairsense-AgentiX/issues)
+- **Discussions**: [Ask questions or share ideas](https://github.com/VectorInstitute/fairsense-AgentiX/discussions)
+- **Vector Institute**: [Learn more about our work](https://vectorinstitute.ai/)
+
+---
+
+**Built with :material-heart: by the Vector Institute AI Engineering team.**
