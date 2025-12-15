@@ -1,12 +1,24 @@
 [project]
 name = "fairsense-AgentiX"
 version = "0.1.0"
-description = "Add your description here"
+description = "An agentic fairness and AI-risk analysis platform for detecting bias in text and images"
 readme = "README.md"
 authors = [ {name = "Vector AI Engineering", email = "ai_engineering@vectorinstitute.ai"}]
-license = "Apache-2.0"
-repository = "https://github.com/VectorInstitute/fairsense-AgentiX"
+license = "MIT"
 requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: FastAPI",
+    "Framework :: Pydantic :: 2",
+]
 dependencies = [
     "pydantic>=2.10.6",
     "pydantic-settings>=2.7.1",
@@ -42,6 +54,12 @@ dependencies = [
     "requests>=2.31.0", # For health checks in server launcher
 ]
 
+[project.urls]
+Homepage = "https://github.com/VectorInstitute/fairsense-AgentiX"
+Documentation = "https://vectorinstitute.github.io/fairsense-AgentiX/"
+Repository = "https://github.com/VectorInstitute/fairsense-AgentiX"
+Issues = "https://github.com/VectorInstitute/fairsense-AgentiX/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -71,6 +89,13 @@ docs = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["fairsense_agentix"]
+
+[tool.hatch.build]
+include = [
+    "fairsense_agentix/**/*.py",
+    "fairsense_agentix/data/**/*",
+    "fairsense_agentix/prompts/templates/**/*.txt",
+]
 
 
 # Default dependency groups to be installed

@@ -1,26 +1,70 @@
-# FairSense - AgentiX
+# FairSense-AgentiX
 
-----------------------------------------------------------------------------------------
+**An agentic fairness and AI-risk analysis platform developed by the [Vector Institute](https://vectorinstitute.ai/).**
 
 [![code checks](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/code_checks.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/code_checks.yml)
 [![integration tests](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/integration_tests.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/integration_tests.yml)
 [![docs](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/docs.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/docs.yml)
 [![codecov](https://codecov.io/github/VectorInstitute/fairsense-AgentiX/graph/badge.svg?token=83MYFZ3UPA)](https://codecov.io/github/VectorInstitute/fairsense-AgentiX)
-
-<!-- TODO: Uncomment this with the right credentials once codecov is set up for this repo.
-[![codecov](https://codecov.io/github/VectorInstitute/fairsense-AgentiX/graph/badge.svg?token=83MYFZ3UPA)](https://codecov.io/github/VectorInstitute/fairsense-AgentiX)
--->
-<!-- TODO: Uncomment this when the repository is made public
 ![GitHub License](https://img.shields.io/github/license/VectorInstitute/fairsense-AgentiX)
--->
 
-<!--
-TODO: Add picture / logo
--->
+---
 
-<!--
-TODO: Add introduction about Fairsense-AgentiX here
--->
+FairSense-AgentiX is an intelligent bias detection and risk assessment platform that uses **agentic AI workflows** to analyze text, images, and datasets for fairness concerns. Unlike traditional ML classifiers, FairSense employs a reasoning agent that plans, selects tools, critiques outputs, and refines them iteratively.
+
+## ✨ Key Features
+
+- 🤖 **Agentic Reasoning** - ReAct loop with dynamic tool selection and self-critique
+- 🔍 **Multi-Modal Analysis** - Text bias detection, image bias detection, and AI risk assessment
+- 🛠️ **Flexible Tool Ecosystem** - OCR, Vision-Language Models, embeddings, FAISS, and LLMs
+- 🌐 **Production-Ready APIs** - FastAPI REST API + WebSocket streaming + React UI
+- ⚙️ **Highly Configurable** - Swap LLM providers, tools, and models on the fly
+
+## 📦 Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install fairsense-AgentiX
+```
+
+### From Source
+
+```bash
+git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
+cd fairsense-AgentiX
+uv sync
+source .venv/bin/activate
+```
+
+### Requirements
+
+- **Python 3.12+**
+- **4GB+ RAM** (for ML models)
+- **API key** for OpenAI or Anthropic (for LLM functionality)
+
+## 🚀 Quick Start
+
+```python
+from fairsense_agentix import FairSense
+
+# Initialize the engine
+engine = FairSense()
+
+# Analyze text for bias
+result = engine.analyze_text(
+    "We're looking for a young, energetic developer to join our startup team."
+)
+
+print(f"Bias detected: {result.bias_detected}")
+print(f"Risk level: {result.risk_level}")
+for instance in result.bias_instances:
+    print(f"  - {instance.type} ({instance.severity}): {instance.text_span}")
+```
+
+**Full Documentation:** [https://vectorinstitute.github.io/fairsense-AgentiX/](https://vectorinstitute.github.io/fairsense-AgentiX/)
+
+---
 
 ## 🧑🏿‍💻 Developing
 
@@ -120,20 +164,7 @@ have `FAIRSENSE_LLM_PROVIDER=openai` (or Anthropic) configured locally. To opt-i
 to exercising the real stack, export `FAIRSENSE_TEST_USE_REAL=1` before running
 pytest.
 
-## Features / Components
-
-## Examples
-
 ## Contributing
 If you are interested in contributing to the library, please see
 [CONTRIBUTING.MD](CONTRIBUTING.MD). This file contains many details around contributing
 to the code base, including development practices, code checks, tests, and more.
-
-<!--
-TODO:
-
-## Acknowledgements
-
-## Citation
-
--->
