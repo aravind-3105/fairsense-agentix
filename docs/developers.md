@@ -63,7 +63,7 @@ fairsense-AgentiX/
 │   └── test_integration.py         # End-to-end tests
 ├── docs/                       # Documentation (MkDocs)
 ├── examples/                   # Usage examples
-├── .env.example                # Environment variable template
+├── .env                        # Environment variables (create from template)
 ├── pyproject.toml              # Python dependencies (uv)
 ├── mkdocs.yml                  # Documentation config
 └── README.md                   # Project README
@@ -91,8 +91,8 @@ source .venv/bin/activate  # Linux/macOS
 ### 2. Configure Environment
 
 ```bash
-# Copy example configuration
-cp .env.example .env
+# Create .env file
+touch .env
 
 # Edit .env with your settings
 # At minimum, set:

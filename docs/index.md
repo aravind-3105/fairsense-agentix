@@ -61,7 +61,7 @@ Fine-tune every aspect of the system:
 
 ## How It Works
 
-FairSense implements an **11-phase agentic workflow**:
+FairSense implements a **multi-node agentic workflow**:
 
 ```mermaid
 graph LR
@@ -101,8 +101,7 @@ uv sync
 source .venv/bin/activate
 
 # Configure API keys (see Configuration section)
-cp .env.example .env
-# Edit .env with your FAIRSENSE_LLM_API_KEY
+# Create .env file with your settings (see getting_started.md)
 ```
 
 ### Your First Analysis
@@ -128,13 +127,15 @@ for instance in result.bias_instances:
 
 The easiest way to get started is with the integrated web interface:
 
-```bash
+```python
 # Launch both backend and frontend
-python -m fairsense_agentix.server
-
-# Or use the convenience script
 from fairsense_agentix import server
 server.start()
+```
+
+Or use an example script:
+```bash
+python examples/launch_server.py
 ```
 
 This starts:

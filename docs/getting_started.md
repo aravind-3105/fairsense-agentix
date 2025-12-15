@@ -48,13 +48,14 @@ uv sync --no-group dev --no-group docs
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root with the following content:
 
 ```bash
-cp .env.example .env
+# Create .env file
+touch .env
 ```
 
-Edit `.env` with your preferred text editor and set the **required** variable:
+Edit `.env` with your preferred text editor and set the **required** variables:
 
 ```bash
 # === REQUIRED ===
@@ -219,8 +220,11 @@ server.start()
 # Using the examples script
 python examples/launch_server.py
 
-# Or directly
+# Or directly with Python
 python -c "from fairsense_agentix import server; server.start()"
+
+# Using uv
+uv run python -c "from fairsense_agentix import server; server.start()"
 ```
 
 **Option 3: Custom Ports**
