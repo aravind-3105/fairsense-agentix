@@ -25,6 +25,12 @@ wheels/
 CLAUDE.md
 *.faiss
 *.index
+*.json
+*.csv
+# BUT: Allow package data files
+!fairsense_agentix/data/**/*.faiss
+!fairsense_agentix/data/**/*.pkl
+!fairsense_agentix/data/**/*.json
 data/indexes/*.json
 data/indexes/README.md
 .env
@@ -32,8 +38,6 @@ data/indexes/README.md
 run_demo.sh
 test_demo.py
 demo_simple.py
-*.json
-*.csv
 */node_modules
 /UI_images
 *.js

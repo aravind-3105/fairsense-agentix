@@ -3,14 +3,17 @@ repos:
     rev: v6.0.0  # Use the ref you want to point at
     hooks:
     - id: trailing-whitespace
+      exclude: "^fairsense_agentix/data/.*"
     - id: check-ast
     - id: check-builtin-literals
     - id: check-docstring-first
     - id: check-executables-have-shebangs
     - id: debug-statements
     - id: end-of-file-fixer
+      exclude: "^fairsense_agentix/data/.*"
     - id: mixed-line-ending
       args: [--fix=lf]
+      exclude: "^fairsense_agentix/data/.*"
     - id: fix-byte-order-marker
     - id: check-merge-conflict
     - id: check-symlinks
@@ -40,13 +43,14 @@ repos:
       entry: python3 -m mypy --config-file pyproject.toml
       language: system
       types: [python]
-      exclude: "tests"
+      exclude: "^(tests|fairsense_agentix/data)/.*"
 
   - repo: https://github.com/crate-ci/typos
     rev: v1
     hooks:
       - id: typos
         args: []
+        exclude: "^fairsense_agentix/data/.*"
 
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.9.1

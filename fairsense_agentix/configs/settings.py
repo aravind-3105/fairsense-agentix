@@ -251,13 +251,13 @@ class Settings(BaseSettings):
     )
 
     faiss_risks_index_path: Path = Field(
-        default=Path("data/indexes/risks.faiss"),
-        description="Path to FAISS index for risks database",
+        default=Path(__file__).parent.parent / "data" / "indexes" / "risks.faiss",
+        description="Path to FAISS index for risks database (package-relative)",
     )
 
     faiss_rmf_index_path: Path = Field(
-        default=Path("data/indexes/rmf.faiss"),
-        description="Path to FAISS index for AI-RMF database",
+        default=Path(__file__).parent.parent / "data" / "indexes" / "rmf.faiss",
+        description="Path to FAISS index for AI-RMF database (package-relative)",
     )
 
     faiss_top_k: int = Field(
