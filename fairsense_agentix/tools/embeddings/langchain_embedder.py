@@ -28,10 +28,12 @@ Examples
 """
 
 import logging
+from typing import Optional
 
 import numpy as np
 from langchain_huggingface import HuggingFaceEmbeddings
 
+from fairsense_agentix.services.telemetry import TelemetryService
 from fairsense_agentix.tools.exceptions import EmbeddingError
 
 
@@ -106,6 +108,8 @@ class LangChainEmbedder:
         dimension: int,
         normalize: bool = True,
         model_kwargs: dict | None = None,
+        telemetry: Optional[TelemetryService] = None,
+        run_id: Optional[str] = None,
     ) -> None:
         """Initialize LangChain embedder.
 
@@ -119,12 +123,28 @@ class LangChainEmbedder:
             Whether to normalize embeddings
         model_kwargs : dict | None
             Additional model kwargs (device, etc.)
+        telemetry : TelemetryService, optional
+            Telemetry service for logging model download events
+        run_id : str, optional
+            Run ID for tracking this initialization in distributed traces
         """
         self.model_name = model_name
         self._dimension = dimension
         self.normalize = normalize
+        self._telemetry = telemetry
+        self._run_id = run_id
 
         try:
+            # Emit "downloading model" event (critical for UI feedback on first use)
+            if self._telemetry and self._run_id:
+                self._telemetry.log_info(
+                    "model_download_start",
+                    model_name=model_name,
+                    model_type="embedder_langchain",
+                    run_id=self._run_id,
+                    message=f"Downloading LangChain embedding model '{model_name}' (first use only, ~30-120s)...",
+                )
+
             # Prepare model kwargs
             final_model_kwargs = model_kwargs or {}
 
@@ -132,6 +152,7 @@ class LangChainEmbedder:
             encode_kwargs = {"normalize_embeddings": normalize}
 
             # Initialize LangChain HuggingFaceEmbeddings
+            # NOTE: This call can take 30-120s on first use (downloads from HuggingFace)
             self.embeddings = HuggingFaceEmbeddings(
                 model_name=model_name,
                 model_kwargs=final_model_kwargs,
@@ -160,7 +181,28 @@ class LangChainEmbedder:
                 f"LangChainEmbedder initialized successfully (model={model_name}, dimension={actual_dim})"
             )
 
+            # Emit "model ready" event
+            if self._telemetry and self._run_id:
+                self._telemetry.log_info(
+                    "model_download_complete",
+                    model_name=model_name,
+                    model_type="embedder_langchain",
+                    dimension=actual_dim,
+                    run_id=self._run_id,
+                    message=f"LangChain embedding model '{model_name}' ready",
+                )
+
         except Exception as e:
+            # Emit failure event
+            if self._telemetry and self._run_id:
+                self._telemetry.log_error(
+                    "model_download_failed",
+                    error=e,
+                    model_name=model_name,
+                    model_type="embedder_langchain",
+                    run_id=self._run_id,
+                )
+
             if isinstance(e, EmbeddingError):
                 raise
             raise EmbeddingError(

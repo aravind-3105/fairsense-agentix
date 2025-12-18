@@ -96,11 +96,12 @@ class PromptLoader:
         >>> prompt = loader.load("bias_text_v1", text="Sample text")
         >>> prompt = loader.load("bias_image_v1", caption="A person", ocr="Job posting")
         """
-        template_path = self.templates_dir / f"{template_name}.txt"
+        normalized_name = template_name.removesuffix(".txt")
+        template_path = self.templates_dir / f"{normalized_name}.txt"
 
         if not template_path.exists():
             msg = (
-                f"Template not found: {template_name}.txt in {self.templates_dir}. "
+                f"Template not found: {normalized_name}.txt in {self.templates_dir}. "
                 f"Available templates: {self.list_templates()}"
             )
             raise FileNotFoundError(msg)
@@ -169,10 +170,11 @@ class PromptLoader:
         >>> print(raw)
         You are an AI bias detection expert. Analyze: $text
         """
-        template_path = self.templates_dir / f"{template_name}.txt"
+        normalized_name = template_name.removesuffix(".txt")
+        template_path = self.templates_dir / f"{normalized_name}.txt"
 
         if not template_path.exists():
-            msg = f"Template not found: {template_name}.txt in {self.templates_dir}"
+            msg = f"Template not found: {normalized_name}.txt in {self.templates_dir}"
             raise FileNotFoundError(msg)
 
         return template_path.read_text(encoding="utf-8")

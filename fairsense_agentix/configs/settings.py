@@ -51,6 +51,8 @@ class Settings(BaseSettings):
         Image captioning model (blip, blip2, llava, fake)
     caption_max_length : int
         Maximum length for generated captions
+    image_analysis_mode : str
+        Image bias analysis mode (vlm, traditional)
     embedding_model : str
         Sentence embedding model name
     embedding_dimension : int
@@ -221,6 +223,20 @@ class Settings(BaseSettings):
     )
 
     # ===========================
+    # Image Analysis Configuration
+    # ===========================
+    image_analysis_mode: Literal["vlm", "traditional"] = Field(
+        default="vlm",
+        description=(
+            "Image bias analysis method:\n"
+            "- 'vlm': Vision-Language Model with Chain-of-Thought reasoning "
+            "(fast, uses llm_provider for vision, requires OpenAI or Anthropic)\n"
+            "- 'traditional': OCR + Caption + Text Analysis "
+            "(slower, uses local models, works without API)"
+        ),
+    )
+
+    # ===========================
     # Embedding & FAISS Configuration
     # ===========================
     embedding_model: str = Field(
@@ -321,14 +337,56 @@ class Settings(BaseSettings):
     # Workflow & Orchestration Configuration
     # ===========================
     enable_refinement: bool = Field(
-        default=False,
-        description="Enable refinement loop (Phase 2-6: False, Phase 7+: True)",
+        default=True,
+        description="Enable refinement loop (Phase 7+: True by default)",
     )
 
     max_refinement_iterations: int = Field(
-        default=2,
+        default=1,
         ge=0,
         description="Maximum refinement iterations for evaluator feedback loops",
+    )
+
+    evaluator_enabled: bool = Field(
+        default=True,
+        description="Enable LLM-based evaluators for post-hoc quality checks",
+    )
+
+    bias_evaluator_min_score: int = Field(
+        default=75,
+        ge=0,
+        le=100,
+        description="Minimum score (0-100) required for bias evaluator to pass output",
+    )
+
+    # ===========================
+    # Risk Evaluator Configuration (Phase 7.2)
+    # ===========================
+    risk_evaluator_min_rmf_functions: int = Field(
+        default=3,
+        ge=1,
+        le=4,
+        description="Minimum number of unique RMF functions for breadth check (1-4: Govern, Map, Measure, Manage)",
+    )
+
+    risk_evaluator_min_avg_score: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum average FAISS similarity score for risk quality check",
+    )
+
+    risk_evaluator_min_risks: int = Field(
+        default=3,
+        ge=1,
+        description="Minimum number of risks required for sufficient coverage",
+    )
+
+    risk_duplicate_threshold: float = Field(
+        default=0.9,
+        ge=0.0,
+        le=1.0,
+        description="Similarity threshold for duplicate risk detection (0.0-1.0)",
     )
 
     workflow_timeout_seconds: int = Field(
@@ -342,6 +400,14 @@ class Settings(BaseSettings):
         ge=0.0,
         le=1.0,
         description="Minimum confidence for router to select a workflow",
+    )
+
+    image_validation_enabled: bool = Field(
+        default=True,
+        description=(
+            "Validate image bytes with Pillow before running OCR/caption nodes. "
+            "Disable for synthetic tests that use non-image byte strings."
+        ),
     )
 
     # ===========================

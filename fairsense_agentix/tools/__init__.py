@@ -32,6 +32,7 @@ from fairsense_agentix.tools.exceptions import (
     PersistenceError,
     ToolConfigurationError,
     ToolError,
+    VLMError,
 )
 
 # Fake implementations (for testing and Phase 4)
@@ -54,6 +55,7 @@ from fairsense_agentix.tools.interfaces import (
     OCRTool,
     PersistenceTool,
     SummarizerTool,
+    VLMTool,
 )
 
 # Registry (factory)
@@ -62,6 +64,13 @@ from fairsense_agentix.tools.registry import (
     create_tool_registry,
     get_tool_registry,
     reset_tool_registry,
+)
+
+# VLM implementations (OpenAI + Anthropic unified)
+from fairsense_agentix.tools.vlm import (
+    BiasVisualAnalysisOutput,
+    FakeVLMTool,
+    UnifiedVLMTool,
 )
 
 
@@ -75,6 +84,7 @@ __all__ = [
     "FAISSIndexTool",
     "FormatterTool",
     "PersistenceTool",
+    "VLMTool",
     # Registry
     "ToolRegistry",
     "create_tool_registry",
@@ -85,6 +95,7 @@ __all__ = [
     "OCRError",
     "CaptionError",
     "LLMError",
+    "VLMError",
     "EmbeddingError",
     "FAISSError",
     "FormatterError",
@@ -99,4 +110,8 @@ __all__ = [
     "FakeFAISSIndexTool",
     "FakeFormatterTool",
     "FakePersistenceTool",
+    # VLM implementations
+    "FakeVLMTool",
+    "UnifiedVLMTool",
+    "BiasVisualAnalysisOutput",
 ]

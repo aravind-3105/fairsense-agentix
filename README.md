@@ -1,26 +1,70 @@
-# FairSense - AgentiX
+# FairSense-AgentiX
 
-----------------------------------------------------------------------------------------
+**An agentic fairness and AI-risk analysis platform developed by the [Vector Institute](https://vectorinstitute.ai/).**
 
 [![code checks](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/code_checks.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/code_checks.yml)
 [![integration tests](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/integration_tests.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/integration_tests.yml)
 [![docs](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/docs.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/docs.yml)
 [![codecov](https://codecov.io/github/VectorInstitute/fairsense-AgentiX/graph/badge.svg?token=83MYFZ3UPA)](https://codecov.io/github/VectorInstitute/fairsense-AgentiX)
-
-<!-- TODO: Uncomment this with the right credentials once codecov is set up for this repo.
-[![codecov](https://codecov.io/github/VectorInstitute/fairsense-AgentiX/graph/badge.svg?token=83MYFZ3UPA)](https://codecov.io/github/VectorInstitute/fairsense-AgentiX)
--->
-<!-- TODO: Uncomment this when the repository is made public
 ![GitHub License](https://img.shields.io/github/license/VectorInstitute/fairsense-AgentiX)
--->
 
-<!--
-TODO: Add picture / logo
--->
+---
 
-<!--
-TODO: Add introduction about Fairsense-AgentiX here
--->
+FairSense-AgentiX is an intelligent bias detection and risk assessment platform that uses **agentic AI workflows** to analyze text, images, and datasets for fairness concerns. Unlike traditional ML classifiers, FairSense employs a reasoning agent that plans, selects tools, critiques outputs, and refines them iteratively.
+
+## ✨ Key Features
+
+- 🤖 **Agentic Reasoning** - ReAct loop with dynamic tool selection and self-critique
+- 🔍 **Multi-Modal Analysis** - Text bias detection, image bias detection, and AI risk assessment
+- 🛠️ **Flexible Tool Ecosystem** - OCR, Vision-Language Models, embeddings, FAISS, and LLMs
+- 🌐 **Production-Ready APIs** - FastAPI REST API + WebSocket streaming + React UI
+- ⚙️ **Highly Configurable** - Swap LLM providers, tools, and models on the fly
+
+## 📦 Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install fairsense-AgentiX
+```
+
+### From Source
+
+```bash
+git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
+cd fairsense-AgentiX
+uv sync
+source .venv/bin/activate
+```
+
+### Requirements
+
+- **Python 3.12+**
+- **4GB+ RAM** (for ML models)
+- **API key** for OpenAI or Anthropic (for LLM functionality)
+
+## 🚀 Quick Start
+
+```python
+from fairsense_agentix import FairSense
+
+# Initialize the engine
+engine = FairSense()
+
+# Analyze text for bias
+result = engine.analyze_text(
+    "We're looking for a young, energetic developer to join our startup team."
+)
+
+print(f"Bias detected: {result.bias_detected}")
+print(f"Risk level: {result.risk_level}")
+for instance in result.bias_instances:
+    print(f"  - {instance.type} ({instance.severity}): {instance.text_span}")
+```
+
+**Full Documentation:** [https://vectorinstitute.github.io/fairsense-AgentiX/](https://vectorinstitute.github.io/fairsense-AgentiX/)
+
+---
 
 ## 🧑🏿‍💻 Developing
 
@@ -51,20 +95,76 @@ uv sync --no-group docs
 ```
 ## Getting Started
 
-## Features / Components
+### Run the FastAPI service (Phase 9)
 
-## Examples
+```bash
+uv run uvicorn fairsense_agentix.service_api.server:app --reload
+```
+
+Endpoints (all under `/v1/...`):
+
+| Route | Description |
+| --- | --- |
+| `POST /analyze` | JSON payload with `content`, optional `input_type`, `options` |
+| `POST /analyze/upload` | `multipart/form-data` for images |
+| `POST /batch` & `GET /batch/{id}` | Submit + inspect batch jobs |
+| `GET /health` | Health probe |
+| `WS /stream/{run_id}` | Stream telemetry/agent events for a run |
+
+The API auto-detects text/image/CSV inputs, but you can override by setting `input_type` to `bias_text`, `bias_image`, or `risk`.
+
+### Run the Claude-inspired UI (Phase 11)
+
+```bash
+cd ui
+npm install
+npm run dev
+```
+
+Set `VITE_API_BASE` (defaults to `http://localhost:8000`) to point at the API. The UI provides:
+
+- Unified input surface (text field + drag/drop image upload)
+- Live agent timeline sourced from telemetry events
+- Downloadable HTML highlights and risk tables
+- Launchpad for batch jobs
+
+### Key configuration knobs
+
+Configure via environment variables (see `.env` for the full list). Most relevant:
+
+| Variable | Description |
+| --- | --- |
+| `FAIRSENSE_LLM_PROVIDER` | `openai`, `anthropic`, or `fake` |
+| `FAIRSENSE_LLM_MODEL_NAME` | e.g. `gpt-4`, `claude-3-5-sonnet` |
+| `FAIRSENSE_LLM_API_KEY` | Provider API key |
+| `FAIRSENSE_OCR_TOOL` | `auto`, `tesseract`, `paddleocr`, `fake` |
+| `FAIRSENSE_CAPTION_MODEL` | `auto`, `blip2`, `blip`, `fake` |
+| `FAIRSENSE_ENABLE_REFINEMENT` | enables evaluator-driven retries (default `true`) |
+| `FAIRSENSE_EVALUATOR_ENABLED` | toggles Phase 7 evaluators |
+| `FAIRSENSE_BIAS_EVALUATOR_MIN_SCORE` | passing score (0–100, default 75) |
+
+All settings can be overridden at runtime:
+
+```bash
+FAIRSENSE_LLM_PROVIDER=anthropic \
+FAIRSENSE_LLM_MODEL_NAME=claude-3-5-sonnet-20241022 \
+uv run uvicorn fairsense_agentix.service_api.server:app
+```
+
+### Running tests
+
+```bash
+uv run pytest
+```
+
+During test collection we automatically override any `.env` values that point at
+real providers/devices so the suite always uses the lightweight `fake`
+toolchain. This guarantees deterministic, offline-friendly tests even if you
+have `FAIRSENSE_LLM_PROVIDER=openai` (or Anthropic) configured locally. To opt-in
+to exercising the real stack, export `FAIRSENSE_TEST_USE_REAL=1` before running
+pytest.
 
 ## Contributing
 If you are interested in contributing to the library, please see
 [CONTRIBUTING.MD](CONTRIBUTING.MD). This file contains many details around contributing
 to the code base, including development practices, code checks, tests, and more.
-
-<!--
-TODO:
-
-## Acknowledgements
-
-## Citation
-
--->

@@ -32,5 +32,9 @@ data/indexes/README.md
 run_demo.sh
 test_demo.py
 demo_simple.py
-*.csv
 *.json
+*.csv
+*/node_modules
+/UI_images
+*.js
+*.map

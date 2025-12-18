@@ -47,9 +47,9 @@ class TestBiasTextGraphIntegration:
         # Summary should be None for short text (conditional not triggered)
         assert result.get("summary") is None
 
-        # Verify highlight output
+        # Verify highlight output - returns <div> fragment for SPA embedding
         assert "highlighted_html" in result
-        assert "<html>" in result["highlighted_html"]
+        assert "<div" in result["highlighted_html"]
 
     def test_bias_text_graph_conditional_summarization(self):
         """BiasTextGraph should conditionally run summarization."""
@@ -90,7 +90,7 @@ class TestBiasImageGraphIntegration:
         result = graph.invoke(
             {
                 "image_bytes": b"fake_image_data",
-                "options": {},
+                "options": {"validate_image_bytes": False},
             }
         )
 
@@ -111,7 +111,7 @@ class TestBiasImageGraphIntegration:
         assert "summary" in result
         assert isinstance(result["summary"], str)
         assert "highlighted_html" in result
-        assert "<html>" in result["highlighted_html"]
+        assert "<div" in result["highlighted_html"]
 
 
 # ============================================================================
@@ -207,7 +207,9 @@ class TestCrossGraphIntegration:
             {"scenario_text": "Test scenario", "run_id": "test-r1", "options": {}}
         )
         text_result = text_graph.invoke({"text": "Test text", "options": {}})
-        image_result = image_graph.invoke({"image_bytes": b"test_image", "options": {}})
+        image_result = image_graph.invoke(
+            {"image_bytes": b"test_image", "options": {"validate_image_bytes": False}}
+        )
 
         # All should produce valid outputs
         assert "bias_analysis" in text_result

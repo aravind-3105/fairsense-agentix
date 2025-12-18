@@ -46,6 +46,8 @@ from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
+# Import logging config for side effects (suppress verbose HTTP logs)
+from fairsense_agentix import logging_config  # noqa: F401
 from fairsense_agentix.graphs.orchestrator_graph import create_orchestrator_graph
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
@@ -169,6 +171,10 @@ class BiasResult(BaseModel):
     )
     merged_text: Optional[str] = Field(
         None, description="Combined OCR + caption (image only)"
+    )
+    image_base64: Optional[str] = Field(
+        None,
+        description="Base64-encoded image with data URL for UI display (VLM workflow only)",
     )
 
     # Metadata and diagnostics
@@ -325,12 +331,18 @@ class FairSense:
 
         This creates and compiles the orchestrator graph. Graph compilation is
         expensive (~1-2s), so reuse this instance for multiple analyses.
+
+        **Performance Note**: Models are preloaded at module import time, so
+        FairSense initialization is fast and all analysis calls are instant.
         """
+        # Tool registry already loaded at module import (see __init__.py)
+        # Just create the orchestrator graph
         self._graph = create_orchestrator_graph()
 
     def analyze_text(
         self,
         text: str,
+        run_id: str | None = None,
         **options: Any,
     ) -> BiasResult:
         """Detect bias in text.
@@ -343,6 +355,8 @@ class FairSense:
         ----------
         text : str
             Text to analyze for bias
+        run_id : str | None, optional
+            Pre-generated run ID for tracing (if None, auto-generated)
         **options
             Optional configuration overrides:
             - temperature: LLM temperature (0.0-1.0, default 0.3)
@@ -365,13 +379,16 @@ class FairSense:
         """
         start_time = time.time()
 
-        result = self._graph.invoke(
-            {
-                "input_type": "text",
-                "content": text,
-                "options": options,
-            }
-        )
+        # Prepare input dict with optional run_id
+        input_dict: dict[str, Any] = {
+            "input_type": "text",
+            "content": text,
+            "options": options,
+        }
+        if run_id is not None:
+            input_dict["run_id"] = run_id
+
+        result = self._graph.invoke(input_dict)
 
         execution_time = time.time() - start_time
 
@@ -380,6 +397,7 @@ class FairSense:
     def analyze_image(
         self,
         image: Union[bytes, Path],
+        run_id: str | None = None,
         **options: Any,
     ) -> BiasResult:
         """Detect bias in images.
@@ -392,6 +410,8 @@ class FairSense:
         ----------
         image : bytes | Path
             Image data as bytes or path to image file
+        run_id : str | None, optional
+            Pre-generated run ID for tracing (if None, auto-generated)
         **options
             Optional configuration overrides:
             - ocr_language: OCR language code (default "eng")
@@ -419,13 +439,16 @@ class FairSense:
         if isinstance(image, Path):
             image = image.read_bytes()
 
-        result = self._graph.invoke(
-            {
-                "input_type": "image",
-                "content": image,
-                "options": options,
-            }
-        )
+        # Prepare input dict with optional run_id
+        input_dict: dict[str, Any] = {
+            "input_type": "image",
+            "content": image,
+            "options": options,
+        }
+        if run_id is not None:
+            input_dict["run_id"] = run_id
+
+        result = self._graph.invoke(input_dict)
 
         execution_time = time.time() - start_time
 
@@ -434,6 +457,7 @@ class FairSense:
     def assess_risk(
         self,
         scenario: str,
+        run_id: str | None = None,
         **options: Any,
     ) -> RiskResult:
         """Assess AI risks in deployment scenario.
@@ -446,6 +470,8 @@ class FairSense:
         ----------
         scenario : str
             AI deployment scenario description
+        run_id : str | None, optional
+            Pre-generated run ID for tracing (if None, auto-generated)
         **options
             Optional configuration overrides:
             - top_k: Number of risks to retrieve (default 5, max 100)
@@ -470,13 +496,16 @@ class FairSense:
         """
         start_time = time.time()
 
-        result = self._graph.invoke(
-            {
-                "input_type": "csv",  # CSV triggers risk workflow
-                "content": scenario,
-                "options": options,
-            }
-        )
+        # Prepare input dict with optional run_id
+        input_dict: dict[str, Any] = {
+            "input_type": "csv",  # CSV triggers risk workflow
+            "content": scenario,
+            "options": options,
+        }
+        if run_id is not None:
+            input_dict["run_id"] = run_id
+
+        result = self._graph.invoke(input_dict)
 
         execution_time = time.time() - start_time
 
@@ -539,6 +568,7 @@ class FairSense:
             ocr_text=output.get("ocr_text"),
             caption_text=output.get("caption_text"),
             merged_text=output.get("merged_text"),
+            image_base64=output.get("image_base64"),
             metadata=metadata,
             errors=final["errors"],
             warnings=final["warnings"],
@@ -639,7 +669,7 @@ def analyze_image(image: Union[bytes, Path], **options: Any) -> BiasResult:
     return fs.analyze_image(image, **options)
 
 
-def assess_risk(scenario: str, **options: Any) -> RiskResult:
+def assess_risk(scenario: str, run_id: str | None = None, **options: Any) -> RiskResult:
     """Assess AI risks in scenario (convenience function).
 
     This function creates a new FairSense instance for each call. For better
@@ -650,6 +680,8 @@ def assess_risk(scenario: str, **options: Any) -> RiskResult:
     ----------
     scenario : str
         AI deployment scenario description
+    run_id : str | None, optional
+        Pre-generated run ID for tracing (if None, auto-generated)
     **options
         Optional configuration (see FairSense.assess_risk for details)
 
@@ -665,4 +697,4 @@ def assess_risk(scenario: str, **options: Any) -> RiskResult:
     >>> print(f"Found {len(result.risks)} risks")
     """
     fs = FairSense()
-    return fs.assess_risk(scenario, **options)
+    return fs.assess_risk(scenario, run_id=run_id, **options)

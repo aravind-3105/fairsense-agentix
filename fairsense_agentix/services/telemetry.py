@@ -15,7 +15,7 @@ Example:
 
 import logging
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any
 from uuid import uuid4
@@ -55,6 +55,7 @@ class TelemetryService:
         """
         self.enabled = enabled
         self._current_run_id: str | None = None
+        self._observers: list[Callable[[dict[str, Any]], None]] = []
 
         # Configure logging level
         log_level_obj = getattr(logging, log_level.upper(), logging.INFO)
@@ -100,13 +101,23 @@ class TelemetryService:
             duration = time.perf_counter() - start_time
             result_ctx["duration"] = duration
 
+            payload = self._build_payload(
+                level="timer",
+                event=operation_name,
+                context={
+                    **extra_context,
+                    "duration_ms": int(duration * 1000),
+                },
+            )
+            self._notify_observers(payload)
+
             if self.enabled:
                 context_str = ", ".join(f"{k}={v}" for k, v in extra_context.items())
                 log_msg = f"{operation_name} completed in {duration:.3f}s"
                 if context_str:
                     log_msg += f" ({context_str})"
-                if self._current_run_id:
-                    log_msg += f" [run_id={self._current_run_id}]"
+                if payload["run_id"]:
+                    log_msg += f" [run_id={payload['run_id']}]"
                 logger.info(log_msg)
 
     def start_trace(self, operation: str) -> str:
@@ -168,13 +179,20 @@ class TelemetryService:
         -------
         >>> telemetry.log_info("router_decision", workflow="bias_text", confidence=0.95)
         """
+        payload = self._build_payload(
+            level="info",
+            event=event,
+            context=context,
+        )
+        self._notify_observers(payload)
+
         if self.enabled:
             context_str = ", ".join(f"{k}={v}" for k, v in context.items())
             log_msg = f"[EVENT] {event}"
             if context_str:
                 log_msg += f" | {context_str}"
-            if self._current_run_id:
-                log_msg += f" [run_id={self._current_run_id}]"
+            if payload["run_id"]:
+                log_msg += f" [run_id={payload['run_id']}]"
             logger.info(log_msg)
 
     def log_warning(self, event: str, **context: Any) -> None:
@@ -187,13 +205,20 @@ class TelemetryService:
         **context : Any
             Additional structured context
         """
+        payload = self._build_payload(
+            level="warning",
+            event=event,
+            context=context,
+        )
+        self._notify_observers(payload)
+
         if self.enabled:
             context_str = ", ".join(f"{k}={v}" for k, v in context.items())
             log_msg = f"[WARNING] {event}"
             if context_str:
                 log_msg += f" | {context_str}"
-            if self._current_run_id:
-                log_msg += f" [run_id={self._current_run_id}]"
+            if payload["run_id"]:
+                log_msg += f" [run_id={payload['run_id']}]"
             logger.warning(log_msg)
 
     def log_error(
@@ -210,14 +235,21 @@ class TelemetryService:
         **context : Any
             Additional structured context
         """
+        payload = self._build_payload(
+            level="error",
+            event=event,
+            context={**context, "exception": type(error).__name__ if error else None},
+        )
+        self._notify_observers(payload)
+
         context_str = ", ".join(f"{k}={v}" for k, v in context.items())
         log_msg = f"[ERROR] {event}"
         if context_str:
             log_msg += f" | {context_str}"
         if error:
             log_msg += f" | exception={type(error).__name__}: {error!s}"
-        if self._current_run_id:
-            log_msg += f" [run_id={self._current_run_id}]"
+        if payload["run_id"]:
+            log_msg += f" [run_id={payload['run_id']}]"
 
         # Always log errors, even if telemetry is disabled
         logger.error(log_msg)
@@ -255,6 +287,19 @@ class TelemetryService:
         ...     cost=0.045,
         ... )
         """
+        payload = self._build_payload(
+            level="llm_call",
+            event="llm_call",
+            context={
+                "model": model,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "duration": duration,
+                "cost": cost,
+            },
+        )
+        self._notify_observers(payload)
+
         if self.enabled:
             total_tokens = prompt_tokens + completion_tokens
             log_msg = (
@@ -268,6 +313,38 @@ class TelemetryService:
             if self._current_run_id:
                 log_msg += f" [run_id={self._current_run_id}]"
             logger.info(log_msg)
+
+    def register_observer(self, observer: Callable[[dict[str, Any]], None]) -> None:
+        """Register an observer to receive telemetry payloads."""
+        self._observers.append(observer)
+
+    def unregister_observer(self, observer: Callable[[dict[str, Any]], None]) -> None:
+        """Remove a previously registered observer."""
+        if observer in self._observers:
+            self._observers.remove(observer)
+
+    def _build_payload(
+        self, *, level: str, event: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Create normalized payload for observers."""
+        run_id = context.get("run_id") or self._current_run_id
+        return {
+            "level": level,
+            "event": event,
+            "context": context,
+            "run_id": run_id,
+            "timestamp": time.time(),
+        }
+
+    def _notify_observers(self, payload: dict[str, Any]) -> None:
+        """Send payload to registered observers."""
+        if not self._observers:
+            return
+        for observer in list(self._observers):
+            try:
+                observer(payload)
+            except Exception:  # pragma: no cover - observer failures are logged only
+                logger.debug("Telemetry observer failed", exc_info=True)
 
     def record_cache_hit(self, operation: str, key: str) -> None:
         """Record a cache hit.

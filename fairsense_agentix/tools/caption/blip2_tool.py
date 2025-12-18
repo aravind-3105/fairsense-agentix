@@ -134,6 +134,11 @@ class BLIP2CaptionTool:
         CaptionError
             If transformers not installed or model loading fails
         """
+        import time
+
+        load_start = time.time()
+        logger.info("⏱️ [BLIP-2] Starting model load...")
+
         try:
             from transformers import (  # noqa: PLC0415
                 Blip2ForConditionalGeneration,
@@ -164,7 +169,12 @@ class BLIP2CaptionTool:
             # Design Choice: Separate processor for clean concerns
             # What This Enables: Standardized preprocessing
             # Why This Way: transformers best practice
+            processor_start = time.time()
+            logger.info(f"⏱️ [BLIP-2] Loading processor from {model_name}...")
             self._processor = Blip2Processor.from_pretrained(model_name)  # type: ignore[assignment]
+            logger.info(
+                f"✓ [BLIP-2] Processor loaded in {time.time() - processor_start:.2f}s"
+            )
 
             # Load model with float16 for speed
             # Design Choice: float16 on GPU, float32 on CPU
@@ -186,15 +196,29 @@ class BLIP2CaptionTool:
                     "avoids CVE-2025-32434 and 76x faster loading)"
                 )
 
+            model_load_start = time.time()
+            logger.info("⏱️ [BLIP-2] Loading model weights (this may take 10-30s)...")
             self._model = Blip2ForConditionalGeneration.from_pretrained(
                 model_name,
                 torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
                 use_safetensors=use_safetensors,
             )
+            logger.info(
+                f"✓ [BLIP-2] Model weights loaded in {time.time() - model_load_start:.2f}s"
+            )
+
+            device_move_start = time.time()
+            logger.info(f"⏱️ [BLIP-2] Moving model to {self._device}...")
             self._model.to(self._device)  # type: ignore[attr-defined]
             self._model.eval()  # type: ignore[attr-defined]  # Inference mode (disable dropout)
+            logger.info(
+                f"✓ [BLIP-2] Model ready on {self._device} in {time.time() - device_move_start:.2f}s"
+            )
 
-            logger.info(f"BLIP-2 model loaded (device={self._device})")
+            total_time = time.time() - load_start
+            logger.info(
+                f"✅ [BLIP-2] Total model load time: {total_time:.2f}s (device={self._device})"
+            )
 
         except ImportError as e:
             msg = (

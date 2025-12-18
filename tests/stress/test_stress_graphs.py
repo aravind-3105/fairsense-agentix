@@ -149,6 +149,12 @@ class TestBiasTextGraphStress:
 class TestBiasImageGraphStress:
     """Stress tests for BiasImageGraph with extreme inputs."""
 
+    INVALID_IMAGE_REGEX = (
+        "Both OCR and caption extraction failed"
+        + "|Invalid image data: unable to decode image bytes"
+        + "|Image data is empty; provide a valid image file."
+    )
+
     def test_very_large_image(self) -> None:
         """Test with 10MB+ image bytes (invalid format causes expected failure)."""
         graph = create_bias_image_graph()
@@ -158,7 +164,7 @@ class TestBiasImageGraphStress:
 
         # Invalid image bytes cause both OCR and caption to fail
         # This is expected behavior - the graph should raise ValueError
-        with pytest.raises(ValueError, match="Both OCR and caption extraction failed"):
+        with pytest.raises(ValueError, match=self.INVALID_IMAGE_REGEX):
             graph.invoke({"image_bytes": large_image_bytes, "options": {}})
 
     def test_empty_image(self) -> None:
@@ -167,7 +173,7 @@ class TestBiasImageGraphStress:
 
         # Empty image causes both OCR and caption to fail
         # This is expected behavior - fail fast on invalid input
-        with pytest.raises(ValueError, match="Both OCR and caption extraction failed"):
+        with pytest.raises(ValueError, match=self.INVALID_IMAGE_REGEX):
             graph.invoke({"image_bytes": b"", "options": {}})
 
     def test_single_byte_image(self) -> None:
@@ -176,7 +182,7 @@ class TestBiasImageGraphStress:
 
         # Single byte is not a valid image - both extractors should fail
         # This validates proper error handling for corrupted images
-        with pytest.raises(ValueError, match="Both OCR and caption extraction failed"):
+        with pytest.raises(ValueError, match=self.INVALID_IMAGE_REGEX):
             graph.invoke({"image_bytes": b"x", "options": {}})
 
     def test_null_bytes_image(self) -> None:
@@ -187,7 +193,7 @@ class TestBiasImageGraphStress:
 
         # Null bytes are not valid image data - should fail gracefully
         # This validates error handling for corrupted binary data
-        with pytest.raises(ValueError, match="Both OCR and caption extraction failed"):
+        with pytest.raises(ValueError, match=self.INVALID_IMAGE_REGEX):
             graph.invoke({"image_bytes": null_image, "options": {}})
 
     def test_binary_data_extremes(self) -> None:
@@ -198,7 +204,7 @@ class TestBiasImageGraphStress:
 
         # Random binary data is not a valid image format
         # This validates the system correctly rejects malformed inputs
-        with pytest.raises(ValueError, match="Both OCR and caption extraction failed"):
+        with pytest.raises(ValueError, match=self.INVALID_IMAGE_REGEX):
             graph.invoke({"image_bytes": extreme_bytes, "options": {}})
 
 
@@ -382,7 +388,7 @@ class TestOrchestratorGraphStress:
         assert result["final_result"]["status"] == "success"
 
     def test_orchestrator_with_large_image(self) -> None:
-        """Test orchestrator routing large image."""
+        """Test orchestrator routing large image (VLM is default as of Phase 6)."""
         graph = create_orchestrator_graph()
 
         large_image = b"fake_large_image" * 100000  # ~1.5MB
@@ -395,9 +401,9 @@ class TestOrchestratorGraphStress:
             }
         )
 
-        # Should route to image workflow
+        # Should route to VLM image workflow (default mode)
         assert result is not None
-        assert result["final_result"]["workflow_id"] == "bias_image"
+        assert result["final_result"]["workflow_id"] == "bias_image_vlm"
 
     def test_orchestrator_with_unicode(self) -> None:
         """Test orchestrator with Unicode content."""

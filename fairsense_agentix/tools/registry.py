@@ -36,6 +36,7 @@ from fairsense_agentix.tools.interfaces import (
     OCRTool,
     PersistenceTool,
     SummarizerTool,
+    VLMTool,
 )
 
 
@@ -66,12 +67,17 @@ class ToolRegistry:
         Output formatting tool (HTML, tables)
     persistence : PersistenceTool
         File persistence tool (CSV, JSON)
+    vlm : VLMTool
+        Vision-Language Model for image analysis with CoT reasoning
 
     Examples
     --------
     >>> registry = ToolRegistry(ocr=FakeOCRTool(), caption=FakeCaptionTool(), ...)
     >>> text = registry.ocr.extract(b"image")
     >>> caption = registry.caption.caption(b"image")
+    >>> result = registry.vlm.analyze_image(
+    ...     b"image", "prompt", BiasVisualAnalysisOutput
+    ... )
     """
 
     ocr: OCRTool
@@ -83,6 +89,7 @@ class ToolRegistry:
     faiss_rmf: FAISSIndexTool
     formatter: FormatterTool
     persistence: PersistenceTool
+    vlm: "VLMTool"
 
 
 # ============================================================================
@@ -634,6 +641,11 @@ def _resolve_embedder_tool(settings: Settings) -> EmbedderTool:
     Phase 6.0: Updated to use LangChain HuggingFaceEmbeddings for better
     integration with LangChain FAISS and retriever patterns.
 
+    Beta Release: Added telemetry support for model download visibility.
+    Uses global telemetry service to emit download progress events during
+    server startup (when embedder is first initialized). This provides
+    transparency for the 30-120s model download on first use.
+
     Parameters
     ----------
     settings : Settings
@@ -656,15 +668,31 @@ def _resolve_embedder_tool(settings: Settings) -> EmbedderTool:
         return FakeEmbedderTool(dimension=settings.embedding_dimension)
 
     # Phase 6.0: Use LangChain HuggingFaceEmbeddings wrapper
+    # Beta: Add telemetry support for model download progress
     try:
+        # Import global telemetry service for server-level events
+        from fairsense_agentix.services.telemetry import (  # noqa: PLC0415
+            TelemetryService,
+        )
         from fairsense_agentix.tools.embeddings import (  # noqa: PLC0415
             LangChainEmbedder,
         )
+
+        # Create telemetry service for model loading events
+        # Uses server-level logging (not per-request, since registry is singleton)
+        telemetry = TelemetryService(enabled=settings.telemetry_enabled)
+
+        # Generate server startup ID for tracing model loads
+        import uuid  # noqa: PLC0415
+
+        server_startup_id = f"server_startup_{uuid.uuid4().hex[:8]}"
 
         return LangChainEmbedder(
             model_name=settings.embedding_model,
             dimension=settings.embedding_dimension,
             normalize=True,  # For cosine similarity (FAISS IndexFlatIP)
+            telemetry=telemetry,  # Enable model download progress events
+            run_id=server_startup_id,  # Server-level trace ID
         )
     except Exception as e:
         raise ToolConfigurationError(
@@ -704,6 +732,15 @@ def _resolve_faiss_tool(
     ToolConfigurationError
         If FAISS index cannot be loaded
     """
+    # Check if using fake embedder - if so, always use fake FAISS
+    # This handles testing scenarios where we have real indexes but fake tools
+    from fairsense_agentix.tools.fake import FakeEmbedderTool  # noqa: PLC0415
+
+    if isinstance(embedder, FakeEmbedderTool):
+        from fairsense_agentix.tools.fake import FakeFAISSIndexTool  # noqa: PLC0415
+
+        return FakeFAISSIndexTool(index_path=index_path, embedder=embedder)
+
     # Check if index exists - if not, use fake
     # For LangChain FAISS, check for folder instead of .faiss file
     index_folder = index_path.parent / index_path.stem  # data/indexes/risks
@@ -823,6 +860,93 @@ def _resolve_persistence_tool(output_dir: Path) -> PersistenceTool:
         ) from e
 
 
+def _resolve_vlm_tool(settings: Settings) -> VLMTool:
+    """Resolve Vision-Language Model tool using same provider as LLM.
+
+    Uses the unified provider model - the same llm_provider setting
+    controls both text LLM and vision VLM operations. This eliminates
+    the need for separate API keys and configuration.
+
+    Design Choice: Unified Provider
+    --------------------------------
+    VLM tool routes to OpenAI or Anthropic based on llm_provider setting:
+        - llm_provider="openai" → GPT-4o Vision
+        - llm_provider="anthropic" → Claude Sonnet Vision
+        - llm_provider="fake" → FakeVLMTool (no API calls)
+
+    No separate vlm_provider or vlm_api_key needed!
+
+    What This Enables:
+        - Single API key for all AI operations (text + vision)
+        - Consistent provider across all analysis workflows
+        - Simpler configuration (one provider choice)
+        - Lower costs (no duplicate services)
+
+    Why This Way:
+        - Both OpenAI and Anthropic support vision + structured output
+        - LangChain provides unified interface across providers
+        - User configures once, uses everywhere
+        - Pattern matches existing LLM tool resolution
+
+    Parameters
+    ----------
+    settings : Settings
+        Application configuration with llm_provider and llm_api_key
+
+    Returns
+    -------
+    VLMTool
+        Configured VLM tool instance (routes to OpenAI or Anthropic)
+
+    Raises
+    ------
+    ToolConfigurationError
+        If VLM cannot be initialized (unsupported provider, missing deps, etc.)
+
+    Examples
+    --------
+    >>> settings = Settings(llm_provider="openai", llm_api_key="sk-...")
+    >>> vlm = _resolve_vlm_tool(settings)
+    >>> # Uses GPT-4o Vision with OpenAI API key
+
+    >>> settings = Settings(llm_provider="anthropic", llm_api_key="sk-ant-...")
+    >>> vlm = _resolve_vlm_tool(settings)
+    >>> # Uses Claude Sonnet Vision with Anthropic API key
+    """
+    if settings.llm_provider == "fake":
+        from fairsense_agentix.tools.vlm import FakeVLMTool  # noqa: PLC0415
+
+        return FakeVLMTool()
+
+    # Real VLM (OpenAI or Anthropic) - routes based on llm_provider
+    try:
+        from fairsense_agentix.tools.vlm import UnifiedVLMTool  # noqa: PLC0415
+
+        return UnifiedVLMTool(settings)
+
+    except Exception as e:
+        # Provide helpful error message for unsupported providers
+        if settings.llm_provider not in ("openai", "anthropic"):
+            raise ToolConfigurationError(
+                f"VLM requires llm_provider to be 'openai' or 'anthropic', "
+                f"got '{settings.llm_provider}'",
+                context={
+                    "llm_provider": settings.llm_provider,
+                    "supported_providers": ["openai", "anthropic", "fake"],
+                },
+            ) from e
+
+        # Other initialization errors
+        raise ToolConfigurationError(
+            f"Failed to initialize VLM tool: {e}",
+            context={
+                "llm_provider": settings.llm_provider,
+                "llm_model_name": settings.llm_model_name,
+                "error_type": type(e).__name__,
+            },
+        ) from e
+
+
 # ============================================================================
 # Registry Factory
 # ============================================================================
@@ -871,9 +995,26 @@ def create_tool_registry(settings: Settings | None = None) -> ToolRegistry:
         settings = global_settings
 
     try:
-        # Resolve each tool type
-        ocr = _resolve_ocr_tool(settings)
-        caption = _resolve_caption_tool(settings)
+        # Optimize: Skip loading heavy OCR/Caption models when using VLM mode
+        # VLM mode doesn't need OCR/Caption (direct image analysis)
+        # This saves 5-10s initialization time and prevents OOM on small systems
+        ocr: OCRTool
+        caption: CaptionTool
+        if settings.image_analysis_mode == "vlm":
+            # Use lightweight fake tools (no model loading)
+            from fairsense_agentix.tools.fake import (  # noqa: PLC0415
+                FakeCaptionTool,
+                FakeOCRTool,
+            )
+
+            ocr = FakeOCRTool()
+            caption = FakeCaptionTool()
+        else:
+            # Traditional mode: Load real OCR/Caption tools
+            ocr = _resolve_ocr_tool(settings)
+            caption = _resolve_caption_tool(settings)
+
+        # Core tools always loaded (needed by all modes)
         llm = _resolve_llm_tool(settings)
         summarizer = _resolve_summarizer_tool(settings)
         embedder = _resolve_embedder_tool(settings)
@@ -892,6 +1033,9 @@ def create_tool_registry(settings: Settings | None = None) -> ToolRegistry:
         formatter = _resolve_formatter_tool(settings)
         persistence = _resolve_persistence_tool(output_dir=settings.output_dir)
 
+        # VLM uses same provider as LLM (unified configuration)
+        vlm = _resolve_vlm_tool(settings)
+
         # Construct registry with all tools
         return ToolRegistry(
             ocr=ocr,
@@ -903,6 +1047,7 @@ def create_tool_registry(settings: Settings | None = None) -> ToolRegistry:
             faiss_rmf=faiss_rmf,
             formatter=formatter,
             persistence=persistence,
+            vlm=vlm,
         )
 
     except Exception as e:

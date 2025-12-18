@@ -20,10 +20,12 @@ Example:
     '...'
 """
 
+import io
 from pathlib import Path
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from PIL import Image, UnidentifiedImageError
 
 from fairsense_agentix.configs import settings
 from fairsense_agentix.graphs.state import BiasImageState
@@ -37,7 +39,47 @@ from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 # ============================================================================
 
 
-def _extract_spans_from_analysis(
+def _ensure_valid_image_bytes(state: BiasImageState) -> None:
+    """Validate that provided image bytes represent a decodable image.
+
+    When fake OCR/caption tools are configured they happily accept any bytes,
+    which can mask corrupted inputs and breaks stress tests that expect early
+    failures. We proactively run a lightweight Pillow validation so invalid
+    payloads raise ValueError regardless of which tools are configured.
+    """
+    should_validate = state.options.get(
+        "validate_image_bytes", settings.image_validation_enabled
+    )
+    if not should_validate:
+        return
+
+    # Avoid double validation when OCR and caption nodes both run.
+    if state.options.get("_image_validation_passed"):
+        return
+
+    if not state.image_bytes:
+        telemetry.log_error("bias_image_invalid_bytes", reason="empty_payload")
+        raise ValueError("Image data is empty; provide a valid image file.")
+
+    try:
+        with Image.open(io.BytesIO(state.image_bytes)) as img:
+            img.verify()
+    except UnidentifiedImageError as exc:
+        telemetry.log_error(
+            "bias_image_invalid_bytes", reason="unidentified", error=exc
+        )
+        raise ValueError("Invalid image data: unable to decode image bytes.") from exc
+    except Exception as exc:
+        telemetry.log_error(
+            "bias_image_invalid_bytes", reason="decode_failed", error=exc
+        )
+        raise ValueError("Invalid or corrupted image data.") from exc
+
+    # Mark as validated so parallel branch skips redundant work.
+    state.options["_image_validation_passed"] = True
+
+
+def _extract_spans_from_analysis(  # noqa: PLR0912, PLR0915
     bias_analysis: str | BiasAnalysisOutput,
     merged_text: str,
     ocr_text: str,
@@ -48,6 +90,9 @@ def _extract_spans_from_analysis(
     Phase 6.2: Parse BiasAnalysisOutput to extract (start_char, end_char, type)
     tuples for HTML highlighting. Handles multiple text sources (OCR + caption)
     with evidence_source tracking.
+
+    Phase 7.1: Added fallback logic to calculate positions from text_span when
+    LLM doesn't provide accurate character positions or positions are invalid.
 
     For image analysis, merged_text combines OCR and caption with headers.
     We map character positions from individual sources to merged_text.
@@ -102,11 +147,11 @@ def _extract_spans_from_analysis(
     ocr_offset = len(ocr_header)
     caption_offset = len(ocr_header) + len(ocr_text) + len(caption_header)
 
-    # Extract spans with validation and offset adjustment
+    # Extract spans with validation, fallback logic, and offset adjustment
     spans: list[tuple[int, int, str]] = []
     merged_length = len(merged_text)
 
-    for instance in analysis.bias_instances:
+    for idx, instance in enumerate(analysis.bias_instances):
         # Determine which text source this span refers to
         evidence_source = instance.evidence_source
 
@@ -118,19 +163,114 @@ def _extract_spans_from_analysis(
             offset = caption_offset
         else:
             # Unknown source or "text" (generic) - skip
+            telemetry.log_warning(
+                "image_span_unknown_source",
+                instance_idx=idx,
+                evidence_source=evidence_source,
+            )
             continue
 
         # Get positions relative to source text
         start = instance.start_char
         end = instance.end_char
 
-        # Validate bounds in source text
-        if not (0 <= start < len(source_text) and start < end <= len(source_text)):
-            continue
+        # Debug logging for position values
+        telemetry.log_info(
+            "image_extract_span_attempt",
+            instance_idx=idx,
+            text_span=instance.text_span[:30] if instance.text_span else None,
+            start_char=start,
+            end_char=end,
+            evidence_source=evidence_source,
+            bias_type=instance.type,
+        )
 
-        # Validate text_span matches (if provided)
-        if instance.text_span and source_text[start:end] != instance.text_span:
-            continue
+        # FALLBACK: If LLM didn't provide positions or they're invalid,
+        # calculate from text_span
+        needs_fallback = False
+
+        # Check if positions are missing (defaulted to 0, 0)
+        if start == 0 and end == 0:
+            telemetry.log_warning(
+                "image_span_positions_missing",
+                instance_idx=idx,
+                text_span=instance.text_span,
+                evidence_source=evidence_source,
+            )
+            needs_fallback = True
+        # Check if positions are out of bounds in source text
+        elif not (0 <= start < len(source_text) and start < end <= len(source_text)):
+            telemetry.log_warning(
+                "image_span_positions_out_of_bounds",
+                instance_idx=idx,
+                start=start,
+                end=end,
+                source_length=len(source_text),
+                evidence_source=evidence_source,
+            )
+            needs_fallback = True
+        # Check if text_span doesn't match the positions in source text
+        elif instance.text_span and source_text[start:end] != instance.text_span:
+            actual_text = source_text[start:end]
+            telemetry.log_warning(
+                "image_span_text_mismatch",
+                instance_idx=idx,
+                expected=instance.text_span,
+                actual=actual_text,
+                positions=f"{start}-{end}",
+                evidence_source=evidence_source,
+            )
+            needs_fallback = True
+
+        # Try fallback calculation if needed
+        if needs_fallback:
+            if instance.text_span:
+                # Try to find the text span in the source text
+                found_pos = source_text.find(instance.text_span)
+                if found_pos >= 0:
+                    start = found_pos
+                    end = found_pos + len(instance.text_span)
+                    telemetry.log_info(
+                        "image_span_fallback_success",
+                        instance_idx=idx,
+                        text_span=instance.text_span,
+                        calculated_start=start,
+                        calculated_end=end,
+                        evidence_source=evidence_source,
+                    )
+                else:
+                    # Try case-insensitive search as last resort
+                    source_lower = source_text.lower()
+                    span_lower = instance.text_span.lower()
+                    found_pos = source_lower.find(span_lower)
+                    if found_pos >= 0:
+                        start = found_pos
+                        end = found_pos + len(instance.text_span)
+                        telemetry.log_info(
+                            "image_span_fallback_case_insensitive",
+                            instance_idx=idx,
+                            text_span=instance.text_span,
+                            calculated_start=start,
+                            calculated_end=end,
+                            evidence_source=evidence_source,
+                        )
+                    else:
+                        telemetry.log_error(
+                            "image_span_fallback_failed",
+                            instance_idx=idx,
+                            text_span=instance.text_span,
+                            evidence_source=evidence_source,
+                            reason="text_span not found in source text",
+                        )
+                        continue
+            else:
+                telemetry.log_error(
+                    "image_span_fallback_impossible",
+                    instance_idx=idx,
+                    evidence_source=evidence_source,
+                    reason="no text_span provided",
+                )
+                continue
 
         # Adjust to merged_text coordinates
         merged_start = offset + start
@@ -141,10 +281,32 @@ def _extract_spans_from_analysis(
             0 <= merged_start < merged_length
             and merged_start < merged_end <= merged_length
         ):
+            telemetry.log_error(
+                "image_span_merged_validation_failed",
+                instance_idx=idx,
+                merged_start=merged_start,
+                merged_end=merged_end,
+                merged_length=merged_length,
+            )
             continue
 
         # Valid span - add to list
         spans.append((merged_start, merged_end, instance.type))
+        telemetry.log_info(
+            "image_span_added",
+            instance_idx=idx,
+            merged_start=merged_start,
+            merged_end=merged_end,
+            type=instance.type,
+            text_preview=merged_text[merged_start:merged_end][:30],
+        )
+
+    telemetry.log_info(
+        "image_extract_spans_complete",
+        total_instances=len(analysis.bias_instances),
+        extracted_spans=len(spans),
+        filtered_out=len(analysis.bias_instances) - len(spans),
+    )
 
     return spans
 
@@ -183,7 +345,16 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
     >>> "ocr_text" in update
     True
     """
+    import logging
+    import time
+
+    logger = logging.getLogger(__name__)
+    node_start = time.time()
+
     with telemetry.timer("bias_image.extract_ocr", image_size=len(state.image_bytes)):
+        logger.info(
+            f"👁️  [IMAGE GRAPH] Starting OCR extraction (image_size={len(state.image_bytes)} bytes)"
+        )
         telemetry.log_info(
             "bias_image_ocr_start",
             image_size=len(state.image_bytes),
@@ -191,6 +362,7 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
         )
 
         try:
+            _ensure_valid_image_bytes(state)
             # Get tools from registry
             registry = get_tool_registry()
 
@@ -232,6 +404,10 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
                 # Since caption runs in parallel, continue with single data source
                 ocr_text = ""
 
+            node_time = time.time() - node_start
+            logger.info(
+                f"✅ [IMAGE GRAPH] OCR node complete in {node_time:.2f}s (text_length={len(ocr_text)})"
+            )
             return {"ocr_text": ocr_text}
 
         except Exception as e:
@@ -269,9 +445,18 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
     >>> "caption_text" in update
     True
     """
+    import logging
+    import time
+
+    logger = logging.getLogger(__name__)
+    node_start = time.time()
+
     with telemetry.timer(
         "bias_image.generate_caption", image_size=len(state.image_bytes)
     ):
+        logger.info(
+            f"🖼️  [IMAGE GRAPH] Starting caption generation (image_size={len(state.image_bytes)} bytes)"
+        )
         telemetry.log_info(
             "bias_image_caption_start",
             image_size=len(state.image_bytes),
@@ -279,6 +464,7 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
         )
 
         try:
+            _ensure_valid_image_bytes(state)
             # Get tools from registry
             registry = get_tool_registry()
 
@@ -310,6 +496,10 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
                 # Since OCR runs in parallel, continue with single data source
                 caption_text = ""
 
+            node_time = time.time() - node_start
+            logger.info(
+                f"✅ [IMAGE GRAPH] Caption node complete in {node_time:.2f}s (caption_length={len(caption_text)})"
+            )
             return {"caption_text": caption_text}
 
         except Exception as e:
@@ -500,6 +690,15 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
             # Build prompt with merged text
             prompt = prompt_template.format(text=merged_text)
 
+            critique_feedback = state.options.get("bias_prompt_feedback")
+            if isinstance(critique_feedback, list) and critique_feedback:
+                feedback_section = "\n".join(f"- {item}" for item in critique_feedback)
+                prompt += (
+                    "\nEvaluator feedback to address:\n"
+                    f"{feedback_section}\n"
+                    "Ensure the refreshed analysis explicitly incorporates the feedback above.\n"
+                )
+
             # Call LLM via registry with structured output
             with telemetry.timer("bias_image.llm_call", temperature=temperature):
                 llm_output = registry.llm.predict(
@@ -682,10 +881,11 @@ def highlight(state: BiasImageState) -> dict[str, str]:
             # Get bias type colors from configuration
             bias_types = settings.get_bias_type_colors()
 
-            # Use formatter tool to generate highlighted HTML with error handling
+            # Use formatter tool to generate highlighted HTML fragment
+            # (dark-mode) with error handling
             try:
                 with telemetry.timer("bias_image.formatter_tool"):
-                    highlighted_html = registry.formatter.highlight(
+                    highlighted_html = registry.formatter.highlight_fragment(
                         text=merged_text, spans=spans, bias_types=bias_types
                     )
                 telemetry.log_info(

@@ -26,8 +26,11 @@ markdown_extensions:
       permalink: true
 nav:
   - Home: index.md
+  - Getting Started: getting_started.md
   - User Guide: user_guide.md
+  - Architecture: architecture.md
   - API Reference: api.md
+  - Developer Guide: developers.md
 plugins:
   - search
   - mkdocstrings:

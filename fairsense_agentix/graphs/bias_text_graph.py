@@ -52,6 +52,9 @@ def _extract_spans_from_analysis(
     Phase 6.1: Parse BiasAnalysisOutput to extract (start_char, end_char, type)
     tuples for HTML highlighting. Validates positions are within text bounds.
 
+    Phase 7.1: Added fallback logic to calculate positions from text_span when
+    LLM doesn't provide accurate character positions or positions are invalid.
+
     Parameters
     ----------
     bias_analysis : str | BiasAnalysisOutput
@@ -87,31 +90,126 @@ def _extract_spans_from_analysis(
     # bias_analysis should always be BiasAnalysisOutput now (not string)
     if not isinstance(bias_analysis, BiasAnalysisOutput):
         # This shouldn't happen with the new design
+        telemetry.log_warning("extract_spans_invalid_type", type=type(bias_analysis))
         return []
 
     analysis = bias_analysis
 
-    # Extract spans with validation
+    # Extract spans with validation and fallback logic
     spans: list[tuple[int, int, str]] = []
     text_length = len(original_text)
 
-    for instance in analysis.bias_instances:
+    for idx, instance in enumerate(analysis.bias_instances):
         start = instance.start_char
         end = instance.end_char
 
-        # Validate bounds
-        if not (0 <= start < text_length and start < end <= text_length):
-            # Skip invalid spans
-            continue
+        # Debug logging for position values
+        telemetry.log_info(
+            "extract_span_attempt",
+            instance_idx=idx,
+            text_span=instance.text_span[:30] if instance.text_span else None,
+            start_char=start,
+            end_char=end,
+            bias_type=instance.type,
+        )
 
-        # Validate text_span matches (if provided)
-        if instance.text_span and original_text[start:end] != instance.text_span:
-            # Mismatch - LLM provided wrong positions
-            # Skip this span rather than highlighting wrong text
-            continue
+        # FALLBACK: If LLM didn't provide positions or they're invalid,
+        # calculate from text_span
+        needs_fallback = False
+
+        # Check if positions are missing (defaulted to 0, 0)
+        if start == 0 and end == 0:
+            telemetry.log_warning(
+                "span_positions_missing",
+                instance_idx=idx,
+                text_span=instance.text_span,
+            )
+            needs_fallback = True
+        # Check if positions are out of bounds
+        elif not (0 <= start < text_length and start < end <= text_length):
+            telemetry.log_warning(
+                "span_positions_out_of_bounds",
+                instance_idx=idx,
+                start=start,
+                end=end,
+                text_length=text_length,
+            )
+            needs_fallback = True
+        # Check if text_span doesn't match the positions
+        elif instance.text_span and original_text[start:end] != instance.text_span:
+            actual_text = original_text[start:end]
+            telemetry.log_warning(
+                "span_text_mismatch",
+                instance_idx=idx,
+                expected=instance.text_span,
+                actual=actual_text,
+                positions=f"{start}-{end}",
+            )
+            needs_fallback = True
+
+        # Try fallback calculation if needed
+        if needs_fallback:
+            if instance.text_span:
+                # Try to find the text span in the original text
+                found_pos = original_text.find(instance.text_span)
+                if found_pos >= 0:
+                    start = found_pos
+                    end = found_pos + len(instance.text_span)
+                    telemetry.log_info(
+                        "span_fallback_success",
+                        instance_idx=idx,
+                        text_span=instance.text_span,
+                        calculated_start=start,
+                        calculated_end=end,
+                    )
+                else:
+                    # Try case-insensitive search as last resort
+                    text_lower = original_text.lower()
+                    span_lower = instance.text_span.lower()
+                    found_pos = text_lower.find(span_lower)
+                    if found_pos >= 0:
+                        start = found_pos
+                        end = found_pos + len(instance.text_span)
+                        telemetry.log_info(
+                            "span_fallback_case_insensitive",
+                            instance_idx=idx,
+                            text_span=instance.text_span,
+                            calculated_start=start,
+                            calculated_end=end,
+                        )
+                    else:
+                        telemetry.log_error(
+                            "span_fallback_failed",
+                            instance_idx=idx,
+                            text_span=instance.text_span,
+                            reason="text_span not found in original text",
+                        )
+                        continue
+            else:
+                telemetry.log_error(
+                    "span_fallback_impossible",
+                    instance_idx=idx,
+                    reason="no text_span provided",
+                )
+                continue
 
         # Valid span - add to list
         spans.append((start, end, instance.type))
+        telemetry.log_info(
+            "span_added",
+            instance_idx=idx,
+            start=start,
+            end=end,
+            type=instance.type,
+            text_preview=original_text[start:end][:30],
+        )
+
+    telemetry.log_info(
+        "extract_spans_complete",
+        total_instances=len(analysis.bias_instances),
+        extracted_spans=len(spans),
+        filtered_out=len(analysis.bias_instances) - len(spans),
+    )
 
     return spans
 
@@ -223,6 +321,15 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
 
             # Build prompt with text
             prompt = prompt_template.format(text=text)
+
+            critique_feedback = state.options.get("bias_prompt_feedback")
+            if isinstance(critique_feedback, list) and critique_feedback:
+                feedback_section = "\n".join(f"- {item}" for item in critique_feedback)
+                prompt += (
+                    "\nEvaluator feedback to address:\n"
+                    f"{feedback_section}\n"
+                    "Ensure the refreshed analysis explicitly incorporates the feedback above.\n"
+                )
 
             # Call LLM via registry with structured output
             # Real LLMs use .with_structured_output() and return BiasAnalysisOutput
@@ -422,10 +529,11 @@ def highlight(state: BiasTextState) -> dict:
             # Get bias type colors from configuration
             bias_types = settings.get_bias_type_colors()
 
-            # Use formatter tool to generate highlighted HTML with error handling
+            # Use formatter tool to generate highlighted HTML fragment
+            # (dark-mode) with error handling
             try:
                 with telemetry.timer("bias_text.formatter_tool"):
-                    highlighted_html = registry.formatter.highlight(
+                    highlighted_html = registry.formatter.highlight_fragment(
                         text=state.text, spans=spans, bias_types=bias_types
                     )
                 telemetry.log_info(

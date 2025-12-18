@@ -131,6 +131,11 @@ class BLIPCaptionTool:
         CaptionError
             If transformers not installed or model loading fails
         """
+        import time
+
+        load_start = time.time()
+        logger.info("⏱️  [BLIP] Starting model load...")
+
         try:
             from transformers import (  # noqa: PLC0415
                 BlipForConditionalGeneration,
@@ -149,13 +154,20 @@ class BLIPCaptionTool:
                     logger.warning("GPU requested but unavailable, using CPU")
 
             model_name = "Salesforce/blip-image-captioning-base"
-            logger.info(f"Loading BLIP model: {model_name} (device={self._device})")
+            logger.info(
+                f"⏱️  [BLIP] Loading model: {model_name} (device={self._device})"
+            )
 
             # Load processor (handles image preprocessing)
             # Design Choice: Separate processor for clean separation of concerns
             # What This Enables: Standardized preprocessing (resize, normalize)
             # Why This Way: transformers best practice, handles all preprocessing
+            processor_start = time.time()
+            logger.info(f"⏱️  [BLIP] Loading processor from {model_name}...")
             self._processor = BlipProcessor.from_pretrained(model_name)  # type: ignore[assignment]
+            logger.info(
+                f"✓ [BLIP] Processor loaded in {time.time() - processor_start:.2f}s"
+            )
 
             # Load model with appropriate dtype
             # Design Choice: float16 on GPU for speed, float32 on CPU for stability
@@ -177,15 +189,31 @@ class BLIPCaptionTool:
                     "avoids CVE-2025-32434 and 76x faster loading)"
                 )
 
+            model_load_start = time.time()
+            logger.info(
+                "⏱️  [BLIP] Loading model weights (this may take 5-30s on CPU)..."
+            )
             self._model = BlipForConditionalGeneration.from_pretrained(
                 model_name,
                 torch_dtype=torch.float16 if self._device == "cuda" else torch.float32,
                 use_safetensors=use_safetensors,
             )
+            logger.info(
+                f"✓ [BLIP] Model weights loaded in {time.time() - model_load_start:.2f}s"
+            )
+
+            device_move_start = time.time()
+            logger.info(f"⏱️  [BLIP] Moving model to {self._device}...")
             self._model.to(self._device)  # type: ignore[attr-defined]
             self._model.eval()  # type: ignore[attr-defined]  # Inference mode (disable dropout)
+            logger.info(
+                f"✓ [BLIP] Model ready on {self._device} in {time.time() - device_move_start:.2f}s"
+            )
 
-            logger.info(f"BLIP model loaded (device={self._device})")
+            total_time = time.time() - load_start
+            logger.info(
+                f"✅ [BLIP] Total model load time: {total_time:.2f}s (device={self._device})"
+            )
 
         except ImportError as e:
             msg = "transformers not installed. Install with: pip install transformers torch"
@@ -247,17 +275,26 @@ class BLIPCaptionTool:
         >>> # Cached result (instant)
         >>> caption2 = captioner.caption(image_bytes)  # Returns immediately
         """
+        import time
+
+        caption_start = time.time()
+
         # Check cache first
         # Design Choice: SHA256 hash of raw bytes as cache key
         # What This Enables: Same image = same key, works across restarts if persisted
         # Why This Way: Content-addressed caching is deterministic and reliable
         cache_key = hashlib.sha256(image_bytes).hexdigest()
         if cache_key in self._cache:
-            logger.debug("Caption cache hit")
+            logger.info("⚡ [BLIP] Caption cache hit (0ms)")
             return self._cache[cache_key]
+
+        logger.info(
+            f"⏱️  [BLIP] Starting caption generation (image_size={len(image_bytes)} bytes)"
+        )
 
         # Lazy load model if not loaded
         if self._model is None:
+            logger.info("⏱️  [BLIP] Model not loaded yet, loading now...")
             self._load_model()
 
         try:
@@ -265,30 +302,49 @@ class BLIPCaptionTool:
             # Design Choice: PIL for compatibility with transformers
             # What This Enables: Handles all image formats (JPEG, PNG, etc.)
             # Why This Way: transformers expects PIL images
+            image_load_start = time.time()
             image = Image.open(io.BytesIO(image_bytes))
+            logger.info(
+                f"✓ [BLIP] Image loaded in {(time.time() - image_load_start) * 1000:.1f}ms"
+            )
 
             # Preprocess image
             # Design Choice: Use processor for standardized preprocessing
             # What This Enables: Correct image format (resize, normalize, tensor)
             # Why This Way: Processor handles all model-specific requirements
+            preprocess_start = time.time()
+            logger.info("⏱️  [BLIP] Preprocessing image...")
             inputs = self._processor(image, return_tensors="pt").to(self._device)  # type: ignore[misc]
+            logger.info(
+                f"✓ [BLIP] Preprocessing done in {(time.time() - preprocess_start) * 1000:.1f}ms"
+            )
 
             # Generate caption with beam search
             # Design Choice: num_beams=5 for quality, max_length for control
             # What This Enables: Better captions than greedy (explores options)
             # Why This Way: Beam search is standard for seq2seq quality
+            generation_start = time.time()
+            logger.info(
+                f"⏱️  [BLIP] Generating caption with beam search (max_length={max_length})..."
+            )
             with torch.no_grad():  # Disable gradients for inference
                 output = self._model.generate(  # type: ignore[attr-defined]
                     **inputs,
                     max_length=max_length,
-                    num_beams=5,  # Beam search for better quality
+                    num_beams=2,  # Beam search for better quality
                 )
+            generation_time = time.time() - generation_start
+            logger.info(f"✓ [BLIP] Caption generated in {generation_time:.2f}s")
 
             # Decode output tokens → text
             # Design Choice: skip_special_tokens=True removes [CLS], [SEP], etc.
             # What This Enables: Clean caption text, no internal tokens
             # Why This Way: Users don't need to see model internals
+            decode_start = time.time()
             caption = self._processor.decode(output[0], skip_special_tokens=True)  # type: ignore[attr-defined]
+            logger.info(
+                f"✓ [BLIP] Decoded in {(time.time() - decode_start) * 1000:.1f}ms"
+            )
 
             # Cache result
             # Design Choice: Store in memory for instant future lookups
@@ -296,8 +352,9 @@ class BLIPCaptionTool:
             # Why This Way: Captions are tiny (~50-200 chars), memory is cheap
             self._cache[cache_key] = caption
 
-            logger.debug(
-                f"Generated caption ({len(caption)} chars, device={self._device})"
+            total_time = time.time() - caption_start
+            logger.info(
+                f'✅ [BLIP] Caption complete in {total_time:.2f}s: "{caption[:50]}{"..." if len(caption) > 50 else ""}"'
             )
             return caption
 
