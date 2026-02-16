@@ -31,6 +31,9 @@ CLAUDE.md
 !fairsense_agentix/data/**/*.faiss
 !fairsense_agentix/data/**/*.pkl
 !fairsense_agentix/data/**/*.json
+# Allow UI package manifest and lockfile (reproducible npm install)
+!ui/package.json
+!ui/package-lock.json
 data/indexes/*.json
 data/indexes/README.md
 .env
