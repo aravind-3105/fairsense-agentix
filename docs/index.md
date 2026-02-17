@@ -153,6 +153,7 @@ The UI provides:
 ## Documentation
 
 - **[Getting Started](getting_started.md)** - Installation, configuration, and first steps
+- **[Configuration Guide](configuration_guide.md)** - .env vs environment variables, troubleshooting
 - **[User Guide](user_guide.md)** - Detailed usage examples for text, image, and risk analysis
 - **[API Reference](api.md)** - Python API and REST API documentation
 - **[Server Guide](server.md)** - Running the FastAPI backend and React UI
