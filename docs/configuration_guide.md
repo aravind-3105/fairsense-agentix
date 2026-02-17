@@ -20,7 +20,7 @@ At some point, FAIRSENSE_ variables were exported to your shell environment and 
 
 ### Solution
 
-**Option 1: New terminal (Recommended)**  
+**Option 1: New terminal (Recommended)**
 Open a fresh terminal. Environment variables don't persist across terminals, so a new session will read only from `.env` (and any new exports you add there).
 
 **Option 2: Manual cleanup**
@@ -32,7 +32,7 @@ for var in $(env | grep '^FAIRSENSE_' | cut -d= -f1); do unset $var; done
 uv run python -c "from fairsense_agentix import FairSense; print('OK')"
 ```
 
-**Option 3: Override in the same command**  
+**Option 3: Override in the same command**
 Run with explicit env for that invocation only:
 ```bash
 FAIRSENSE_LLM_PROVIDER=openai FAIRSENSE_LLM_API_KEY=your-key uv run python -c "from fairsense_agentix import FairSense; FairSense()"
