@@ -344,8 +344,9 @@ class TestBiasImageVLMGraphRealOpenAI:
     def setup_method(self) -> None:
         """Reset tool registry and configure for OpenAI before each test."""
         reset_tool_registry()
-        # Ensure settings use OpenAI (will be read from env)
+        # Use OpenAI with a vision-capable model (required for image_url API)
         settings.llm_provider = "openai"
+        settings.llm_model_name = "gpt-4o"
 
     def teardown_method(self) -> None:
         """Reset tool registry after each test."""
