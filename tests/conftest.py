@@ -36,6 +36,10 @@ if _should_force_fake_stack():
         # Disable eager loading to speed up test collection and avoid
         # loading heavy models at import time (60s -> instant).
         "FAIRSENSE_DISABLE_EAGER_LOADING": "true",
+        # Test environment defaults
+        "FAIRSENSE_CAPTION_MAX_LENGTH": "50",
+        "FAIRSENSE_CAPTION_FORCE_CPU": "true",
+        "FAIRSENSE_LLM_MODEL_NAME": "gpt-4-turbo",
     }
 
     for key, value in _TEST_ENV_OVERRIDES.items():

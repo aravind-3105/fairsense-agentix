@@ -25,7 +25,7 @@ FairSense-AgentiX is an intelligent bias detection and risk assessment platform 
 ### From PyPI (Recommended)
 
 ```bash
-pip install fairsense-AgentiX
+pip install fairsense-agentix
 ```
 
 ### From Source
@@ -166,5 +166,5 @@ pytest.
 
 ## Contributing
 If you are interested in contributing to the library, please see
-[CONTRIBUTING.MD](CONTRIBUTING.MD). This file contains many details around contributing
+[CONTRIBUTING.md](CONTRIBUTING.md). This file contains many details around contributing
 to the code base, including development practices, code checks, tests, and more.

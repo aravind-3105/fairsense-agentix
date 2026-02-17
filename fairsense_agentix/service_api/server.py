@@ -8,7 +8,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterator, cast
+from typing import Annotated, Any, AsyncIterator
 
 import anyio
 from fastapi import (
@@ -365,7 +365,7 @@ async def _run_analysis(
             else str(content).encode("utf-8")
         )
         bias_result = await anyio.to_thread.run_sync(
-            lambda: fs.analyze_image(cast(bytes, image_bytes), run_id=run_id, **options)
+            lambda: fs.analyze_image(image_bytes, run_id=run_id, **options)
         )
         return AnalyzeResponse.from_bias_result(bias_result)
 

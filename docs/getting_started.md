@@ -48,26 +48,35 @@ uv sync --no-group dev --no-group docs
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in the project root with the following content:
+Create a `.env` file in the project root using either option below.
+
+**Option A: Copy from template (recommended)**
+
+Use the provided `.env.example` as a starting point—it includes all supported variables and comments:
 
 ```bash
-# Create .env file
+cp .env.example .env
+```
+
+Then edit `.env` and set at least the **required** values (LLM provider, model, and API key). The template documents optional settings (OCR, vision model, caching, etc.).
+
+**Option B: Create an empty file**
+
+```bash
 touch .env
 ```
 
-Edit `.env` with your preferred text editor and set the **required** variables:
+Then add the variables yourself. At minimum, set:
 
 ```bash
 # === REQUIRED ===
-# LLM Provider & Model
 FAIRSENSE_LLM_PROVIDER=anthropic  # or 'openai'
 FAIRSENSE_LLM_MODEL_NAME=claude-3-5-sonnet-20241022
 FAIRSENSE_LLM_API_KEY=sk-ant-your-key-here  # Your Anthropic/OpenAI API key
 
 # === OPTIONAL ===
-# Tool Configuration
-FAIRSENSE_OCR_TOOL=auto  # auto-selects best available OCR
-FAIRSENSE_CAPTION_MODEL=auto  # auto-selects best vision model
+FAIRSENSE_OCR_TOOL=auto
+FAIRSENSE_CAPTION_MODEL=auto
 ```
 
 !!! tip "Configuration Priority"
@@ -77,7 +86,7 @@ FAIRSENSE_CAPTION_MODEL=auto  # auto-selects best vision model
     2. **`.env` file** in project root
     3. **Default values** in `fairsense_agentix/configs/settings.py`
 
-    See the [User Guide](user_guide.md#configuration) for full options.
+See the [User Guide](user_guide.md#configuration) for full options. If changes in `.env` don't apply, see the [Configuration Guide](configuration_guide.md) for troubleshooting.
 
 ### 4. Verify Installation
 

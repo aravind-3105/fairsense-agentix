@@ -220,12 +220,6 @@ def get_bias_text_inputs() -> dict[str, dict[str, Any]]:
     }
 ```
 
-## Related Documentation
-
-- [Phase 6.4: Telemetry Integration](../../PLAN.md#phase-64-telemetry-integration)
-- [Stress Testing Guide](../stress/README.md)
-- [Production Deployment](../../docs/deployment.md)
-
 ## Troubleshooting
 
 ### "ModuleNotFoundError: psutil"

@@ -2,17 +2,10 @@
 
 Quick Start
 -----------
-Simple usage:
-
-    >>> from fairsense_agentix import analyze_text
-    >>> result = analyze_text("Job posting text")
-    >>> print(result.bias_detected, result.risk_level)
-
-Class-based (reusable):
-
     >>> from fairsense_agentix import FairSense
     >>> fs = FairSense()
-    >>> result = fs.analyze_text("Text")
+    >>> result = fs.analyze_text("Job posting text")
+    >>> print(result.bias_detected, result.risk_level)
 
 Advanced (full control):
 
@@ -29,9 +22,6 @@ from fairsense_agentix.api import (
     FairSense,
     ResultMetadata,
     RiskResult,
-    analyze_image,
-    analyze_text,
-    assess_risk,
 )
 
 # Configuration
@@ -50,10 +40,6 @@ __all__ = [
     "BiasResult",
     "RiskResult",
     "ResultMetadata",
-    # Convenience functions
-    "analyze_text",
-    "analyze_image",
-    "assess_risk",
     # Configuration
     "Settings",
     # Advanced
@@ -68,7 +54,7 @@ __all__ = [
 # This loads all models (LLM, OCR, embeddings, FAISS) when the module is
 # imported, making all subsequent function calls instant (~0.03s instead of ~30s).
 #
-# Trade-off: Import takes 30-60s, but every analyze_text() call is instant.
+# Trade-off: Import takes 30-60s, but every FairSense().analyze_*() call is instant.
 # Perfect for: Production servers, demos, notebooks (import once, use many times)
 #
 # To disable: Set FAIRSENSE_DISABLE_EAGER_LOADING=true in environment
