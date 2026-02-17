@@ -164,6 +164,12 @@ have `FAIRSENSE_LLM_PROVIDER=openai` (or Anthropic) configured locally. To opt-i
 to exercising the real stack, export `FAIRSENSE_TEST_USE_REAL=1` before running
 pytest.
 
+## Acknowledgments
+
+Resources used in preparing this research were provided, in part, by the Province of Ontario, the Government of Canada through CIFAR, and companies sponsoring the Vector Institute.
+
+This research was funded by the European Union's Horizon Europe research and innovation programme under the AIXPERT project (Grant Agreement No. 101214389).
+
 ## Contributing
 If you are interested in contributing to the library, please see
 [CONTRIBUTING.md](CONTRIBUTING.md). This file contains many details around contributing

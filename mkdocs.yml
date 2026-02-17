@@ -33,6 +33,7 @@ nav:
   - Architecture: architecture.md
   - API Reference: api.md
   - Developer Guide: developers.md
+  - Acknowledgments: acknowledgments.md
 plugins:
   - search
   - mkdocstrings:
