@@ -27,7 +27,9 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
+  - Configuration: configuration_guide.md
   - User Guide: user_guide.md
+  - Server Guide: server.md
   - Architecture: architecture.md
   - API Reference: api.md
   - Developer Guide: developers.md
