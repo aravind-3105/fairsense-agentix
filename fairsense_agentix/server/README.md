@@ -76,7 +76,7 @@ server.start(reload=True)
 ```
 
 Backend auto-reloads when you:
-- Edit prompts in `prompts/`
+- Edit prompts in `fairsense_agentix/prompts/templates/`
 - Modify configs in `.env`
 - Change tool parameters
 
@@ -235,6 +235,5 @@ fairsense_agentix/server/
 
 ## See Also
 
-- [Beta Implementation Plan](../../../planning_files/beta_implementation_plan.md)
 - [API Documentation](http://localhost:8000/docs) (when running)
 - [Project README](../../../README.md)
