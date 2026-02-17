@@ -95,7 +95,7 @@ uv sync --no-group docs
 ```
 ## Getting Started
 
-### Run the FastAPI service (Phase 9)
+### Run the FastAPI service
 
 ```bash
 uv run uvicorn fairsense_agentix.service_api.server:app --reload
@@ -113,7 +113,7 @@ Endpoints (all under `/v1/...`):
 
 The API auto-detects text/image/CSV inputs, but you can override by setting `input_type` to `bias_text`, `bias_image`, or `risk`.
 
-### Run the Claude-inspired UI (Phase 11)
+### Run the Claude-inspired UI
 
 ```bash
 cd ui

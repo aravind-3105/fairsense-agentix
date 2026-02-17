@@ -883,3 +883,4 @@ def create_bias_text_graph() -> CompiledStateGraph:
 - **[Getting Started](getting_started.md)** - Install and configure FairSense
 - **[User Guide](user_guide.md)** - Detailed usage examples
 - **[API Reference](api.md)** - Complete API documentation
+- **[Developer Guide](developers.md)** - Extend and contribute to FairSense

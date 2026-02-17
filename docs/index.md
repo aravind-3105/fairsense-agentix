@@ -20,7 +20,7 @@ This approach delivers more accurate, transparent, and context-aware fairness as
 ## Key Features
 
 ### 🤖 Agentic Reasoning
-Built on [LangGraph](https://langchain-ai.github.io/langgraph/), FairSense implements a **ReAct (Reasoning + Acting) loop** that:
+Built on [LangGraph](https://langchain-ai.github.io/langgraph/), FairSense-AgentiX implements a **ReAct (Reasoning + Acting) loop** that:
 
 - Dynamically selects analysis tools based on input characteristics
 - Iteratively refines outputs using an evaluator-critique cycle
@@ -153,10 +153,12 @@ The UI provides:
 ## Documentation
 
 - **[Getting Started](getting_started.md)** - Installation, configuration, and first steps
-- **[Configuration Guide](configuration_guide.md)** - .env vs environment variables, troubleshooting
+- **[Config & Troubleshooting](config_troubleshooting.md)** - .env, environment variables, and troubleshooting
 - **[User Guide](user_guide.md)** - Detailed usage examples for text, image, and risk analysis
 - **[API Reference](api.md)** - Python API and REST API documentation
 - **[Server Guide](server.md)** - Running the FastAPI backend and React UI
+- **[Developer Guide](developers.md)** - Contributing and extending FairSense-AgentiX
+- **[Acknowledgments](acknowledgments.md)** - Funding and institutional support
 
 ---
 

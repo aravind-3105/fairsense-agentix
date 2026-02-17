@@ -63,6 +63,8 @@ The `BiasResult` object contains:
 | `highlighted_html` | `str` | HTML with color-coded highlights |
 | `metadata` | `ResultMetadata` | Execution details (time, model, workflow ID) |
 
+For the full list of fields (e.g. `status`, `bias_analysis`, `ocr_text`, `errors`), see the [API Reference](api.md).
+
 **BiasInstance Fields:**
 
 | Field | Type | Description |
@@ -677,7 +679,7 @@ engine = FairSense(settings=settings)
 ### 3. Handle Errors Gracefully
 
 ```python
-from fairsense_agentix.api import FairSense
+from fairsense_agentix import FairSense
 
 engine = FairSense()
 

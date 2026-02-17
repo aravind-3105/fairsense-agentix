@@ -28,7 +28,7 @@ cd fairsense-AgentiX
 
 ### 2. Set Up Virtual Environment
 
-FairSense uses `uv` for fast, reliable dependency management:
+FairSense-AgentiX uses `uv` for fast, reliable dependency management:
 
 ```bash
 # Sync all dependencies (includes dev tools, docs, etc.)
@@ -86,7 +86,7 @@ FAIRSENSE_CAPTION_MODEL=auto
     2. **`.env` file** in project root
     3. **Default values** in `fairsense_agentix/configs/settings.py`
 
-See the [User Guide](user_guide.md#configuration) for full options. If changes in `.env` don't apply, see the [Configuration Guide](configuration_guide.md) for troubleshooting.
+See the [User Guide](user_guide.md#configuration) for full options. If changes in `.env` don't apply, see [Config & Troubleshooting](config_troubleshooting.md).
 
 ### 4. Verify Installation
 
@@ -424,11 +424,12 @@ python -c "import fairsense_agentix; print('✅ Installed')"
 
 ## Next Steps
 
-Now that you have FairSense running, explore:
+Now that you have FairSense-AgentiX running, explore:
 
 - **[User Guide](user_guide.md)** - Detailed examples for each workflow (text, image, risk)
 - **[API Reference](api.md)** - Full Python API and REST endpoint documentation
 - **[Server Guide](server.md)** - Deployment and production setup
+- **[Developer Guide](developers.md)** - Contributing and extending FairSense-AgentiX
 
 ---
 

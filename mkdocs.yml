@@ -18,7 +18,11 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.details
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -27,7 +31,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
-  - Configuration: configuration_guide.md
+  - Config & Troubleshooting: config_troubleshooting.md
   - User Guide: user_guide.md
   - Server Guide: server.md
   - Architecture: architecture.md
@@ -52,7 +56,7 @@ plugins:
             show_symbol_type_toc: true
 repo_url: https://github.com/VectorInstitute/fairsense-AgentiX
 repo_name: VectorInstitute/fairsense-AgentiX
-site_name: fairsense-AgentiX
+site_name: FairSense-AgentiX
 theme:
   custom_dir: docs/overrides
   favicon: assets/favicon-48x48.svg
