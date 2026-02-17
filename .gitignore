@@ -21,7 +21,6 @@ wheels/
 *.DS_Store
 
 # Claude Files
-/planning_files
 CLAUDE.md
 *.faiss
 *.index
