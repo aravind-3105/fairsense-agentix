@@ -18,7 +18,7 @@
     
     
       
-        <title>fairsense-AgentiX</title>
+        <title>FairSense-AgentiX</title>
       
     
     
@@ -88,7 +88,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="fairsense-AgentiX" class="md-header__button md-logo" aria-label="fairsense-AgentiX" data-md-component="logo">
+    <a href="." title="FairSense-AgentiX" class="md-header__button md-logo" aria-label="FairSense-AgentiX" data-md-component="logo">
       
 <img src="assets/vector-logo.svg" alt="logo">
 
@@ -101,7 +101,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            fairsense-AgentiX
+            FairSense-AgentiX
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -260,13 +260,13 @@
   
   
     <li class="md-tabs__item">
-      <a href="configuration_guide/" class="md-tabs__link">
+      <a href="config_troubleshooting/" class="md-tabs__link">
         
   
   
     
   
-  Configuration
+  Config & Troubleshooting
 
       </a>
     </li>
@@ -409,12 +409,12 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="fairsense-AgentiX" class="md-nav__button md-logo" aria-label="fairsense-AgentiX" data-md-component="logo">
+    <a href="." title="FairSense-AgentiX" class="md-nav__button md-logo" aria-label="FairSense-AgentiX" data-md-component="logo">
       
 <img src="assets/vector-logo.svg" alt="logo">
 
     </a>
-    fairsense-AgentiX
+    FairSense-AgentiX
   </label>
   
     <div class="md-nav__source">
@@ -707,12 +707,12 @@
   
   
     <li class="md-nav__item">
-      <a href="configuration_guide/" class="md-nav__link">
+      <a href="config_troubleshooting/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Configuration
+    Config & Troubleshooting
     
   </span>
   
@@ -1097,7 +1097,7 @@
 <hr />
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <h3 id="agentic-reasoning">🤖 Agentic Reasoning<a class="headerlink" href="#agentic-reasoning" title="Permanent link">&para;</a></h3>
-<p>Built on <a href="https://langchain-ai.github.io/langgraph/">LangGraph</a>, FairSense implements a <strong>ReAct (Reasoning + Acting) loop</strong> that:</p>
+<p>Built on <a href="https://langchain-ai.github.io/langgraph/">LangGraph</a>, FairSense-AgentiX implements a <strong>ReAct (Reasoning + Acting) loop</strong> that:</p>
 <ul>
 <li>Dynamically selects analysis tools based on input characteristics</li>
 <li>Iteratively refines outputs using an evaluator-critique cycle</li>
@@ -1138,17 +1138,16 @@
 <hr />
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>FairSense implements a <strong>multi-node agentic workflow</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>graph LR
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    A[Input] --&gt; B[Plan]
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    B --&gt; C[Tool Selection]
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    C --&gt; D[Tool Execution]
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    D --&gt; E[Evidence Synthesis]
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    E --&gt; F[Evaluation]
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    F --&gt; G{Pass?}
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    G --&gt;|No| H[Refine Plan]
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    H --&gt; C
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    G --&gt;|Yes| I[Output]
-</span></code></pre></div>
+<pre class="mermaid"><code>graph LR
+    A[Input] --&gt; B[Plan]
+    B --&gt; C[Tool Selection]
+    C --&gt; D[Tool Execution]
+    D --&gt; E[Evidence Synthesis]
+    E --&gt; F[Evaluation]
+    F --&gt; G{Pass?}
+    G --&gt;|No| H[Refine Plan]
+    H --&gt; C
+    G --&gt;|Yes| I[Output]</code></pre>
 <ol>
 <li><strong>Planning</strong> - Agent analyzes input and creates an action plan</li>
 <li><strong>Tool Selection</strong> - Chooses appropriate tools (OCR, VLM, embeddings, etc.)</li>
@@ -1161,41 +1160,41 @@
 <hr />
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Clone the repository</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/VectorInstitute/fairsense-AgentiX.git
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">cd</span><span class="w"> </span>fairsense-AgentiX
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Install dependencies with uv</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>uv<span class="w"> </span>sync
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Configure API keys (see Configuration section)</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Create .env file with your settings (see getting_started.md)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Clone the repository</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/VectorInstitute/fairsense-AgentiX.git
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd</span><span class="w"> </span>fairsense-AgentiX
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Install dependencies with uv</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>uv<span class="w"> </span>sync
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Configure API keys (see Configuration section)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Create .env file with your settings (see getting_started.md)</span>
 </span></code></pre></div>
 <h3 id="your-first-analysis">Your First Analysis<a class="headerlink" href="#your-first-analysis" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fairsense_agentix</span><span class="w"> </span><span class="kn">import</span> <span class="n">FairSense</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Initialize the engine</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">FairSense</span><span class="p">()</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Analyze text for bias</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyze_text</span><span class="p">(</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="s2">&quot;We&#39;re looking for a young, energetic developer to join our startup team.&quot;</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Overall: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">)</span><span class="si">}</span><span class="s2"> bias instances&quot;</span><span class="p">)</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">:</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">severity</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">text_span</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fairsense_agentix</span><span class="w"> </span><span class="kn">import</span> <span class="n">FairSense</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Initialize the engine</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">FairSense</span><span class="p">()</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Analyze text for bias</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyze_text</span><span class="p">(</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s2">&quot;We&#39;re looking for a young, energetic developer to join our startup team.&quot;</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">)</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Overall: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">)</span><span class="si">}</span><span class="s2"> bias instances&quot;</span><span class="p">)</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">:</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">severity</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">text_span</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="using-the-web-interface">Using the Web Interface<a class="headerlink" href="#using-the-web-interface" title="Permanent link">&para;</a></h3>
 <p>The easiest way to get started is with the integrated web interface:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Launch both backend and frontend</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fairsense_agentix</span><span class="w"> </span><span class="kn">import</span> <span class="n">server</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">server</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Launch both backend and frontend</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fairsense_agentix</span><span class="w"> </span><span class="kn">import</span> <span class="n">server</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">server</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Or use an example script:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>examples/launch_server.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>examples/launch_server.py
 </span></code></pre></div></p>
 <p>This starts:
 - <strong>Backend API</strong> at <code>http://localhost:8000</code>
@@ -1209,10 +1208,12 @@
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong><a href="getting_started/">Getting Started</a></strong> - Installation, configuration, and first steps</li>
-<li><strong><a href="configuration_guide/">Configuration Guide</a></strong> - .env vs environment variables, troubleshooting</li>
+<li><strong><a href="config_troubleshooting/">Config &amp; Troubleshooting</a></strong> - .env, environment variables, and troubleshooting</li>
 <li><strong><a href="user_guide/">User Guide</a></strong> - Detailed usage examples for text, image, and risk analysis</li>
 <li><strong><a href="api/">API Reference</a></strong> - Python API and REST API documentation</li>
 <li><strong><a href="server/">Server Guide</a></strong> - Running the FastAPI backend and React UI</li>
+<li><strong><a href="developers/">Developer Guide</a></strong> - Contributing and extending FairSense-AgentiX</li>
+<li><strong><a href="acknowledgments/">Acknowledgments</a></strong> - Funding and institutional support</li>
 </ul>
 <hr />
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
