@@ -1,10 +1,10 @@
 [project]
-name = "fairsense-AgentiX"
+name = "fairsense-agentix"
 version = "0.1.0"
 description = "An agentic fairness and AI-risk analysis platform for detecting bias in text and images"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 authors = [ {name = "Vector AI Engineering", email = "ai_engineering@vectorinstitute.ai"}]
-license = "MIT"
+license = {text = "MIT"}
 requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -178,6 +178,7 @@ ignore = [
 # Allow lazy/conditional imports for performance and avoiding circular dependencies
 "fairsense_agentix/graphs/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/registry.py" = ["PLC0415"]
+"fairsense_agentix/tools/resolvers/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/vlm/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/caption/*.py" = ["PLC0415"]
 "fairsense_agentix/graphs/orchestrator_graph.py" = ["PLC0415"]
