@@ -95,39 +95,6 @@ Execution metadata included in all results.
 
 ---
 
-### Convenience Functions
-
-Quick single-use functions for simple scripts. For batch processing, use the `FairSense` class instead.
-
-#### analyze_text()
-
-::: fairsense_agentix.api.analyze_text
-    options:
-      show_source: false
-      show_root_heading: true
-      show_root_full_path: false
-      heading_level: 5
-
-#### analyze_image()
-
-::: fairsense_agentix.api.analyze_image
-    options:
-      show_source: false
-      show_root_heading: true
-      show_root_full_path: false
-      heading_level: 5
-
-#### assess_risk()
-
-::: fairsense_agentix.api.assess_risk
-    options:
-      show_source: false
-      show_root_heading: true
-      show_root_full_path: false
-      heading_level: 5
-
----
-
 ## REST API
 
 The FastAPI backend exposes a production-ready REST API for remote analysis.

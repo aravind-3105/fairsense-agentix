@@ -20,33 +20,34 @@ At some point, FAIRSENSE_ variables were exported to your shell environment and 
 
 ### Solution
 
-**Option 1: Use the wrapper script (Recommended)**
-```bash
-./run_demo.sh
-```
-This automatically clears environment variables and reads from `.env`.
+**Option 1: New terminal (Recommended)**  
+Open a fresh terminal. Environment variables don't persist across terminals, so a new session will read only from `.env` (and any new exports you add there).
 
 **Option 2: Manual cleanup**
 ```bash
-# One-time: Clear all FAIRSENSE_ variables
+# One-time: Clear all FAIRSENSE_ variables in this shell
 for var in $(env | grep '^FAIRSENSE_' | cut -d= -f1); do unset $var; done
 
-# Then run your program
-uv run python planning_files/test_demo.py
+# Then run your program (e.g. Python API or server)
+uv run python -c "from fairsense_agentix import FairSense; print('OK')"
 ```
 
-**Option 3: New terminal**
-Open a fresh terminal (environment variables don't persist across terminals).
+**Option 3: Override in the same command**  
+Run with explicit env for that invocation only:
+```bash
+FAIRSENSE_LLM_PROVIDER=openai FAIRSENSE_LLM_API_KEY=your-key uv run python -c "from fairsense_agentix import FairSense; FairSense()"
+```
 
 ### Verification
-Test if `.env` is being read:
+In a **new terminal** (so shell env doesn't override), run:
 ```bash
-uv run python test_config.py
+uv run python -c "
+from fairsense_agentix.configs.settings import Settings
+s = Settings()
+print('SUCCESS: .env is being used' if (s.llm_provider != 'fake' or s.llm_api_key) else 'Check .env or set FAIRSENSE_LLM_PROVIDER and FAIRSENSE_LLM_API_KEY')
+"
 ```
-
-This will show:
-- ✓ SUCCESS: Configuration loaded from .env file! (good)
-- ✗ PROBLEM: Environment variables are overriding .env file (need to unset)
+If you see "SUCCESS", `.env` is being read. If values still look wrong, ensure you didn't export `FAIRSENSE_*` in this shell.
 
 ## Configuration Best Practices
 
@@ -76,10 +77,8 @@ FAIRSENSE_LLM_PROVIDER=fake uv run pytest
 ```
 
 ## Files
-- `.env` - Your local configuration (gitignored)
-- `test_config.py` - Test configuration loading
-- `run_demo.sh` - Wrapper that handles env cleanup
-- `fairsense_agentix/configs/settings.py` - Settings class
+- `.env` - Your local configuration (gitignored; create from `.env.example`)
+- `fairsense_agentix/configs/settings.py` - Settings class and defaults
 
 ## Technical Details
 

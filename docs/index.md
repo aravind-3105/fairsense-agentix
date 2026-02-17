@@ -188,7 +188,7 @@ FairSense-AgentiX is designed for:
 
 ## License
 
-FairSense-AgentiX is released under the [Apache-2.0 License](https://github.com/VectorInstitute/fairsense-AgentiX/blob/main/LICENSE.md).
+FairSense-AgentiX is released under the [MIT License](https://github.com/VectorInstitute/fairsense-AgentiX/blob/main/LICENSE).
 
 ---
 

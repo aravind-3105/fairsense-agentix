@@ -20,6 +20,7 @@ fairsense-AgentiX/
 │   │   └── state.py                # State definitions
 │   ├── tools/                  # Tool implementations
 │   │   ├── registry.py             # Tool factory and DI container
+│   │   ├── resolvers/               # Per-tool resolver modules (ocr, llm, etc.)
 │   │   ├── interfaces.py           # Tool protocols/interfaces
 │   │   ├── ocr/                    # OCR implementations
 │   │   ├── caption/                # Image captioning
@@ -47,8 +48,8 @@ fairsense-AgentiX/
 │   ├── configs/                # Configuration management
 │   │   ├── settings.py             # Pydantic Settings class
 │   │   └── logging_config.py       # Logging setup
-│   └── data/                   # Data files
-│       └── faiss_indices/          # FAISS vector indices
+│   └── data/                   # Package data (index metadata, etc.)
+│       └── indexes/                # FAISS index metadata (risks_meta.json, rmf_meta.json)
 ├── ui/                         # React frontend
 │   ├── src/
 │   │   ├── App.tsx                 # Main app component
@@ -57,10 +58,12 @@ fairsense-AgentiX/
 │   ├── package.json
 │   └── vite.config.ts
 ├── tests/                      # Test suite
-│   ├── test_api.py                 # API tests
-│   ├── test_graphs.py              # Workflow tests
-│   ├── test_tools.py               # Tool tests
-│   └── test_integration.py         # End-to-end tests
+│   ├── test_ocr_tools.py           # OCR tool tests
+│   ├── test_caption_tools.py       # Caption tool tests
+│   ├── test_server_launcher.py     # Server launcher tests
+│   ├── test_*.py                   # Other tool/API tests
+│   ├── fairsense-agentix/          # Graph and integration tests
+│   └── benchmarks/                 # Performance benchmarks
 ├── docs/                       # Documentation (MkDocs)
 ├── examples/                   # Usage examples
 ├── .env                        # Environment variables (create from template)

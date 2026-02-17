@@ -326,7 +326,7 @@ graph LR
 **Knowledge Base:**
 - **Risks:** 280+ AI risks from NIST AI Risk Management Framework
 - **RMF:** 500+ mitigation recommendations mapped to risk categories
-- **Storage:** FAISS indices built at startup, cached in `data/faiss_indices/`
+- **Storage:** FAISS indices built at startup; index files and metadata live under `data/indexes/` (e.g. `risks.faiss`, `rmf.faiss`) and package `fairsense_agentix/data/indexes/`
 
 ---
 
