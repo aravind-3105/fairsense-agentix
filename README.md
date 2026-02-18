@@ -2,11 +2,11 @@
 
 **An agentic fairness and AI-risk analysis platform developed by the [Vector Institute](https://vectorinstitute.ai/).**
 
-[![code checks](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/code_checks.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/code_checks.yml)
-[![integration tests](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/integration_tests.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/integration_tests.yml)
-[![docs](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/docs.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-AgentiX/actions/workflows/docs.yml)
-[![codecov](https://codecov.io/github/VectorInstitute/fairsense-AgentiX/graph/badge.svg?token=83MYFZ3UPA)](https://codecov.io/github/VectorInstitute/fairsense-AgentiX)
-![GitHub License](https://img.shields.io/github/license/VectorInstitute/fairsense-AgentiX)
+[![code checks](https://github.com/VectorInstitute/fairsense-agentix/actions/workflows/code_checks.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-agentix/actions/workflows/code_checks.yml)
+[![integration tests](https://github.com/VectorInstitute/fairsense-agentix/actions/workflows/integration_tests.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-agentix/actions/workflows/integration_tests.yml)
+[![docs](https://github.com/VectorInstitute/fairsense-agentix/actions/workflows/docs.yml/badge.svg)](https://github.com/VectorInstitute/fairsense-agentix/actions/workflows/docs.yml)
+[![codecov](https://codecov.io/github/VectorInstitute/fairsense-agentix/graph/badge.svg?token=83MYFZ3UPA)](https://codecov.io/github/VectorInstitute/fairsense-agentix)
+![GitHub License](https://img.shields.io/github/license/VectorInstitute/fairsense-agentix)
 
 ---
 
@@ -31,8 +31,8 @@ pip install fairsense-agentix
 ### From Source
 
 ```bash
-git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
-cd fairsense-AgentiX
+git clone https://github.com/VectorInstitute/fairsense-agentix.git
+cd fairsense-agentix
 uv sync
 source .venv/bin/activate
 ```
@@ -62,7 +62,7 @@ for instance in result.bias_instances:
     print(f"  - {instance['type']} ({instance['severity']}): {instance['text_span']}")
 ```
 
-**Full Documentation:** [https://vectorinstitute.github.io/fairsense-AgentiX/](https://vectorinstitute.github.io/fairsense-AgentiX/)
+**Full Documentation:** [https://vectorinstitute.github.io/fairsense-agentix/](https://vectorinstitute.github.io/fairsense-agentix/)
 
 ---
 

@@ -7,7 +7,7 @@ This guide is for developers who want to contribute to FairSense-AgentiX or exte
 ## Project Structure
 
 ```
-fairsense-AgentiX/
+fairsense-agentix/
 ├── fairsense_agentix/          # Core Python package
 │   ├── __init__.py             # Package exports and eager loading
 │   ├── api.py                  # High-level Python API (FairSense class)
@@ -79,8 +79,8 @@ fairsense-AgentiX/
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
-cd fairsense-AgentiX
+git clone https://github.com/VectorInstitute/fairsense-agentix.git
+cd fairsense-agentix
 
 # Install all dependencies (including dev tools)
 uv sync
@@ -800,8 +800,8 @@ def test_with_mock_llm(mock_llm):
 
 1. **Fork the Repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/fairsense-AgentiX.git
-   cd fairsense-AgentiX
+   git clone https://github.com/YOUR_USERNAME/fairsense-agentix.git
+   cd fairsense-agentix
    git checkout -b feature/my-new-feature
    ```
 
@@ -959,8 +959,8 @@ def my_node(state):
 
 ## Getting Help
 
-- **GitHub Issues:** [Report bugs or request features](https://github.com/VectorInstitute/fairsense-AgentiX/issues)
-- **GitHub Discussions:** [Ask questions](https://github.com/VectorInstitute/fairsense-AgentiX/discussions)
+- **GitHub Issues:** [Report bugs or request features](https://github.com/VectorInstitute/fairsense-agentix/issues)
+- **GitHub Discussions:** [Ask questions](https://github.com/VectorInstitute/fairsense-agentix/discussions)
 - **Code Review:** Tag `@VectorInstitute/fairsense-maintainers` in PRs
 
 ---

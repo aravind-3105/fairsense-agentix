@@ -22,8 +22,8 @@ Before you begin, ensure you have:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
-cd fairsense-AgentiX
+git clone https://github.com/VectorInstitute/fairsense-agentix.git
+cd fairsense-agentix
 ```
 
 ### 2. Set Up Virtual Environment
@@ -435,6 +435,6 @@ Now that you have FairSense-AgentiX running, explore:
 
 ## Getting Help
 
-- **GitHub Issues**: [Report bugs](https://github.com/VectorInstitute/fairsense-AgentiX/issues)
-- **Discussions**: [Ask questions](https://github.com/VectorInstitute/fairsense-AgentiX/discussions)
+- **GitHub Issues**: [Report bugs](https://github.com/VectorInstitute/fairsense-agentix/issues)
+- **Discussions**: [Ask questions](https://github.com/VectorInstitute/fairsense-agentix/discussions)
 - **Documentation**: You're reading it! 📚

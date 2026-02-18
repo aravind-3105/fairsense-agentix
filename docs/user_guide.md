@@ -725,7 +725,7 @@ print(f"  High Risk: {avg_risk * 100:.1f}%")
 
 - **[API Reference](api.md)** - Complete API documentation
 - **[Server Guide](server.md)** - Running the web interface and REST API
-- **[GitHub Examples](https://github.com/VectorInstitute/fairsense-AgentiX/tree/main/examples)** - Additional code samples
+- **[GitHub Examples](https://github.com/VectorInstitute/fairsense-agentix/tree/main/examples)** - Additional code samples
 
 ---
 
@@ -775,4 +775,4 @@ settings = Settings(
 
 ---
 
-**Need more help?** Check the [Getting Started](getting_started.md) guide or [open an issue](https://github.com/VectorInstitute/fairsense-AgentiX/issues).
+**Need more help?** Check the [Getting Started](getting_started.md) guide or [open an issue](https://github.com/VectorInstitute/fairsense-agentix/issues).

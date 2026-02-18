@@ -93,8 +93,8 @@ This **critique-driven refinement loop** distinguishes FairSense from static pip
 
 ```bash
 # Clone the repository
-git clone https://github.com/VectorInstitute/fairsense-AgentiX.git
-cd fairsense-AgentiX
+git clone https://github.com/VectorInstitute/fairsense-agentix.git
+cd fairsense-agentix
 
 # Install dependencies with uv
 uv sync
@@ -198,13 +198,13 @@ This research was funded by the European Union's Horizon Europe research and inn
 
 ## License
 
-FairSense-AgentiX is released under the [MIT License](https://github.com/VectorInstitute/fairsense-AgentiX/blob/main/LICENSE).
+FairSense-AgentiX is released under the [MIT License](https://github.com/VectorInstitute/fairsense-agentix/blob/main/LICENSE).
 
 ---
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](https://github.com/VectorInstitute/fairsense-AgentiX/blob/main/CONTRIBUTING.md) for details on:
+We welcome contributions! Please see our [Contributing Guide](https://github.com/VectorInstitute/fairsense-agentix/blob/main/CONTRIBUTING.md) for details on:
 
 - Code style (PEP 8, numpy docstrings)
 - Pre-commit hooks (ruff, mypy, pytest)
@@ -215,8 +215,8 @@ We welcome contributions! Please see our [Contributing Guide](https://github.com
 
 ## Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/VectorInstitute/fairsense-AgentiX/issues)
-- **Discussions**: [Ask questions or share ideas](https://github.com/VectorInstitute/fairsense-AgentiX/discussions)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/VectorInstitute/fairsense-agentix/issues)
+- **Discussions**: [Ask questions or share ideas](https://github.com/VectorInstitute/fairsense-agentix/discussions)
 - **Vector Institute**: [Learn more about our work](https://vectorinstitute.ai/)
 
 ---

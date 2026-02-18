@@ -55,10 +55,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/VectorInstitute/fairsense-AgentiX"
-Documentation = "https://vectorinstitute.github.io/fairsense-AgentiX/"
-Repository = "https://github.com/VectorInstitute/fairsense-AgentiX"
-Issues = "https://github.com/VectorInstitute/fairsense-AgentiX/issues"
+Homepage = "https://github.com/VectorInstitute/fairsense-agentix"
+Documentation = "https://vectorinstitute.github.io/fairsense-agentix/"
+Repository = "https://github.com/VectorInstitute/fairsense-agentix"
+Issues = "https://github.com/VectorInstitute/fairsense-agentix/issues"
 
 [build-system]
 requires = ["hatchling"]
