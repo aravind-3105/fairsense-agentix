@@ -59,7 +59,7 @@ result = engine.analyze_text(
 print(f"Bias detected: {result.bias_detected}")
 print(f"Risk level: {result.risk_level}")
 for instance in result.bias_instances:
-    print(f"  - {instance.type} ({instance.severity}): {instance.text_span}")
+    print(f"  - {instance['type']} ({instance['severity']}): {instance['text_span']}")
 ```
 
 **Full Documentation:** [https://vectorinstitute.github.io/fairsense-AgentiX/](https://vectorinstitute.github.io/fairsense-AgentiX/)
