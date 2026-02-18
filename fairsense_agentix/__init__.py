@@ -16,6 +16,8 @@ Advanced (full control):
 
 # High-level API (recommended)
 # Server launcher (for programmatic usage)
+from importlib.metadata import version
+
 from fairsense_agentix import server
 from fairsense_agentix.api import (
     BiasResult,
@@ -31,7 +33,14 @@ from fairsense_agentix.configs.settings import Settings
 from fairsense_agentix.graphs.orchestrator_graph import create_orchestrator_graph
 
 
-__version__ = "0.1.0"
+def _get_version() -> str:
+    try:
+        return version("fairsense-agentix")
+    except Exception:
+        return "0.1.0"
+
+
+__version__ = _get_version()
 
 __all__ = [
     # Main API

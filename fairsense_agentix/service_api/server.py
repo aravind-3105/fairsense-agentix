@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import logging config for side effects (suppress verbose HTTP logs)
 from fairsense_agentix import (
     FairSense,
+    __version__,
     logging_config,  # noqa: F401 (imported for side effects)
 )
 from fairsense_agentix.service_api.schemas import (
@@ -93,7 +94,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="FairSense AgentiX API",
-    version="0.1.0",
+    version=__version__,
     lifespan=lifespan,  # Use modern lifespan pattern
 )
 app.add_middleware(
