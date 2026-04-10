@@ -18,7 +18,7 @@ from typing import Optional
 
 import requests
 
-from fairsense_agentix import logging_config  # noqa: F401 (imported for side effects)
+from fairsense_agentix.logging_config import ensure_root_logging
 
 
 logger = logging.getLogger(__name__)
@@ -661,6 +661,9 @@ def start(
     - Press Ctrl+C for graceful shutdown
     - Requires Node.js/npm installed (https://nodejs.org/)
     """
+    # Match verbose: DEBUG shows _log_debug lines; INFO is enough for banners.
+    ensure_root_logging(logging.DEBUG if verbose else logging.INFO)
+
     launcher = ServerLauncher(
         backend_port=port,
         frontend_port=ui_port,

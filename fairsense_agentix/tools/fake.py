@@ -22,6 +22,7 @@ Examples
 """
 
 import csv
+import html
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -504,7 +505,7 @@ class FakeFormatterTool:
 <body>
     <h1>Bias Analysis - Highlighted Text</h1>
     <div class="text-content">
-        <p>{text}</p>
+        <p>{html.escape(text)}</p>
     </div>
     <p><em>{phase_note}</em></p>
 </body>
@@ -528,7 +529,7 @@ class FakeFormatterTool:
             f'<div style="background-color: #1a1a1a; color: #e2e8f0; padding: 1rem; '
             f"border-radius: 0.5rem; font-family: 'Inter', sans-serif; "
             f'line-height: 1.6;">\n'
-            f'    <p style="margin: 0;">{text}</p>\n'
+            f'    <p style="margin: 0;">{html.escape(text)}</p>\n'
             f'    <p style="margin-top: 1rem; font-size: 0.875rem; opacity: 0.7;">'
             f"<em>Note: This is a fake formatter for testing.</em></p>\n"
             f"</div>"
@@ -550,7 +551,7 @@ class FakeFormatterTool:
             headers = list(data[0].keys())
 
         # Build HTML table
-        html = """<!DOCTYPE html>
+        html_doc = """<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -582,25 +583,25 @@ class FakeFormatterTool:
 
         # Add headers
         for header in headers:
-            html += f"                <th>{header}</th>\n"
-        html += """            </tr>
+            html_doc += f"                <th>{html.escape(str(header))}</th>\n"
+        html_doc += """            </tr>
         </thead>
         <tbody>
 """
 
         # Add data rows
         for row in data:
-            html += "            <tr>\n"
+            html_doc += "            <tr>\n"
             for header in headers:
                 value = row.get(header, "")
-                html += f"                <td>{value}</td>\n"
-            html += "            </tr>\n"
+                html_doc += f"                <td>{html.escape(str(value))}</td>\n"
+            html_doc += "            </tr>\n"
 
-        html += """        </tbody>
+        html_doc += """        </tbody>
     </table>
 </body>
 </html>"""
-        return html
+        return html_doc
 
 
 class FakePersistenceTool:
