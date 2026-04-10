@@ -7,7 +7,7 @@ assess_risk).
 
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
@@ -158,11 +158,9 @@ class BiasResult(BaseModel):
     errors: list[str] = Field(default_factory=list, description="Error messages")
     warnings: list[str] = Field(default_factory=list, description="Warning messages")
 
-    class Config:
-        """Pydantic config."""
-
-        # Allow BiasAnalysisOutput to be serialized
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,  # BiasAnalysisOutput in bias_analysis union
+    )
 
 
 class RiskResult(BaseModel):
