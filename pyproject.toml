@@ -125,6 +125,11 @@ strict_equality = true
 extra_checks = true
 mypy_path = "src"
 
+# Third-party wheels without types or stubs (ignore_missing_imports is false globally).
+[[tool.mypy.overrides]]
+module = ["faiss", "paddleocr", "pytesseract"]
+ignore_missing_imports = true
+
 [tool.ruff]
 include = ["*.py", "pyproject.toml", "*.ipynb"]
 exclude = []
