@@ -38,7 +38,7 @@ class TestOrchestratorGraphBasic:
                 "input_type": "text",
                 "content": "Sample job posting text",
                 "options": {},
-            }
+            },
         )
 
         # Verify execution completed
@@ -74,7 +74,7 @@ class TestOrchestratorGraphBasic:
                 "input_type": "image",
                 "content": b"fake_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify execution completed
@@ -104,7 +104,7 @@ class TestOrchestratorGraphBasic:
                 "input_type": "csv",
                 "content": "AI deployment scenario text",
                 "options": {},
-            }
+            },
         )
 
         # Verify execution completed
@@ -128,7 +128,7 @@ class TestOrchestratorGraphBasic:
                 "input_type": "text",
                 "content": "Sample job posting text with biased language",
                 "options": {"force_bias_eval_score": 60},
-            }
+            },
         )
 
         assert result["final_result"]["refinement_count"] == 1
@@ -152,7 +152,7 @@ class TestOrchestratorConditionalRouting:
                 "input_type": "text",
                 "content": "Test text",
                 "options": {"llm_model": "gpt-4-turbo", "temperature": 0.7},
-            }
+            },
         )
 
         # Verify options propagated to plan
@@ -194,7 +194,7 @@ class TestOrchestratorVLMRouting:
                 "input_type": "image",
                 "content": b"fake_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify execution completed
@@ -229,7 +229,7 @@ class TestOrchestratorVLMRouting:
                 "input_type": "image",
                 "content": b"fake_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify execution completed
@@ -266,7 +266,7 @@ class TestOrchestratorVLMRouting:
                 "input_type": "image",
                 "content": b"fake_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Should fail with clear error
@@ -293,7 +293,7 @@ class TestOrchestratorVLMRouting:
                 "input_type": "image",
                 "content": b"fake_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Should succeed with fake provider
@@ -320,7 +320,7 @@ class TestOrchestratorVLMRouting:
                 "input_type": "image",
                 "content": b"fake_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Should have exact same structure as original bias_image workflow

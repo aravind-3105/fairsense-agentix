@@ -178,7 +178,7 @@ class CSVWriter:
                 writer.writerows(data)
 
             logger.debug(
-                f"CSV saved: {output_path} ({len(data)} rows, {len(headers)} columns)"
+                f"CSV saved: {output_path} ({len(data)} rows, {len(headers)} columns)",
             )
 
             # Return absolute path

@@ -68,7 +68,8 @@ def visual_analyze(state: BiasImageVLMState) -> dict:
         - llm_provider="fake" → FakeVLMTool (testing)
     """
     with telemetry.timer(
-        "bias_image_vlm.visual_analyze", image_size=len(state.image_bytes)
+        "bias_image_vlm.visual_analyze",
+        image_size=len(state.image_bytes),
     ):
         telemetry.log_info(
             "bias_image_vlm_analyze_start",
@@ -99,7 +100,7 @@ def visual_analyze(state: BiasImageVLMState) -> dict:
 
             logger.info(
                 f"VLM analyzing image: {len(state.image_bytes)} bytes "
-                f"via {settings.llm_provider} ({settings.llm_model_name})"
+                f"via {settings.llm_provider} ({settings.llm_model_name})",
             )
 
             # Call VLM with structured output
@@ -118,7 +119,7 @@ def visual_analyze(state: BiasImageVLMState) -> dict:
             logger.info(
                 f"VLM analysis complete: "
                 f"bias_detected={vlm_result.bias_analysis.bias_detected}, "
-                f"instance_count={len(vlm_result.bias_analysis.bias_instances)}"
+                f"instance_count={len(vlm_result.bias_analysis.bias_instances)}",
             )
 
             telemetry.log_info(
@@ -181,7 +182,8 @@ def summarize(state: BiasImageVLMState) -> dict:
 
             # Summarize overall assessment
             max_length = state.options.get(
-                "summary_max_length", settings.summarizer_max_length
+                "summary_max_length",
+                settings.summarizer_max_length,
             )
 
             try:
@@ -191,7 +193,7 @@ def summarize(state: BiasImageVLMState) -> dict:
                 )
 
                 logger.info(
-                    f"Summary generated: {len(summary) if summary else 0} characters"
+                    f"Summary generated: {len(summary) if summary else 0} characters",
                 )
 
                 telemetry.log_info(
@@ -368,9 +370,12 @@ def highlight(state: BiasImageVLMState) -> dict:  # noqa: PLR0915
                     risk_color = risk_colors.get(bias_analysis.risk_level, "#6b7280")
                     instances_html += (
                         f"<div style='margin-top: 0.75rem;'>"
-                        f"<span style='display: inline-block; padding: 0.25rem 0.75rem; "
-                        f"background: {risk_color}; color: white; border-radius: 9999px; "
-                        f"font-size: 0.75rem; font-weight: 600; text-transform: uppercase;'>"
+                        f"<span style='display: inline-block; "
+                        f"padding: 0.25rem 0.75rem; "
+                        f"background: {risk_color}; color: white; "
+                        f"border-radius: 9999px; "
+                        f"font-size: 0.75rem; font-weight: 600; "
+                        f"text-transform: uppercase;'>"
                         f"Risk: {bias_analysis.risk_level}</span>"
                         f"</div>"
                     )
@@ -381,7 +386,7 @@ def highlight(state: BiasImageVLMState) -> dict:  # noqa: PLR0915
                     highlighted_html += instances_html
 
                 logger.info(
-                    f"Highlighted HTML generated: {len(highlighted_html)} characters"
+                    f"Highlighted HTML generated: {len(highlighted_html)} characters",
                 )
 
                 telemetry.log_info(
@@ -407,7 +412,8 @@ def highlight(state: BiasImageVLMState) -> dict:  # noqa: PLR0915
                 image_base64 = f"data:{mime_type};base64,{image_b64}"
 
                 logger.info(
-                    f"Image encoded for UI: {len(state.image_bytes)} bytes ({mime_type})"
+                    f"Image encoded for UI: {len(state.image_bytes)} bytes "
+                    f"({mime_type})",
                 )
 
             except Exception as e:
@@ -480,7 +486,7 @@ def create_bias_image_vlm_graph() -> CompiledStateGraph:
 
     logger.info(
         "Compiled bias_image_vlm_graph: 3 nodes, "
-        f"provider={settings.llm_provider}, model={settings.llm_model_name}"
+        f"provider={settings.llm_provider}, model={settings.llm_model_name}",
     )
 
     return workflow.compile()

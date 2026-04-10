@@ -41,7 +41,7 @@ class TestBiasTextGraphBasic:
             {
                 "text": "Looking for a talented developer",
                 "options": {},
-            }
+            },
         )
 
         # Verify required outputs
@@ -69,7 +69,7 @@ class TestBiasTextGraphBasic:
             {
                 "text": long_text,
                 "options": {},
-            }
+            },
         )
 
         # Verify execution completed
@@ -88,7 +88,7 @@ class TestBiasTextGraphBasic:
             {
                 "text": "Sample text",
                 "options": {"temperature": 0.5, "enable_summary": True},
-            }
+            },
         )
 
         # Verify execution completed with options

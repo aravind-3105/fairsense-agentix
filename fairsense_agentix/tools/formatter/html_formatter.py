@@ -107,7 +107,7 @@ class HTMLFormatter:
             self.default_color_map.update(color_map)
 
         logger.info(
-            f"HTMLFormatter initialized with {len(self.default_color_map)} bias colors"
+            f"HTMLFormatter initialized with {len(self.default_color_map)} bias colors",
         )
 
     def highlight_fragment(
@@ -153,7 +153,8 @@ class HTMLFormatter:
             html_output = self._build_dark_fragment(text, sorted_spans, bias_types)
 
             logger.debug(
-                f"Dark-mode HTML fragment generated (text_length={len(text)}, spans={len(spans)})"
+                f"Dark-mode HTML fragment generated "
+                f"(text_length={len(text)}, spans={len(spans)})",
             )
 
             return html_output
@@ -233,7 +234,8 @@ class HTMLFormatter:
             html_output = self._build_highlight_html(text, sorted_spans, bias_types)
 
             logger.debug(
-                f"Highlight HTML generated (text_length={len(text)}, spans={len(spans)})"
+                f"Highlight HTML generated "
+                f"(text_length={len(text)}, spans={len(spans)})",
             )
 
             return html_output
@@ -315,7 +317,7 @@ class HTMLFormatter:
             html_output = self._build_table_html(data, headers)
 
             logger.debug(
-                f"Table HTML generated (rows={len(data)}, columns={len(headers)})"
+                f"Table HTML generated (rows={len(data)}, columns={len(headers)})",
             )
 
             return html_output
@@ -365,9 +367,13 @@ class HTMLFormatter:
         highlighted_content = self._apply_spans_dark(text, spans, bias_types)
 
         # Return just the content div with inline styles (no full document)
-        return f"""<div style="font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace; font-size: 14px; line-height: 1.6; color: #e5e7eb; background: transparent; padding: 16px; border-radius: 6px; white-space: pre-wrap; word-break: break-word;">
-{highlighted_content}
-</div>"""
+        _dark_style = (
+            "font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, "
+            "Consolas, monospace; font-size: 14px; line-height: 1.6; color: #e5e7eb; "
+            "background: transparent; padding: 16px; border-radius: 6px; "
+            "white-space: pre-wrap; word-break: break-word;"
+        )
+        return f'<div style="{_dark_style}">\n{highlighted_content}\n</div>'
 
     def _apply_spans_dark(
         self,
@@ -401,7 +407,8 @@ class HTMLFormatter:
             # Validate span indices
             if start < 0 or end > len(original_text) or start >= end:
                 logger.warning(
-                    f"Invalid span: start={start}, end={end}, text_len={len(original_text)}"
+                    f"Invalid span: start={start}, end={end}, "
+                    f"text_len={len(original_text)}",
                 )
                 continue
 
@@ -412,11 +419,14 @@ class HTMLFormatter:
             # Add span with dark-mode inline styles
             span_text = original_text[start:end]
             color = bias_types.get(
-                bias_type, "#FF6B9D"
+                bias_type,
+                "#FF6B9D",
             )  # Default pink for unknown types
             # Use semi-transparent backgrounds that work on dark themes
             result_parts.append(
-                f'<span style="background-color: {color}30; color: {color}; padding: 2px 4px; border-radius: 3px; font-weight: 500;">{html.escape(span_text)}</span>'
+                f'<span style="background-color: {color}30; color: {color}; '
+                f'padding: 2px 4px; border-radius: 3px; font-weight: 500;">'
+                f"{html.escape(span_text)}</span>",
             )
 
             last_end = end
@@ -577,7 +587,8 @@ class HTMLFormatter:
             # Validate span indices
             if start < 0 or end > len(original_text) or start >= end:
                 logger.warning(
-                    f"Invalid span: start={start}, end={end}, text_len={len(original_text)}"
+                    f"Invalid span: start={start}, end={end}, "
+                    f"text_len={len(original_text)}",
                 )
                 continue
 
@@ -588,7 +599,8 @@ class HTMLFormatter:
             # Add span with escaped content
             span_text = original_text[start:end]
             result_parts.append(
-                f'<span class="bias-span bias-{bias_type}">{html.escape(span_text)}</span>'
+                f'<span class="bias-span bias-{bias_type}">'
+                f"{html.escape(span_text)}</span>",
             )
 
             last_end = end
@@ -615,7 +627,7 @@ class HTMLFormatter:
         css_rules = []
         for bias_type, color in bias_types.items():
             css_rules.append(
-                f"        .bias-{bias_type} {{ background-color: {color}; }}"
+                f"        .bias-{bias_type} {{ background-color: {color}; }}",
             )
 
         return "\n".join(css_rules)
@@ -638,7 +650,7 @@ class HTMLFormatter:
             # Capitalize bias type for display
             display_name = bias_type.replace("_", " ").title()
             legend_items.append(
-                f'<span class="legend-item bias-{bias_type}">{display_name}</span>'
+                f'<span class="legend-item bias-{bias_type}">{display_name}</span>',
             )
 
         return " ".join(legend_items)
@@ -672,7 +684,7 @@ class HTMLFormatter:
                 escaped_value = html.escape(str(value))
                 cells.append(f"                <td>{escaped_value}</td>")
             rows_html.append(
-                "            <tr>\n" + "\n".join(cells) + "\n            </tr>"
+                "            <tr>\n" + "\n".join(cells) + "\n            </tr>",
             )
 
         rows_html_str = "\n".join(rows_html)

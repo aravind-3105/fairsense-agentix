@@ -147,7 +147,8 @@ def search_risks(state: RiskState) -> dict:
             # Use FAISS risks index from registry
             with telemetry.timer("risk.faiss_risks_search", top_k=top_k):
                 risks = registry.faiss_risks.search(
-                    query_vector=state.embedding, top_k=top_k
+                    query_vector=state.embedding,
+                    top_k=top_k,
                 )
 
             telemetry.log_info("risk_search_complete", risks_found=len(risks))
@@ -228,10 +229,12 @@ def search_rmf_per_risk(state: RiskState) -> dict:
                 # Search RMF index for recommendations
                 # (convert ndarray to list for protocol compatibility)
                 with telemetry.timer(
-                    "risk.faiss_rmf_search", rmf_per_risk=rmf_per_risk
+                    "risk.faiss_rmf_search",
+                    rmf_per_risk=rmf_per_risk,
                 ):
                     rmf_results = registry.faiss_rmf.search(
-                        query_vector=risk_embedding.tolist(), top_k=rmf_per_risk
+                        query_vector=risk_embedding.tolist(),
+                        top_k=rmf_per_risk,
                     )
 
                 rmf_recommendations[risk_id] = rmf_results
@@ -383,7 +386,8 @@ def format_html(state: RiskState) -> dict:
             try:
                 with telemetry.timer("risk.formatter_tool"):
                     html_table = registry.formatter.table(
-                        data=state.joined_table, headers=headers
+                        data=state.joined_table,
+                        headers=headers,
                     )
                 telemetry.log_info("risk_format_complete", html_length=len(html_table))
             except Exception as e:
@@ -448,7 +452,9 @@ def export_csv(state: RiskState) -> dict:
             run_id_safe = "".join(c for c in run_id[:8] if c.isalnum() or c == "-")
             if not run_id_safe:
                 telemetry.log_warning(
-                    "invalid_run_id", run_id=run_id, using_default="unknown"
+                    "invalid_run_id",
+                    run_id=run_id,
+                    using_default="unknown",
                 )
                 run_id_safe = "unknown"
             filename = f"risk_assessment_{run_id_safe}.csv"
@@ -457,10 +463,12 @@ def export_csv(state: RiskState) -> dict:
             try:
                 with telemetry.timer("risk.persistence_tool"):
                     csv_path = registry.persistence.save_csv(
-                        data=state.joined_table, filename=filename
+                        data=state.joined_table,
+                        filename=filename,
                     )
                 telemetry.log_info(
-                    "risk_export_complete", csv_path=str(csv_path) if csv_path else None
+                    "risk_export_complete",
+                    csv_path=str(csv_path) if csv_path else None,
                 )
             except Exception as e:
                 telemetry.log_error("csv_export_failed", error=e)

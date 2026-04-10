@@ -99,7 +99,8 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
         except Exception as e:
             msg = f"Failed to initialize OpenAI LLM: {e}"
             raise ToolConfigurationError(
-                msg, context={"llm_provider": settings.llm_provider}
+                msg,
+                context={"llm_provider": settings.llm_provider},
             ) from e
 
     if settings.llm_provider == "anthropic":
@@ -146,11 +147,13 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
             if not settings.llm_api_key:
                 msg = "API key required for Anthropic provider"
                 raise ToolConfigurationError(
-                    msg, context={"llm_provider": settings.llm_provider}
+                    msg,
+                    context={"llm_provider": settings.llm_provider},
                 )
 
+            # ChatAnthropic uses model_name not model
             anthropic_model = ChatAnthropic(  # type: ignore[call-arg]
-                model_name=settings.llm_model_name,  # ChatAnthropic uses model_name not model
+                model_name=settings.llm_model_name,
                 api_key=SecretStr(settings.llm_api_key),
                 callbacks=[callback],
             )
@@ -158,7 +161,7 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
             # Apply structured output mode BEFORE retry wrapper
             # Anthropic's native JSON mode is more reliable than prompt-based parsing
             structured_model = anthropic_model.with_structured_output(
-                BiasAnalysisOutput
+                BiasAnalysisOutput,
             )
 
             # Add retry after structured output configuration
@@ -180,7 +183,8 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
         except Exception as e:
             msg = f"Failed to initialize Anthropic LLM: {e}"
             raise ToolConfigurationError(
-                msg, context={"llm_provider": settings.llm_provider}
+                msg,
+                context={"llm_provider": settings.llm_provider},
             ) from e
 
     if settings.llm_provider == "local":

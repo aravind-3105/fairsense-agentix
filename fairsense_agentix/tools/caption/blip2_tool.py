@@ -155,7 +155,8 @@ class BLIP2CaptionTool:
                 self._device = "cpu"  # type: ignore[assignment]
                 if self._use_gpu:
                     logger.warning(
-                        "GPU requested but unavailable, using CPU (will be slow ~2-5s per image)"
+                        "GPU requested but unavailable, using CPU "
+                        "(will be slow ~2-5s per image)",
                     )
 
             # Choose model variant
@@ -173,7 +174,7 @@ class BLIP2CaptionTool:
             logger.info(f"⏱️ [BLIP-2] Loading processor from {model_name}...")
             self._processor = Blip2Processor.from_pretrained(model_name)  # type: ignore[assignment]
             logger.info(
-                f"✓ [BLIP-2] Processor loaded in {time.time() - processor_start:.2f}s"
+                f"✓ [BLIP-2] Processor loaded in {time.time() - processor_start:.2f}s",
             )
 
             # Load model with float16 for speed
@@ -193,7 +194,7 @@ class BLIP2CaptionTool:
             if use_safetensors:
                 logger.info(
                     f"Using safetensors format (torch {torch.__version__} < 2.6, "
-                    "avoids CVE-2025-32434 and 76x faster loading)"
+                    "avoids CVE-2025-32434 and 76x faster loading)",
                 )
 
             model_load_start = time.time()
@@ -204,7 +205,8 @@ class BLIP2CaptionTool:
                 use_safetensors=use_safetensors,
             )
             logger.info(
-                f"✓ [BLIP-2] Model weights loaded in {time.time() - model_load_start:.2f}s"
+                f"✓ [BLIP-2] Model weights loaded in "
+                f"{time.time() - model_load_start:.2f}s",
             )
 
             device_move_start = time.time()
@@ -212,12 +214,14 @@ class BLIP2CaptionTool:
             self._model.to(self._device)  # type: ignore[attr-defined]
             self._model.eval()  # type: ignore[attr-defined]  # Inference mode (disable dropout)
             logger.info(
-                f"✓ [BLIP-2] Model ready on {self._device} in {time.time() - device_move_start:.2f}s"
+                f"✓ [BLIP-2] Model ready on {self._device} in "
+                f"{time.time() - device_move_start:.2f}s",
             )
 
             total_time = time.time() - load_start
             logger.info(
-                f"✅ [BLIP-2] Total model load time: {total_time:.2f}s (device={self._device})"
+                f"✅ [BLIP-2] Total model load time: {total_time:.2f}s "
+                f"(device={self._device})",
             )
 
         except ImportError as e:
@@ -229,7 +233,8 @@ class BLIP2CaptionTool:
         except Exception as e:
             msg = "Failed to load BLIP-2 model"
             raise CaptionError(
-                msg, context={"device": self._device, "error": str(e)}
+                msg,
+                context={"device": self._device, "error": str(e)},
             ) from e
 
     def caption(self, image_bytes: bytes, max_length: int = 100) -> str:
@@ -333,7 +338,7 @@ class BLIP2CaptionTool:
             self._cache[cache_key] = caption
 
             logger.debug(
-                f"Generated caption ({len(caption)} chars, device={self._device})"
+                f"Generated caption ({len(caption)} chars, device={self._device})",
             )
             return caption
 

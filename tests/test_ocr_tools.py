@@ -342,7 +342,10 @@ class TestPaddleOCRTool:
     @patch("torch.cuda.is_available")
     @patch("numpy.array")
     def test_extract_handles_empty_results(
-        self, mock_array, mock_cuda, mock_paddle_cls
+        self,
+        mock_array,
+        mock_cuda,
+        mock_paddle_cls,
     ):
         """Verify graceful handling of images with no text.
 

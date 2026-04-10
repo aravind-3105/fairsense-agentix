@@ -8,7 +8,13 @@ from typing import Literal, cast
 
 InputType = Literal["text", "image", "csv"]
 WorkflowHint = Literal[
-    "bias_text", "bias_image", "bias_image_vlm", "risk", "text", "image", "csv"
+    "bias_text",
+    "bias_image",
+    "bias_image_vlm",
+    "risk",
+    "text",
+    "image",
+    "csv",
 ]
 
 

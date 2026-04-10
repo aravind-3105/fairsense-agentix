@@ -149,7 +149,7 @@ def preflight_eval(state: OrchestratorState) -> dict:
                         score=0.0,
                         issues=["No plan available"],
                         explanation="Router failed to create a plan",
-                    )
+                    ),
                 }
 
             # Stub: Always pass
@@ -163,8 +163,11 @@ def preflight_eval(state: OrchestratorState) -> dict:
                     passed=True,
                     score=1.0,
                     issues=[],
-                    explanation=f"Plan validation passed for workflow '{state.plan.workflow_id}'",
-                )
+                    explanation=(
+                        f"Plan validation passed for workflow "
+                        f"'{state.plan.workflow_id}'"
+                    ),
+                ),
             }
 
         except Exception as e:
@@ -237,7 +240,7 @@ def execute_workflow(state: OrchestratorState) -> dict:
                             "text": text,
                             "options": state.options,
                             "run_id": state.run_id,  # Propagate run_id for tracing
-                        }
+                        },
                     )
 
                 # Package result
@@ -267,9 +270,11 @@ def execute_workflow(state: OrchestratorState) -> dict:
                             provider=settings.llm_provider,
                         )
                         raise ValueError(
-                            f"VLM mode requires llm_provider to be 'openai', 'anthropic', or 'fake'. "
+                            f"VLM mode requires llm_provider to be "
+                            f"'openai', 'anthropic', or 'fake'. "
                             f"Current provider: {settings.llm_provider}. "
-                            f"Either change llm_provider or set image_analysis_mode='traditional'."
+                            f"Either change llm_provider or set "
+                            f"image_analysis_mode='traditional'.",
                         )
 
                     with telemetry.timer("orchestrator.bias_image_vlm_subgraph"):
@@ -281,7 +286,7 @@ def execute_workflow(state: OrchestratorState) -> dict:
                                 "image_bytes": image_bytes,
                                 "options": state.options,
                                 "run_id": state.run_id,
-                            }
+                            },
                         )
 
                     # Package result (VLM format)
@@ -311,7 +316,7 @@ def execute_workflow(state: OrchestratorState) -> dict:
                                 "image_bytes": image_bytes,
                                 "options": state.options,
                                 "run_id": state.run_id,
-                            }
+                            },
                         )
 
                     # Package result (traditional format)
@@ -341,9 +346,11 @@ def execute_workflow(state: OrchestratorState) -> dict:
                         provider=settings.llm_provider,
                     )
                     raise ValueError(
-                        f"VLM mode requires llm_provider to be 'openai', 'anthropic', or 'fake'. "
+                        f"VLM mode requires llm_provider to be "
+                        f"'openai', 'anthropic', or 'fake'. "
                         f"Current provider: {settings.llm_provider}. "
-                        f"Either change llm_provider or set image_analysis_mode='traditional'."
+                        f"Either change llm_provider or set "
+                        f"image_analysis_mode='traditional'.",
                     )
 
                 with telemetry.timer("orchestrator.bias_image_vlm_subgraph"):
@@ -355,7 +362,7 @@ def execute_workflow(state: OrchestratorState) -> dict:
                             "image_bytes": image_bytes,
                             "options": state.options,
                             "run_id": state.run_id,
-                        }
+                        },
                     )
 
                 # Package result (VLM format)
@@ -390,7 +397,7 @@ def execute_workflow(state: OrchestratorState) -> dict:
                             "scenario_text": scenario_text,
                             "options": state.options,
                             "run_id": state.run_id,  # Propagate run_id for tracing
-                        }
+                        },
                     )
 
                 # Package result
@@ -412,7 +419,9 @@ def execute_workflow(state: OrchestratorState) -> dict:
 
         except Exception as e:
             telemetry.log_error(
-                "orchestrator_execute_workflow_failed", workflow_id=workflow_id, error=e
+                "orchestrator_execute_workflow_failed",
+                workflow_id=workflow_id,
+                error=e,
             )
             return {
                 "workflow_result": None,
@@ -463,7 +472,8 @@ def posthoc_eval(state: OrchestratorState) -> dict:
 
             if state.workflow_result is None:
                 telemetry.log_warning(
-                    "posthoc_eval_failed", reason="no_workflow_result"
+                    "posthoc_eval_failed",
+                    reason="no_workflow_result",
                 )
                 return {
                     "posthoc_eval": EvaluationResult(
@@ -471,7 +481,7 @@ def posthoc_eval(state: OrchestratorState) -> dict:
                         score=0.0,
                         issues=["No workflow result to evaluate"],
                         explanation="Workflow execution failed",
-                    )
+                    ),
                 }
 
             workflow_id = state.workflow_result.get("workflow_id")
@@ -524,7 +534,8 @@ def posthoc_eval(state: OrchestratorState) -> dict:
 
 
 def _extract_bias_source_text(
-    state: OrchestratorState, workflow_id: str | None
+    state: OrchestratorState,
+    workflow_id: str | None,
 ) -> str | None:
     """Return best-effort source text for evaluator prompts."""
     if workflow_id == "bias_text" and isinstance(state.content, str):
@@ -624,7 +635,8 @@ def decide_action(state: OrchestratorState) -> dict:
                     "decision": "refine",
                     "warnings": state.warnings
                     + [
-                        f"Refinement {state.refinement_count + 1}/{settings.max_refinement_iterations} triggered"
+                        f"Refinement {state.refinement_count + 1}/"
+                        f"{settings.max_refinement_iterations} triggered",
                     ],
                 }
 
@@ -638,7 +650,7 @@ def decide_action(state: OrchestratorState) -> dict:
                 "errors": state.errors
                 + [
                     f"Max refinements ({settings.max_refinement_iterations}) reached, "
-                    "output still does not meet quality threshold"
+                    "output still does not meet quality threshold",
                 ],
             }
 
@@ -690,11 +702,12 @@ def apply_refinement(state: OrchestratorState) -> dict:
         try:
             if state.posthoc_eval is None or state.plan is None:
                 telemetry.log_error(
-                    "apply_refinement_failed", reason="missing_eval_or_plan"
+                    "apply_refinement_failed",
+                    reason="missing_eval_or_plan",
                 )
                 return {
                     "errors": state.errors
-                    + ["Cannot refine: missing evaluation or plan"]
+                    + ["Cannot refine: missing evaluation or plan"],
                 }
 
             # Extract refinement hints
@@ -714,7 +727,8 @@ def apply_refinement(state: OrchestratorState) -> dict:
             if option_hints:
                 for key, value in option_hints.items():
                     if isinstance(value, list) and isinstance(
-                        updated_options.get(key), list
+                        updated_options.get(key),
+                        list,
                     ):
                         updated_options[key] = [
                             *updated_options[key],
@@ -725,7 +739,7 @@ def apply_refinement(state: OrchestratorState) -> dict:
 
             # Create updated plan (Pydantic models are immutable)
             updated_plan = state.plan.model_copy(
-                update={"tool_preferences": updated_preferences}
+                update={"tool_preferences": updated_preferences},
             )
 
             telemetry.log_info(

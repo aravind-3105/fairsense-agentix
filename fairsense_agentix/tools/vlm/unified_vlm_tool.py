@@ -77,7 +77,7 @@ def _detect_image_format(image_bytes: bytes) -> str:
     # Default to JPEG if unknown
     logger.warning(
         f"Could not detect image format from magic bytes, "
-        f"defaulting to image/jpeg. First 12 bytes: {image_bytes[:12]!r}"
+        f"defaulting to image/jpeg. First 12 bytes: {image_bytes[:12]!r}",
     )
     return "image/jpeg"
 
@@ -185,7 +185,7 @@ class UnifiedVLMTool:
 
             logger.info(
                 f"Initialized OpenAI VLM: {self.settings.llm_model_name} "
-                f"(using llm_api_key)"
+                f"(using llm_api_key)",
             )
 
         except ImportError as e:
@@ -232,7 +232,7 @@ class UnifiedVLMTool:
 
             logger.info(
                 f"Initialized Anthropic VLM: {self.settings.llm_model_name} "
-                f"(using llm_api_key)"
+                f"(using llm_api_key)",
             )
 
         except ImportError as e:
@@ -325,7 +325,7 @@ class UnifiedVLMTool:
 
             logger.info(
                 f"VLM analyzing image: {len(image_bytes)} bytes "
-                f"(format: {mime_type}) via {self.provider}"
+                f"(format: {mime_type}) via {self.provider}",
             )
 
             # Create multimodal message (same format for both providers)
@@ -337,7 +337,7 @@ class UnifiedVLMTool:
                         "type": "image_url",
                         "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
                     },
-                ]
+                ],
             )
 
             # Ensure model is initialized
@@ -352,7 +352,7 @@ class UnifiedVLMTool:
 
             # Add retry for transient failures
             structured_model_with_retry = structured_model.with_retry(
-                stop_after_attempt=3
+                stop_after_attempt=3,
             )
 
             # Invoke API (OpenAI or Anthropic depending on provider)
@@ -364,7 +364,7 @@ class UnifiedVLMTool:
 
             logger.info(
                 f"VLM analysis complete via {self.provider}: "
-                f"{response_model.__name__} returned"
+                f"{response_model.__name__} returned",
             )
 
             # Type narrowing: structured_output returns the response_model type

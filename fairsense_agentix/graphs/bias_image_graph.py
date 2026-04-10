@@ -48,7 +48,8 @@ def _ensure_valid_image_bytes(state: BiasImageState) -> None:
     payloads raise ValueError regardless of which tools are configured.
     """
     should_validate = state.options.get(
-        "validate_image_bytes", settings.image_validation_enabled
+        "validate_image_bytes",
+        settings.image_validation_enabled,
     )
     if not should_validate:
         return
@@ -66,12 +67,16 @@ def _ensure_valid_image_bytes(state: BiasImageState) -> None:
             img.verify()
     except UnidentifiedImageError as exc:
         telemetry.log_error(
-            "bias_image_invalid_bytes", reason="unidentified", error=exc
+            "bias_image_invalid_bytes",
+            reason="unidentified",
+            error=exc,
         )
         raise ValueError("Invalid image data: unable to decode image bytes.") from exc
     except Exception as exc:
         telemetry.log_error(
-            "bias_image_invalid_bytes", reason="decode_failed", error=exc
+            "bias_image_invalid_bytes",
+            reason="decode_failed",
+            error=exc,
         )
         raise ValueError("Invalid or corrupted image data.") from exc
 
@@ -353,7 +358,8 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
 
     with telemetry.timer("bias_image.extract_ocr", image_size=len(state.image_bytes)):
         logger.info(
-            f"👁️  [IMAGE GRAPH] Starting OCR extraction (image_size={len(state.image_bytes)} bytes)"
+            f"👁️  [IMAGE GRAPH] Starting OCR extraction "
+            f"(image_size={len(state.image_bytes)} bytes)",
         )
         telemetry.log_info(
             "bias_image_ocr_start",
@@ -406,7 +412,8 @@ def extract_ocr(state: BiasImageState) -> dict[str, str]:
 
             node_time = time.time() - node_start
             logger.info(
-                f"✅ [IMAGE GRAPH] OCR node complete in {node_time:.2f}s (text_length={len(ocr_text)})"
+                f"✅ [IMAGE GRAPH] OCR node complete in {node_time:.2f}s "
+                f"(text_length={len(ocr_text)})",
             )
             return {"ocr_text": ocr_text}
 
@@ -452,10 +459,12 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
     node_start = time.time()
 
     with telemetry.timer(
-        "bias_image.generate_caption", image_size=len(state.image_bytes)
+        "bias_image.generate_caption",
+        image_size=len(state.image_bytes),
     ):
         logger.info(
-            f"🖼️  [IMAGE GRAPH] Starting caption generation (image_size={len(state.image_bytes)} bytes)"
+            f"🖼️  [IMAGE GRAPH] Starting caption generation "
+            f"(image_size={len(state.image_bytes)} bytes)",
         )
         telemetry.log_info(
             "bias_image_caption_start",
@@ -484,10 +493,12 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
             try:
                 with telemetry.timer("bias_image.caption_tool", max_length=max_length):
                     caption_text = registry.caption.caption(
-                        image_bytes=state.image_bytes, max_length=max_length
+                        image_bytes=state.image_bytes,
+                        max_length=max_length,
                     )
                 telemetry.log_info(
-                    "caption_generation_complete", text_length=len(caption_text)
+                    "caption_generation_complete",
+                    text_length=len(caption_text),
                 )
             except Exception as e:
                 telemetry.log_error("caption_generation_failed", error=e)
@@ -498,7 +509,8 @@ def generate_caption(state: BiasImageState) -> dict[str, str]:
 
             node_time = time.time() - node_start
             logger.info(
-                f"✅ [IMAGE GRAPH] Caption node complete in {node_time:.2f}s (caption_length={len(caption_text)})"
+                f"✅ [IMAGE GRAPH] Caption node complete in {node_time:.2f}s "
+                f"(caption_length={len(caption_text)})",
             )
             return {"caption_text": caption_text}
 
@@ -561,7 +573,8 @@ def merge_text(state: BiasImageState) -> dict[str, str]:
                 )
                 # Raise error that orchestrator will catch and handle
                 raise ValueError(
-                    "Both OCR and caption extraction failed - no text available for analysis"
+                    "Both OCR and caption extraction failed - no text available "
+                    "for analysis",
                 )
 
             # Simple merge with section headers
@@ -617,7 +630,8 @@ def analyze_bias(state: BiasImageState) -> dict:
     True
     """
     with telemetry.timer(
-        "bias_image.analyze_bias", text_length=len(state.merged_text or "")
+        "bias_image.analyze_bias",
+        text_length=len(state.merged_text or ""),
     ):
         telemetry.log_info(
             "bias_image_analyze_start",
@@ -671,21 +685,29 @@ def analyze_bias(state: BiasImageState) -> dict:
                     using_fallback=True,
                 )
                 # Fallback to hardcoded prompt if template not found
-                prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
-
-Your task is to carefully analyze the provided text and identify ANY instances of bias across these categories:
-- **Gender bias**: Gendered language, stereotypes, exclusionary terms
-- **Age bias**: Age discrimination, ageist assumptions, generational stereotypes
-- **Racial/ethnic bias**: Racial stereotypes, cultural assumptions, exclusionary language
-- **Disability bias**: Ableist language, accessibility assumptions, capability stereotypes
-- **Socioeconomic bias**: Class-based assumptions, privilege bias, economic stereotypes
-
-**TEXT TO ANALYZE:**
-{text}
-
-**IMPORTANT FOR IMAGE ANALYSIS:** Specify evidence_source as "caption" or "ocr_text" for each bias instance.
-
-Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [...], "overall_assessment": str, "risk_level": str}}"""
+                prompt_template = (
+                    "You are a bias detection specialist analyzing text for "
+                    "various forms of bias.\n\n"
+                    "Your task is to carefully analyze the provided text and "
+                    "identify ANY instances of bias across these categories:\n"
+                    "- **Gender bias**: Gendered language, stereotypes, "
+                    "exclusionary terms\n"
+                    "- **Age bias**: Age discrimination, ageist assumptions, "
+                    "generational stereotypes\n"
+                    "- **Racial/ethnic bias**: Racial stereotypes, cultural "
+                    "assumptions, exclusionary language\n"
+                    "- **Disability bias**: Ableist language, accessibility "
+                    "assumptions, capability stereotypes\n"
+                    "- **Socioeconomic bias**: Class-based assumptions, "
+                    "privilege bias, economic stereotypes\n\n"
+                    "**TEXT TO ANALYZE:**\n"
+                    "{text}\n\n"
+                    "**IMPORTANT FOR IMAGE ANALYSIS:** Specify evidence_source as "
+                    '"caption" or "ocr_text" for each bias instance.\n\n'
+                    "Return valid JSON with structure: "
+                    '{{"bias_detected": bool, "bias_instances": [...], '
+                    '"overall_assessment": str, "risk_level": str}}'
+                )
 
             # Build prompt with merged text
             prompt = prompt_template.format(text=merged_text)
@@ -696,13 +718,16 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
                 prompt += (
                     "\nEvaluator feedback to address:\n"
                     f"{feedback_section}\n"
-                    "Ensure the refreshed analysis explicitly incorporates the feedback above.\n"
+                    "Ensure the refreshed analysis explicitly incorporates "
+                    "the feedback above.\n"
                 )
 
             # Call LLM via registry with structured output
             with telemetry.timer("bias_image.llm_call", temperature=temperature):
                 llm_output = registry.llm.predict(
-                    prompt=prompt, temperature=temperature, max_tokens=max_tokens
+                    prompt=prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                 )
 
             # Parse LLM output into BiasAnalysisOutput (same as bias_text_graph)
@@ -715,17 +740,18 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
                 try:
                     bias_analysis = BiasAnalysisOutput.model_validate_json(llm_output)
                     telemetry.log_info(
-                        "bias_analysis_parsed", format="json_to_pydantic"
+                        "bias_analysis_parsed",
+                        format="json_to_pydantic",
                     )
                 except Exception as e:
                     telemetry.log_error("bias_analysis_parse_failed", error=e)
                     raise ValueError(
-                        f"Failed to parse LLM output into BiasAnalysisOutput: {e}"
+                        f"Failed to parse LLM output into BiasAnalysisOutput: {e}",
                     ) from e
             else:
                 raise TypeError(
                     f"Unexpected LLM output type: {type(llm_output)}. "
-                    "Expected BiasAnalysisOutput or JSON string."
+                    "Expected BiasAnalysisOutput or JSON string.",
                 )
 
             telemetry.log_info(
@@ -767,7 +793,8 @@ def summarize(state: BiasImageState) -> dict[str, str | None]:
     """
     with telemetry.timer("bias_image.summarize"):
         telemetry.log_info(
-            "bias_image_summarize_start", run_id=state.run_id or "unknown"
+            "bias_image_summarize_start",
+            run_id=state.run_id or "unknown",
         )
 
         try:
@@ -799,7 +826,8 @@ def summarize(state: BiasImageState) -> dict[str, str | None]:
 
                 with telemetry.timer("bias_image.summarizer_tool"):
                     summary = registry.summarizer.summarize(
-                        text=text_to_summarize, max_length=max_length
+                        text=text_to_summarize,
+                        max_length=max_length,
                     )
                 telemetry.log_info(
                     "bias_image_summarize_complete",
@@ -850,7 +878,8 @@ def highlight(state: BiasImageState) -> dict[str, str]:
     """
     with telemetry.timer("bias_image.highlight"):
         telemetry.log_info(
-            "bias_image_highlight_start", run_id=state.run_id or "unknown"
+            "bias_image_highlight_start",
+            run_id=state.run_id or "unknown",
         )
 
         try:
@@ -875,7 +904,8 @@ def highlight(state: BiasImageState) -> dict[str, str]:
                 telemetry.log_info("spans_extracted", span_count=len(spans))
             else:
                 telemetry.log_warning(
-                    "highlight_no_analysis", reason="no_bias_analysis"
+                    "highlight_no_analysis",
+                    reason="no_bias_analysis",
                 )
 
             # Get bias type colors from configuration
@@ -886,10 +916,13 @@ def highlight(state: BiasImageState) -> dict[str, str]:
             try:
                 with telemetry.timer("bias_image.formatter_tool"):
                     highlighted_html = registry.formatter.highlight_fragment(
-                        text=merged_text, spans=spans, bias_types=bias_types
+                        text=merged_text,
+                        spans=spans,
+                        bias_types=bias_types,
                     )
                 telemetry.log_info(
-                    "bias_image_highlight_complete", html_length=len(highlighted_html)
+                    "bias_image_highlight_complete",
+                    html_length=len(highlighted_html),
                 )
             except Exception as e:
                 telemetry.log_error("highlighting_failed", error=e)

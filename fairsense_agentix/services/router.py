@@ -90,7 +90,8 @@ def create_selection_plan(
 
 
 def _create_text_bias_plan(
-    content: str | bytes, options: dict[str, Any]
+    content: str | bytes,
+    options: dict[str, Any],
 ) -> SelectionPlan:
     """Create plan for text bias analysis workflow.
 
@@ -148,7 +149,8 @@ def _create_text_bias_plan(
 
 
 def _create_image_bias_plan(
-    content: str | bytes, options: dict[str, Any]
+    content: str | bytes,
+    options: dict[str, Any],
 ) -> SelectionPlan:
     """Create plan for image bias analysis workflow.
 
@@ -205,13 +207,14 @@ def _create_image_bias_plan(
         },
         node_params=node_params,
         fallbacks=[
-            "bias_text"
+            "bias_text",
         ],  # Fallback: extract text manually and use text workflow
     )
 
 
 def _create_image_bias_vlm_plan(
-    content: str | bytes, options: dict[str, Any]
+    content: str | bytes,
+    options: dict[str, Any],
 ) -> SelectionPlan:
     """Create plan for VLM-based image bias analysis workflow.
 

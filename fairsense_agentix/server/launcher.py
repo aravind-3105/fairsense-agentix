@@ -71,7 +71,8 @@ class ServerLauncher:
         self.verbose = verbose
         self.reload = reload
 
-        # So logger.debug() from _log_debug() is emitted when verbose=True (parent is INFO)
+        # So logger.debug() from _log_debug() is emitted when verbose=True
+        # (parent logger is INFO)
         logger.setLevel(logging.DEBUG if verbose else logging.INFO)
 
         self.backend_proc: Optional[subprocess.Popen] = None
@@ -133,7 +134,7 @@ class ServerLauncher:
             sys.exit(1)
 
         logger.info(
-            "⏳ Waiting for backend to be ready (preloading models, 1-2 minutes)..."
+            "⏳ Waiting for backend to be ready (preloading models, 1-2 minutes)...",
         )
         logger.info("   Initial startup delay before health checks: 10 seconds...")
         time.sleep(10)
@@ -169,7 +170,8 @@ class ServerLauncher:
         """Open browser if configured to do so."""
         if self.open_browser:
             logger.info(
-                "🌐 Opening browser at http://localhost:%s", self.frontend_port
+                "🌐 Opening browser at http://localhost:%s",
+                self.frontend_port,
             )
             time.sleep(1)
             webbrowser.open(f"http://localhost:{self.frontend_port}")
@@ -177,32 +179,36 @@ class ServerLauncher:
     def _print_backend_troubleshooting(self) -> None:
         """Print backend troubleshooting instructions."""
         logger.error(
-            "❌ Backend failed to start on port %s", self.backend_port
+            "❌ Backend failed to start on port %s",
+            self.backend_port,
         )
         logger.info("💡 Troubleshooting:")
         logger.info("   • Check if port %s is already in use", self.backend_port)
         logger.info("   • Run: lsof -i :%s  (macOS/Linux)", self.backend_port)
         logger.info(
-            "   • Run: netstat -ano | findstr :%s  (Windows)", self.backend_port
+            "   • Run: netstat -ano | findstr :%s  (Windows)",
+            self.backend_port,
         )
         logger.info(
-            "   • Check .env file for FAIRSENSE_LLM_API_KEY and other settings"
+            "   • Check .env file for FAIRSENSE_LLM_API_KEY and other settings",
         )
 
     def _print_frontend_troubleshooting(self) -> None:
         """Print frontend troubleshooting instructions."""
         logger.error(
-            "❌ Frontend failed to start on port %s", self.frontend_port
+            "❌ Frontend failed to start on port %s",
+            self.frontend_port,
         )
         logger.info("💡 Troubleshooting:")
         logger.info(
-            "   • Check if port %s is already in use", self.frontend_port
+            "   • Check if port %s is already in use",
+            self.frontend_port,
         )
         logger.info(
-            "   • Ensure npm dependencies are installed: cd ui && npm install"
+            "   • Ensure npm dependencies are installed: cd ui && npm install",
         )
         logger.info(
-            "   • Check ui/ directory exists and contains package.json"
+            "   • Check ui/ directory exists and contains package.json",
         )
 
     def _print_nodejs_install_instructions(self) -> None:
@@ -248,7 +254,7 @@ class ServerLauncher:
         if not script.exists():
             raise FileNotFoundError(
                 f"Backend launcher script not found: {script}\n"
-                f"Ensure you're running from the project root directory."
+                f"Ensure you're running from the project root directory.",
             )
 
         # Start backend process
@@ -298,7 +304,7 @@ class ServerLauncher:
         if not ui_dir.exists():
             raise FileNotFoundError(
                 f"UI directory not found: {ui_dir}\n"
-                f"Ensure you cloned the repository completely."
+                f"Ensure you cloned the repository completely.",
             )
 
         # Check if node_modules exists
@@ -306,7 +312,7 @@ class ServerLauncher:
         if not node_modules.exists():
             logger.info("⚠️  Node modules not found. Installing dependencies...")
             logger.info(
-                "   This is a one-time setup (may take 1-2 minutes)..."
+                "   This is a one-time setup (may take 1-2 minutes)...",
             )
             install_proc = subprocess.run(
                 ["npm", "install"],
@@ -316,7 +322,7 @@ class ServerLauncher:
             )
             if install_proc.returncode != 0:
                 raise RuntimeError(
-                    "npm install failed. Check your internet connection and try again."
+                    "npm install failed. Check your internet connection and try again.",
                 )
 
         # Start frontend with explicit port
@@ -423,12 +429,14 @@ class ServerLauncher:
                 except requests.exceptions.Timeout:
                     if attempt <= 3:
                         self._log_debug(
-                            "Request timeout (server slow to respond)"
+                            "Request timeout (server slow to respond)",
                         )
                 except requests.exceptions.RequestException as e:
                     if attempt <= 3:
                         self._log_debug(
-                            "Request error: %s: %s", type(e).__name__, e
+                            "Request error: %s: %s",
+                            type(e).__name__,
+                            e,
                         )
 
             time.sleep(1)
@@ -436,7 +444,8 @@ class ServerLauncher:
         self._log_debug("Health check TIMEOUT after %ss", timeout)
         if self.backend_proc:
             self._log_debug(
-                "Backend process status: %s", self.backend_proc.poll()
+                "Backend process status: %s",
+                self.backend_proc.poll(),
             )
         return False
 
@@ -528,7 +537,11 @@ class ServerLauncher:
             if system == "Windows":
                 # Windows: netstat + taskkill
                 subprocess.run(
-                    f"for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :{port}') do taskkill /F /PID %a",
+                    (
+                        f'for /f "tokens=5" %a in '
+                        f"('netstat -aon ^| findstr :{port}') "
+                        f"do taskkill /F /PID %a"
+                    ),
                     check=False,
                     shell=True,
                     capture_output=True,

@@ -40,14 +40,14 @@ def configure_logging() -> None:
     # Transformers: Show loading progress, hide verbose warnings
     logging.getLogger("transformers").setLevel(logging.INFO)  # ← Changed: show loading
     logging.getLogger("transformers.modeling_utils").setLevel(
-        logging.WARNING
+        logging.WARNING,
     )  # ← Hide tensor warnings
     logging.getLogger("transformers.configuration_utils").setLevel(logging.WARNING)
     logging.getLogger("transformers.modeling_attn_mask_utils").setLevel(logging.WARNING)
 
     # Sentence Transformers: Show loading progress
     logging.getLogger("sentence_transformers").setLevel(
-        logging.INFO
+        logging.INFO,
     )  # ← Keep progress visible
 
     # Keep our application logs visible

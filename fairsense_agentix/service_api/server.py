@@ -46,6 +46,7 @@ from fairsense_agentix.service_api.utils import (
 from fairsense_agentix.services import telemetry
 from fairsense_agentix.services.event_bus import AgentEventBus
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -160,7 +161,7 @@ async def analyze_upload(
     data = await file.read()
     # Convert filename string to Path for proper extension detection
     detected = input_type or detect_input_type(
-        Path(file.filename) if file.filename else data
+        Path(file.filename) if file.filename else data,
     )
 
     # Handle image vs text with proper error handling
@@ -242,7 +243,7 @@ async def analyze_upload_start(
     # Read and process file
     data = await file.read()
     detected = input_type or detect_input_type(
-        Path(file.filename) if file.filename else data
+        Path(file.filename) if file.filename else data,
     )
 
     # Handle image vs text with proper error handling
@@ -369,7 +370,7 @@ async def _run_analysis(
             else str(content).encode("utf-8")
         )
         bias_result = await anyio.to_thread.run_sync(
-            lambda: fs.analyze_image(image_bytes, run_id=run_id, **options)
+            lambda: fs.analyze_image(image_bytes, run_id=run_id, **options),
         )
         return AnalyzeResponse.from_bias_result(bias_result)
 
@@ -380,12 +381,12 @@ async def _run_analysis(
     )
     if input_type == "csv":
         risk_result = await anyio.to_thread.run_sync(
-            lambda: fs.assess_risk(text_content, run_id=run_id, **options)
+            lambda: fs.assess_risk(text_content, run_id=run_id, **options),
         )
         return AnalyzeResponse.from_risk_result(risk_result)
 
     bias_result = await anyio.to_thread.run_sync(
-        lambda: fs.analyze_text(text_content, run_id=run_id, **options)
+        lambda: fs.analyze_text(text_content, run_id=run_id, **options),
     )
     return AnalyzeResponse.from_bias_result(bias_result)
 
@@ -438,7 +439,9 @@ async def _run_analysis_background(
             queue = event_bus._queues.get(run_id)
             if queue:
                 event_bus._loop.call_soon_threadsafe(
-                    event_bus._enqueue, queue, completion_payload
+                    event_bus._enqueue,
+                    queue,
+                    completion_payload,
                 )
 
     except Exception as e:  # pragma: no cover - best effort error handling
@@ -458,5 +461,7 @@ async def _run_analysis_background(
             queue = event_bus._queues.get(run_id)
             if queue:
                 event_bus._loop.call_soon_threadsafe(
-                    event_bus._enqueue, queue, error_payload
+                    event_bus._enqueue,
+                    queue,
+                    error_payload,
                 )

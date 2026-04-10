@@ -93,7 +93,7 @@ class PaddleOCRTool:
         self._device = None  # Determined at load time
 
         logger.info(
-            f"PaddleOCRTool initialized (GPU={'requested' if use_gpu else 'disabled'})"
+            f"PaddleOCRTool initialized (GPU={'requested' if use_gpu else 'disabled'})",
         )
 
     def _load_model(self) -> None:
@@ -157,7 +157,8 @@ class PaddleOCRTool:
         except Exception as e:
             msg = "Failed to load PaddleOCR model"
             raise OCRError(
-                msg, context={"device": self._device, "error": str(e)}
+                msg,
+                context={"device": self._device, "error": str(e)},
             ) from e
 
     def extract(
@@ -261,7 +262,8 @@ class PaddleOCRTool:
             result_text = " ".join(texts)
             logger.debug(
                 f"PaddleOCR extracted {len(texts)} text segments "
-                f"({len(result_text)} chars, device={self._device}, lang={paddle_lang})"
+                f"({len(result_text)} chars, device={self._device}, "
+                f"lang={paddle_lang})",
             )
             return result_text
 

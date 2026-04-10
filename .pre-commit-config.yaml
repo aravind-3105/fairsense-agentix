@@ -1,3 +1,7 @@
+# Use Python 3.12 for hook venvs (matches requires-python)
+default_language_version:
+  python: python3.12
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0  # Use the ref you want to point at
@@ -23,12 +27,12 @@ repos:
     - id: check-toml
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.8.15
+    rev: 0.11.4
     hooks:
       - id: uv-lock
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.12.12'
+    rev: 'v0.15.9'
     hooks:
     - id: ruff-check
       args: [--fix, --exit-non-zero-on-fix]
@@ -37,7 +41,7 @@ repos:
       types_or: [python, jupyter]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
+    rev: v1.20.0
     hooks:
     - id: mypy
       entry: python3 -m mypy --config-file pyproject.toml
@@ -46,7 +50,7 @@ repos:
       exclude: "^(tests|fairsense_agentix/data)/.*"
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: v1.45.0
     hooks:
       - id: typos
         args: []
@@ -84,5 +88,5 @@ ci:
     autoupdate_branch: ''
     autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
     autoupdate_schedule: weekly
-    skip: [pytest,doctest,mypy]
+    skip: [pytest, doctest, mypy]
     submodules: false

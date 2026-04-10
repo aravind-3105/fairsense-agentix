@@ -34,7 +34,7 @@ class TestBiasImageGraphBasic:
             {
                 "image_bytes": b"small_image_data",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify parallel extraction completed
@@ -68,7 +68,7 @@ class TestBiasImageGraphBasic:
             {
                 "image_bytes": large_image,
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify parallel extraction with different content
@@ -94,7 +94,7 @@ class TestBiasImageGraphBasic:
             {
                 "image_bytes": b"test_image_bytes",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Both parallel nodes should have produced output
@@ -118,7 +118,7 @@ class TestBiasImageGraphBasic:
                     "caption_model": "blip2",
                     "validate_image_bytes": False,
                 },
-            }
+            },
         )
 
         # Verify execution completed with options
