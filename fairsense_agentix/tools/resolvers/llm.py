@@ -77,11 +77,12 @@ def _resolve_llm_tool(settings: Settings) -> LLMTool:  # noqa: PLR0915
             )
 
             # Apply structured output BEFORE retry wrapper.
-            # ChatOpenAI defaults to method="json_schema" (OpenAI structured outputs API).
-            # Many chat models (e.g. gpt-4-turbo) do not support that API; LangChain then
-            # falls back to function_calling and emits a UserWarning. Using
-            # method="function_calling" explicitly matches that fallback—same runtime path
-            # those models already used—without the warning.
+            # ChatOpenAI defaults to method="json_schema" (OpenAI structured outputs
+            # API).
+            # Many chat models (e.g. gpt-4-turbo) do not support that API; LangChain
+            # then falls back to function_calling and emits a UserWarning. Using
+            # method="function_calling" explicitly matches that fallback; same runtime
+            # path those models already used without the warning.
             structured_model = base_model.with_structured_output(
                 BiasAnalysisOutput,
                 method="function_calling",

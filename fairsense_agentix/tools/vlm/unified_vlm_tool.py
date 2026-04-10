@@ -347,8 +347,8 @@ class UnifiedVLMTool:
                     context={"provider": self.provider},
                 )
 
-            # OpenAI: explicit function_calling avoids json_schema attempt + UserWarning on
-            # models that lack OpenAI structured-output support (see llm resolver).
+            # OpenAI: use function_calling to skip json_schema and UserWarning for
+            # models without native structured-output support (see llm resolver).
             # Anthropic already defaults to function_calling.
             if self.provider == "openai":
                 structured_model = self._model.with_structured_output(
