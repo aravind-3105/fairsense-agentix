@@ -347,8 +347,16 @@ class UnifiedVLMTool:
                     context={"provider": self.provider},
                 )
 
-            # Apply structured output (both providers support this)
-            structured_model = self._model.with_structured_output(response_model)
+            # OpenAI: explicit function_calling avoids json_schema attempt + UserWarning on
+            # models that lack OpenAI structured-output support (see llm resolver).
+            # Anthropic already defaults to function_calling.
+            if self.provider == "openai":
+                structured_model = self._model.with_structured_output(
+                    response_model,
+                    method="function_calling",
+                )
+            else:
+                structured_model = self._model.with_structured_output(response_model)
 
             # Add retry for transient failures
             structured_model_with_retry = structured_model.with_retry(
