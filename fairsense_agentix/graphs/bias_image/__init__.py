@@ -1,4 +1,5 @@
-"""Bias image workflow helpers (validation, span extraction).
+"""Bias image workflow: helpers, LangGraph nodes, and graph builder.
 
-The compiled subgraph factory lives in :mod:`fairsense_agentix.graphs.bias_image_graph`.
+Import :func:`create_bias_image_graph` from
+:mod:`fairsense_agentix.graphs.bias_image_graph` for a stable public path.
 """
