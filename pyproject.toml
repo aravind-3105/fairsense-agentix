@@ -180,6 +180,7 @@ ignore = [
 "tests/*" = ["D103", "D105", "D107", "PLC0415"]
 # Allow lazy/conditional imports for performance and avoiding circular dependencies
 "fairsense_agentix/graphs/*.py" = ["PLC0415"]
+"fairsense_agentix/graphs/orchestrator/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/registry.py" = ["PLC0415"]
 "fairsense_agentix/tools/resolvers/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/vlm/*.py" = ["PLC0415"]
