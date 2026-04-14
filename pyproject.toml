@@ -182,6 +182,7 @@ ignore = [
 "fairsense_agentix/graphs/*.py" = ["PLC0415"]
 "fairsense_agentix/graphs/orchestrator/*.py" = ["PLC0415"]
 "fairsense_agentix/graphs/bias_image/*.py" = ["PLC0415"]
+"fairsense_agentix/graphs/bias_image_vlm/*.py" = ["PLC0415"]
 "fairsense_agentix/graphs/bias_text/*.py" = ["PLC0415"]
 "fairsense_agentix/graphs/risk/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/registry.py" = ["PLC0415"]
@@ -190,6 +191,7 @@ ignore = [
 "fairsense_agentix/tools/caption/*.py" = ["PLC0415"]
 "fairsense_agentix/graphs/orchestrator_graph.py" = ["PLC0415"]
 "fairsense_agentix/graphs/bias_image_graph.py" = ["PLC0415"]
+"fairsense_agentix/graphs/bias_image_vlm_graph.py" = ["PLC0415"]
 "fairsense_agentix/graphs/bias_text_graph.py" = ["PLC0415"]
 "fairsense_agentix/graphs/risk_graph.py" = ["PLC0415"]
 
