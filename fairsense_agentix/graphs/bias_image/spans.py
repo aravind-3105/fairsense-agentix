@@ -4,7 +4,7 @@ from fairsense_agentix.services.telemetry import telemetry
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput, BiasInstance
 
 
-def _resolve_source(
+def _resolve_source(  # noqa: PLR0913
     evidence_source: str,
     ocr_text: str,
     caption_text: str,
