@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import TextIO
 
 
 # Intentionally do not import `fairsense_agentix` here: importing the package runs
@@ -307,114 +308,126 @@ def map_domain_to_rmf_functions(
     return recommendations
 
 
-def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]:  # noqa: PLR0915
+def _seek_to_csv_header(f: TextIO) -> bool:
+    """Seek an open file to the line containing the CSV header.
+
+    Scans for a line containing 'Category level', then repositions the file
+    pointer so the next read starts at that header line.
+    Returns True if the header was found, False otherwise.
+    """
+    for line_num, line in enumerate(f):
+        if "Category level" in line:
+            logger.debug("Found header row at line %s", line_num + 1)
+            f.seek(0)
+            for _ in range(line_num):
+                next(f)
+            return True
+    return False
+
+
+def _process_row(
+    row: dict,
+    risk_id_counter: int,
+    total_rows: int,
+) -> tuple[dict, dict] | None:
+    """Process a single CSV row into a (risk_entry, metadata_entry) pair.
+
+    Returns None if the row should be skipped (wrong category level or
+    insufficient description).
+    """
+    if total_rows <= 5:
+        logger.debug(
+            "Row %s: category_level=%r description_length=%s",
+            total_rows,
+            row.get("Category level", ""),
+            len(row.get("Description", "")),
+        )
+
+    category_level = row.get("Category level", "").strip()
+    if category_level not in ["Risk Category", "Risk Sub-Category"]:
+        return None
+
+    description = clean_text(row.get("Description", ""))
+    if not description or len(description) < 20:
+        return None
+
+    risk_category = clean_text(row.get("Risk category", ""))
+    risk_subcategory = clean_text(row.get("Risk subcategory", ""))
+    domain = clean_text(row.get("Domain", ""))
+    subdomain = clean_text(row.get("Sub-domain", ""))
+
+    risk_id = f"RISK{risk_id_counter:04d}"
+    risk_name = extract_risk_name(risk_category, risk_subcategory, description)
+    severity = map_domain_to_severity(domain)
+    category = subdomain if subdomain else domain
+
+    risk_entry = {
+        "id": risk_id,
+        "risk_name": risk_name,
+        "description": description,
+        "severity": severity,
+        "category": category,
+    }
+    metadata_entry = {
+        "domain": domain,
+        "subdomain": subdomain,
+        "entity": row.get("Entity", ""),
+        "intent": row.get("Intent", ""),
+        "timing": row.get("Timing", ""),
+        "category": risk_category,
+    }
+    return risk_entry, metadata_entry
+
+
+def _write_risks_csv(risks: list[dict], output_path: Path) -> None:
+    """Write the risks list to a CSV file."""
+    with open(output_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["id", "risk_name", "description", "severity", "category"],
+        )
+        writer.writeheader()
+        writer.writerows(risks)
+
+
+def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]:
     """Transform MIT AI Risk Database into ai_risks.csv format.
 
     Returns a dictionary mapping risk_id -> risk metadata for RMF generation.
     """
     logger.info("Reading risks from: %s", input_path)
 
-    risks = []
-    risk_metadata = {}  # For RMF generation
+    risks: list[dict] = []
+    risk_metadata: dict[str, dict] = {}
     risk_id_counter = 1
+    total_rows = 0
+    filtered_by_category = 0
+    filtered_by_description = 0
 
     with open(input_path, "r", encoding="utf-8") as f:
-        # Find the header row containing "Category level"
-        header_found = False
-        for line_num, line in enumerate(f):
-            if "Category level" in line:
-                logger.debug("Found header row at line %s", line_num + 1)
-                # Rewind to start of file
-                f.seek(0)
-                # Skip all lines before the header
-                for _ in range(line_num):
-                    next(f)
-                header_found = True
-                break
-
-        if not header_found:
-            logger.error(
-                "Could not find header row with 'Category level' column",
-            )
+        if not _seek_to_csv_header(f):
+            logger.error("Could not find header row with 'Category level' column")
             return {}
 
-        # Now read CSV starting from the actual header row
         reader = csv.DictReader(f)
-
-        # Debug: Print actual column names
         if reader.fieldnames:
-            logger.debug(
-                "CSV columns found (first 10): %s",
-                reader.fieldnames[:10],
-            )
-
-        total_rows = 0
-        filtered_by_category = 0
-        filtered_by_description = 0
+            logger.debug("CSV columns found (first 10): %s", reader.fieldnames[:10])
 
         for row in reader:
             total_rows += 1
+            result = _process_row(row, risk_id_counter, total_rows)
 
-            # Debug: Print first few rows
-            if total_rows <= 5:
-                cat_level = row.get("Category level", "")
-                desc_len = len(row.get("Description", ""))
-                logger.debug(
-                    "Row %s: category_level=%r description_length=%s",
-                    total_rows,
-                    cat_level,
-                    desc_len,
-                )
-
-            # Skip header rows and paper-level entries
-            category_level = row.get("Category level", "").strip()
-            if category_level not in ["Risk Category", "Risk Sub-Category"]:
-                filtered_by_category += 1
+            if result is None:
+                category_level = row.get("Category level", "").strip()
+                if category_level not in ["Risk Category", "Risk Sub-Category"]:
+                    filtered_by_category += 1
+                else:
+                    filtered_by_description += 1
                 continue
 
-            # Skip rows without meaningful description
-            description = clean_text(row.get("Description", ""))
-            if not description or len(description) < 20:
-                filtered_by_description += 1
-                continue
-
-            # Extract fields
-            risk_category = clean_text(row.get("Risk category", ""))
-            risk_subcategory = clean_text(row.get("Risk subcategory", ""))
-            domain = clean_text(row.get("Domain", ""))
-            subdomain = clean_text(row.get("Sub-domain", ""))
-            entity = row.get("Entity", "")
-            intent = row.get("Intent", "")
-            timing = row.get("Timing", "")
-
-            # Create risk entry
-            risk_id = f"RISK{risk_id_counter:04d}"
-            risk_name = extract_risk_name(risk_category, risk_subcategory, description)
-            severity = map_domain_to_severity(domain)
-
-            # Use domain subdomain as category if available
-            category = subdomain if subdomain else domain
-
-            risks.append(
-                {
-                    "id": risk_id,
-                    "risk_name": risk_name,
-                    "description": description,
-                    "severity": severity,
-                    "category": category,
-                },
-            )
-
-            # Store metadata for RMF generation
-            risk_metadata[risk_id] = {
-                "domain": domain,
-                "subdomain": subdomain,
-                "entity": entity,
-                "intent": intent,
-                "timing": timing,
-                "category": risk_category,
-            }
-
+            risk_entry, metadata_entry = result
+            risks.append(risk_entry)
+            risk_metadata[risk_entry["id"]] = metadata_entry
             risk_id_counter += 1
 
     logger.info("")
@@ -426,15 +439,9 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
 
     logger.info("")
     logger.info("Writing %s risks to: %s", len(risks), output_path)
-    with open(output_path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=["id", "risk_name", "description", "severity", "category"],
-        )
-        writer.writeheader()
-        writer.writerows(risks)
-
+    _write_risks_csv(risks, output_path)
     logger.info("Created ai_risks.csv with %s risk entries", len(risks))
+
     return risk_metadata
 
 
