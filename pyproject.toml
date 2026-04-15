@@ -123,7 +123,6 @@ warn_unused_ignores = true
 implicit_reexport = false
 strict_equality = true
 extra_checks = true
-mypy_path = "src"
 
 # Third-party wheels without types or stubs (ignore_missing_imports is false globally).
 [[tool.mypy.overrides]]
@@ -189,11 +188,6 @@ ignore = [
 "fairsense_agentix/tools/resolvers/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/vlm/*.py" = ["PLC0415"]
 "fairsense_agentix/tools/caption/*.py" = ["PLC0415"]
-"fairsense_agentix/graphs/orchestrator_graph.py" = ["PLC0415"]
-"fairsense_agentix/graphs/bias_image_graph.py" = ["PLC0415"]
-"fairsense_agentix/graphs/bias_image_vlm_graph.py" = ["PLC0415"]
-"fairsense_agentix/graphs/bias_text_graph.py" = ["PLC0415"]
-"fairsense_agentix/graphs/risk_graph.py" = ["PLC0415"]
 
 
 [tool.ruff.lint.pep8-naming]
