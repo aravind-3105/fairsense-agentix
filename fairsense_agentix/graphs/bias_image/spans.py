@@ -1,10 +1,167 @@
 """Map bias analysis instances to character spans in merged OCR/caption text."""
 
 from fairsense_agentix.services.telemetry import telemetry
-from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
+from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput, BiasInstance
 
 
-def _extract_spans_from_analysis(  # noqa: PLR0912, PLR0915
+def _resolve_source(
+    evidence_source: str,
+    ocr_text: str,
+    caption_text: str,
+    ocr_offset: int,
+    caption_offset: int,
+    idx: int,
+) -> tuple[str, int] | None:
+    """Return (source_text, offset) for the given evidence_source.
+
+    Returns None and logs a warning if the source is unrecognised.
+    """
+    if evidence_source == "ocr_text":
+        return ocr_text, ocr_offset
+    if evidence_source == "caption":
+        return caption_text, caption_offset
+    # Unknown source or "text" (generic) - skip
+    telemetry.log_warning(
+        "image_span_unknown_source",
+        instance_idx=idx,
+        evidence_source=evidence_source,
+    )
+    return None
+
+
+def _needs_fallback(instance: BiasInstance, source_text: str, idx: int) -> bool:
+    """Check whether the LLM-provided character positions need a fallback.
+
+    Validates three conditions and logs the appropriate warning for each:
+    - positions are missing (both defaulted to 0)
+    - positions are out of bounds in the source text
+    - text at positions does not match instance.text_span
+    """
+    start = instance.start_char
+    end = instance.end_char
+
+    if start == 0 and end == 0:
+        telemetry.log_warning(
+            "image_span_positions_missing",
+            instance_idx=idx,
+            text_span=instance.text_span,
+            evidence_source=instance.evidence_source,
+        )
+        return True
+
+    if not (0 <= start < len(source_text) and start < end <= len(source_text)):
+        telemetry.log_warning(
+            "image_span_positions_out_of_bounds",
+            instance_idx=idx,
+            start=start,
+            end=end,
+            source_length=len(source_text),
+            evidence_source=instance.evidence_source,
+        )
+        return True
+
+    if instance.text_span and source_text[start:end] != instance.text_span:
+        telemetry.log_warning(
+            "image_span_text_mismatch",
+            instance_idx=idx,
+            expected=instance.text_span,
+            actual=source_text[start:end],
+            positions=f"{start}-{end}",
+            evidence_source=instance.evidence_source,
+        )
+        return True
+
+    return False
+
+
+def _fallback_span(
+    instance: BiasInstance,
+    source_text: str,
+    idx: int,
+) -> tuple[int, int] | None:
+    """Resolve (start, end) for an instance when LLM positions are invalid.
+
+    Tries an exact search first, then a case-insensitive search as last resort.
+    Returns None if the text_span cannot be located.
+    """
+    if not instance.text_span:
+        telemetry.log_error(
+            "image_span_fallback_impossible",
+            instance_idx=idx,
+            evidence_source=instance.evidence_source,
+            reason="no text_span provided",
+        )
+        return None
+
+    found_pos = source_text.find(instance.text_span)
+    if found_pos >= 0:
+        start, end = found_pos, found_pos + len(instance.text_span)
+        telemetry.log_info(
+            "image_span_fallback_success",
+            instance_idx=idx,
+            text_span=instance.text_span,
+            calculated_start=start,
+            calculated_end=end,
+            evidence_source=instance.evidence_source,
+        )
+        return start, end
+
+    # Try case-insensitive search as last resort
+    found_pos = source_text.lower().find(instance.text_span.lower())
+    if found_pos >= 0:
+        start, end = found_pos, found_pos + len(instance.text_span)
+        telemetry.log_info(
+            "image_span_fallback_case_insensitive",
+            instance_idx=idx,
+            text_span=instance.text_span,
+            calculated_start=start,
+            calculated_end=end,
+            evidence_source=instance.evidence_source,
+        )
+        return start, end
+
+    telemetry.log_error(
+        "image_span_fallback_failed",
+        instance_idx=idx,
+        text_span=instance.text_span,
+        evidence_source=instance.evidence_source,
+        reason="text_span not found in source text",
+    )
+    return None
+
+
+def _resolve_instance_span(
+    instance: BiasInstance,
+    idx: int,
+    source_text: str,
+) -> tuple[int, int] | None:
+    """Return (start, end) positions relative to source_text, or None to skip.
+
+    Logs the attempt, validates positions, and applies fallback logic when needed.
+    """
+    start = instance.start_char
+    end = instance.end_char
+
+    telemetry.log_info(
+        "image_extract_span_attempt",
+        instance_idx=idx,
+        text_span=instance.text_span[:30] if instance.text_span else None,
+        start_char=start,
+        end_char=end,
+        evidence_source=instance.evidence_source,
+        bias_type=instance.type,
+    )
+
+    if _needs_fallback(instance, source_text, idx):
+        result = _fallback_span(instance, source_text, idx)
+        if result is None:
+            return None
+        start, end = result
+
+    return start, end
+
+
+def _extract_spans_from_analysis(
     bias_analysis: str | BiasAnalysisOutput,
     merged_text: str,
     ocr_text: str,
@@ -68,134 +225,29 @@ def _extract_spans_from_analysis(  # noqa: PLR0912, PLR0915
     # Format: "**OCR Extracted Text:**\n{ocr}\n\n**Image Caption:**\n{caption}"
     ocr_header = "**OCR Extracted Text:**\n"
     caption_header = "\n\n**Image Caption:**\n"
-
     ocr_offset = len(ocr_header)
     caption_offset = len(ocr_header) + len(ocr_text) + len(caption_header)
 
-    # Extract spans with validation, fallback logic, and offset adjustment
     spans: list[tuple[int, int, str]] = []
     merged_length = len(merged_text)
 
     for idx, instance in enumerate(analysis.bias_instances):
-        # Determine which text source this span refers to
-        evidence_source = instance.evidence_source
-
-        if evidence_source == "ocr_text":
-            source_text = ocr_text
-            offset = ocr_offset
-        elif evidence_source == "caption":
-            source_text = caption_text
-            offset = caption_offset
-        else:
-            # Unknown source or "text" (generic) - skip
-            telemetry.log_warning(
-                "image_span_unknown_source",
-                instance_idx=idx,
-                evidence_source=evidence_source,
-            )
-            continue
-
-        # Get positions relative to source text
-        start = instance.start_char
-        end = instance.end_char
-
-        # Debug logging for position values
-        telemetry.log_info(
-            "image_extract_span_attempt",
-            instance_idx=idx,
-            text_span=instance.text_span[:30] if instance.text_span else None,
-            start_char=start,
-            end_char=end,
-            evidence_source=evidence_source,
-            bias_type=instance.type,
+        resolved = _resolve_source(
+            instance.evidence_source,
+            ocr_text,
+            caption_text,
+            ocr_offset,
+            caption_offset,
+            idx,
         )
+        if resolved is None:
+            continue
+        source_text, offset = resolved
 
-        # FALLBACK: If LLM didn't provide positions or they're invalid,
-        # calculate from text_span
-        needs_fallback = False
-
-        # Check if positions are missing (defaulted to 0, 0)
-        if start == 0 and end == 0:
-            telemetry.log_warning(
-                "image_span_positions_missing",
-                instance_idx=idx,
-                text_span=instance.text_span,
-                evidence_source=evidence_source,
-            )
-            needs_fallback = True
-        # Check if positions are out of bounds in source text
-        elif not (0 <= start < len(source_text) and start < end <= len(source_text)):
-            telemetry.log_warning(
-                "image_span_positions_out_of_bounds",
-                instance_idx=idx,
-                start=start,
-                end=end,
-                source_length=len(source_text),
-                evidence_source=evidence_source,
-            )
-            needs_fallback = True
-        # Check if text_span doesn't match the positions in source text
-        elif instance.text_span and source_text[start:end] != instance.text_span:
-            actual_text = source_text[start:end]
-            telemetry.log_warning(
-                "image_span_text_mismatch",
-                instance_idx=idx,
-                expected=instance.text_span,
-                actual=actual_text,
-                positions=f"{start}-{end}",
-                evidence_source=evidence_source,
-            )
-            needs_fallback = True
-
-        # Try fallback calculation if needed
-        if needs_fallback:
-            if instance.text_span:
-                # Try to find the text span in the source text
-                found_pos = source_text.find(instance.text_span)
-                if found_pos >= 0:
-                    start = found_pos
-                    end = found_pos + len(instance.text_span)
-                    telemetry.log_info(
-                        "image_span_fallback_success",
-                        instance_idx=idx,
-                        text_span=instance.text_span,
-                        calculated_start=start,
-                        calculated_end=end,
-                        evidence_source=evidence_source,
-                    )
-                else:
-                    # Try case-insensitive search as last resort
-                    source_lower = source_text.lower()
-                    span_lower = instance.text_span.lower()
-                    found_pos = source_lower.find(span_lower)
-                    if found_pos >= 0:
-                        start = found_pos
-                        end = found_pos + len(instance.text_span)
-                        telemetry.log_info(
-                            "image_span_fallback_case_insensitive",
-                            instance_idx=idx,
-                            text_span=instance.text_span,
-                            calculated_start=start,
-                            calculated_end=end,
-                            evidence_source=evidence_source,
-                        )
-                    else:
-                        telemetry.log_error(
-                            "image_span_fallback_failed",
-                            instance_idx=idx,
-                            text_span=instance.text_span,
-                            evidence_source=evidence_source,
-                            reason="text_span not found in source text",
-                        )
-                        continue
-            else:
-                telemetry.log_error(
-                    "image_span_fallback_impossible",
-                    instance_idx=idx,
-                    evidence_source=evidence_source,
-                    reason="no text_span provided",
-                )
-                continue
+        span = _resolve_instance_span(instance, idx, source_text)
+        if span is None:
+            continue
+        start, end = span
 
         # Adjust to merged_text coordinates
         merged_start = offset + start
