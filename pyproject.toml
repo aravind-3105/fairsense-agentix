@@ -161,7 +161,6 @@ select = [
 ]
 fixable = ["A", "B", "COM", "C4", "RET", "SIM", "ICN", "Q", "RSE", "D", "E", "F", "I", "W", "N", "ERA", "PL"]
 ignore = [
-    "B905", # `zip()` without an explicit `strict=` parameter
     "D203", # 1 blank line required before class docstring
     "D213", # Multi-line docstring summary should start at the second line
     "PLR2004", # Replace magic number with named constant
