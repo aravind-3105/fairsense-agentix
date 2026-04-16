@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Loader2, Play, Upload, Sparkles, Activity, Power } from "lucide-react";
+import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
 
 type Mode = "text" | "image" | "csv";
@@ -178,14 +179,21 @@ export default function App() {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleShutdown}
-            className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
-            title="Shutdown both backend and frontend servers"
-          >
-            <Power size={16} />
-            Shutdown
-          </button>
+          <div className="flex items-center gap-4">
+            <img
+              src={vectorLogo}
+              alt="Vector Institute"
+              className="h-9 opacity-70 hover:opacity-100 transition-opacity"
+            />
+            <button
+              onClick={handleShutdown}
+              className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
+              title="Shutdown both backend and frontend servers"
+            >
+              <Power size={16} />
+              Shutdown
+            </button>
+          </div>
         </div>
       </header>
 
@@ -329,10 +337,31 @@ function ImageDropzone({
   file: File | null;
   onFileChange: (f: File | null) => void;
 }) {
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   return (
-    <label className="glass flex cursor-pointer flex-col items-center justify-center gap-3 p-10 text-slate-400 hover:border-slate-500">
-      <Upload />
-      <span>{file ? file.name : "Drop an image or click to browse"}</span>
+    <label className="glass flex cursor-pointer flex-col items-center justify-center gap-3 p-6 text-slate-400 hover:border-slate-500 transition-colors">
+      {previewUrl ? (
+        <>
+          <img
+            src={previewUrl}
+            alt="Selected preview"
+            className="max-h-48 max-w-full rounded-lg object-contain opacity-90"
+          />
+          <span className="text-xs text-slate-400 truncate max-w-full px-2">{file!.name}</span>
+        </>
+      ) : (
+        <>
+          <Upload />
+          <span>Drop an image or click to browse</span>
+        </>
+      )}
       <input
         type="file"
         accept="image/*"
