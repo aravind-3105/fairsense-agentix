@@ -260,7 +260,7 @@ export default function App() {
               )}
             </button>
             <button
-              className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:border-slate-500"
+              className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:border-slate-500 hover:bg-slate-800 transition-colors"
               onClick={() => {
                 setInput("");
                 setFile(null);
@@ -379,6 +379,35 @@ function ImageDropzone({
   );
 }
 
+const EVENT_LABELS: Record<string, string> = {
+  router_decision:        "Router Decision",
+  llm_call:               "LLM Call",
+  model_download_start:   "Downloading Model",
+  model_download_complete:"Model Ready",
+  model_download_failed:  "Download Failed",
+  analysis_complete:      "Analysis Complete",
+  analysis_error:         "Analysis Error",
+  log_info:               "Info",
+  log_warning:            "Warning",
+};
+
+const EVENT_DOT: Record<string, string> = {
+  analysis_complete:      "bg-green-400",
+  model_download_complete:"bg-green-400",
+  analysis_error:         "bg-red-400",
+  model_download_failed:  "bg-red-400",
+  log_warning:            "bg-yellow-400",
+  model_download_start:   "bg-yellow-400",
+};
+
+function eventDot(event: string) {
+  return EVENT_DOT[event] ?? "bg-slate-500";
+}
+
+function eventLabel(event: string) {
+  return EVENT_LABELS[event] ?? event.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function TimelinePanel({ events }: { events: TimelineEntry[] }) {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const bottomRef = useRef<HTMLLIElement>(null);
@@ -428,9 +457,19 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
           const messageText = message ? String(message) : null;
 
           return (
-            <li ref={idx === events.length - 1 ? bottomRef : null} key={`${evt.timestamp}-${idx}`} className="rounded-xl bg-slate-900/40 border border-slate-800/40 p-3 hover:bg-slate-900/60 transition-colors">
+            <li ref={idx === events.length - 1 ? bottomRef : null} key={`${evt.timestamp}-${idx}`} className={clsx(
+                "rounded-xl border p-3 transition-colors",
+                evt.event === "analysis_error" || evt.event === "model_download_failed"
+                  ? "bg-red-900/20 border-red-700/40 hover:bg-red-900/30"
+                  : evt.event === "analysis_complete" || evt.event === "model_download_complete"
+                  ? "bg-green-900/20 border-green-700/40 hover:bg-green-900/30"
+                  : "bg-slate-900/40 border-slate-800/40 hover:bg-slate-900/60"
+              )}>
               <div className="flex items-center justify-between">
-                <span className="uppercase tracking-wider text-xs font-bold text-slate-300">{evt.event}</span>
+                <span className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                  <span className={clsx("inline-block h-2 w-2 rounded-full flex-shrink-0", eventDot(evt.event))} />
+                  {eventLabel(evt.event)}
+                </span>
                 <span className="text-xs text-slate-500">
                   {new Date(evt.timestamp * 1000).toLocaleTimeString()}
                 </span>
