@@ -310,7 +310,9 @@ class FAISSIndexTool:
 
             # Build result list
             results = []
-            for rank, (idx, score) in enumerate(zip(indices[0], distances[0], strict=False)):
+            for rank, (idx, score) in enumerate(
+                zip(indices[0], distances[0], strict=True)
+            ):
                 # Skip invalid indices (FAISS returns -1 for missing results)
                 if idx == -1:
                     continue

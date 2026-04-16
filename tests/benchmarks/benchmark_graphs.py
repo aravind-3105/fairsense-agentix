@@ -315,7 +315,8 @@ def benchmark_graph(
         if timings:
             timing_stats = calculate_percentiles(timings)
             memory_delta = [
-                after - before for before, after in zip(memory_before, memory_after, strict=False)
+                after - before
+                for before, after in zip(memory_before, memory_after, strict=True)
             ]
             memory_stats = calculate_percentiles(memory_delta)
 
