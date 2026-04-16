@@ -7,8 +7,8 @@ module.exports = {
         base: "#0E1117",
         panel: "#161B22",
         accent: {
-          100: "#8A63D2",
-          200: "#4AC0E0"
+          100: "#b0066d",
+          200: "#EB088A"
         }
       },
       fontFamily: {
