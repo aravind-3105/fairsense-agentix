@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Sparkles, Activity, Power, FileText, Image, ShieldAlert } from "lucide-react";
+import { Loader2, Play, Upload, Sparkles, Activity, Power, FileText, Image, ShieldAlert, X } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
 
@@ -34,6 +34,8 @@ export default function App() {
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [showLoadingBanner, setShowLoadingBanner] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showShutdownModal, setShowShutdownModal] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function App() {
 
           // Check if this is an error event
           if (data.event === "analysis_error") {
-            alert(`Analysis failed: ${data.context?.message || "Unknown error"}`);
+            setErrorMessage(data.context?.message ? String(data.context.message) : "Analysis failed. Check the timeline for details.");
             setLoading(false); // Stop loading spinner
           }
 
@@ -122,46 +124,32 @@ export default function App() {
       // Step 3: Analysis is now running in background, events will stream in!
     } catch (err) {
       console.error(err);
-      alert("Analysis failed. Check logs for details.");
+      setErrorMessage("Analysis failed. Check logs for details.");
       setLoading(false);
     }
   }
 
-  async function handleShutdown() {
-    // Confirmation dialog to prevent accidental shutdowns
-    const confirmed = window.confirm(
-      "Are you sure you want to shutdown the server?\n\n" +
-      "This will stop both the backend and frontend servers and clean up ports.\n" +
-      "You'll need to restart the server manually to use the application again."
-    );
+  function handleShutdown() {
+    setShowShutdownModal(true);
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function executeShutdown() {
+    setShowShutdownModal(false);
     try {
-      // Call the shutdown endpoint
       const response = await fetch(`${API_BASE}/v1/shutdown`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
-        // Show success message briefly before server shuts down
-        alert("Server shutdown initiated. Both servers will stop in 1 second.");
-
-        // Close any open WebSocket connections
         wsRef.current?.close();
-
-        // UI will become unresponsive as backend shuts down - this is expected
+        setErrorMessage(null);
       } else {
-        alert("Failed to shutdown server. Check console for details.");
+        setErrorMessage("Failed to shutdown server. Check console for details.");
       }
     } catch (err) {
       console.error("Shutdown error:", err);
-      alert("Error communicating with server. It may have already shut down.");
+      setErrorMessage("Error communicating with server. It may have already shut down.");
     }
   }
 
@@ -202,6 +190,16 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Inline error banner */}
+      {errorMessage && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3 text-sm text-red-300">
+          <span className="flex-1">{errorMessage}</span>
+          <button onClick={() => setErrorMessage(null)} className="flex-shrink-0 text-red-400 hover:text-red-200 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Model Download Loading Banner */}
       {showLoadingBanner && (
@@ -300,13 +298,44 @@ export default function App() {
               )}
 
               <div
-                className="prose prose-invert max-w-none text-sm leading-relaxed custom-scrollbar max-h-[500px] overflow-y-auto pr-2"
+                className="custom-scrollbar max-h-[500px] overflow-y-auto pr-2"
                 dangerouslySetInnerHTML={highlightHtml}
               />
             </div>
           )}
         </div>
       </section>
+      {/* Shutdown confirmation modal */}
+      {showShutdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-100">Shutdown server?</h2>
+              <button onClick={() => setShowShutdownModal(false)} className="text-slate-400 hover:text-slate-200 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              This will stop both the backend and frontend servers. You'll need to restart manually to use the application again.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowShutdownModal(false)}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:border-slate-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeShutdown}
+                className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
+              >
+                <Power size={14} />
+                Shutdown
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
