@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Sparkles, Activity, Power } from "lucide-react";
+import { Loader2, Play, Upload, Sparkles, Activity, Power, FileText, Image, ShieldAlert } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
 
@@ -10,6 +10,12 @@ const MODE_LABELS: Record<Mode, string> = {
   text: "Bias (Text)",
   image: "Bias (Image)",
   csv: "Risk"
+};
+
+const MODE_ICONS: Record<Mode, React.ReactNode> = {
+  text: <FileText size={14} />,
+  image: <Image size={14} />,
+  csv: <ShieldAlert size={14} />
 };
 
 interface TimelineEntry {
@@ -319,10 +325,11 @@ function ModeSelector({
           key={key}
           onClick={() => onModeChange(key)}
           className={clsx(
-            "flex-1 rounded-lg px-4 py-3 text-sm font-semibold transition",
-            mode === key ? "bg-accent-200 text-black" : "text-slate-400"
+            "flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition",
+            mode === key ? "bg-accent-200 text-black" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
           )}
         >
+          {MODE_ICONS[key]}
           {MODE_LABELS[key]}
         </button>
       ))}
@@ -374,6 +381,11 @@ function ImageDropzone({
 
 function TimelinePanel({ events }: { events: TimelineEntry[] }) {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
+  const bottomRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [events]);
 
   if (!events.length) {
     return (
@@ -416,7 +428,7 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
           const messageText = message ? String(message) : null;
 
           return (
-            <li key={`${evt.timestamp}-${idx}`} className="rounded-xl bg-slate-900/40 border border-slate-800/40 p-3 hover:bg-slate-900/60 transition-colors">
+            <li ref={idx === events.length - 1 ? bottomRef : null} key={`${evt.timestamp}-${idx}`} className="rounded-xl bg-slate-900/40 border border-slate-800/40 p-3 hover:bg-slate-900/60 transition-colors">
               <div className="flex items-center justify-between">
                 <span className="uppercase tracking-wider text-xs font-bold text-slate-300">{evt.event}</span>
                 <span className="text-xs text-slate-500">
