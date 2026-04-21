@@ -1,9 +1,30 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen, Linkedin, Twitter } from "lucide-react";
+import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import fairsenseLogo from "./assets/fairsense-logo.png";
+import aixpertLogo from "./assets/AIXPERT_logo_extended_white-2048x896.png";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
+
+const LinkedInIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect x="2" y="9" width="4" height="12" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
+const XIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+const BlueskyIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.567 6.479.737 3.123 3.419 4.056 5.977 3.529-.005.039-.01.077-.014.116C2.535 14.315.733 16.37.58 18.409c-.206 2.763 2.43 5.765 5.77 4.578 2.668-.948 4.888-3.77 6.65-6.875 1.762 3.104 3.982 5.927 6.65 6.875 3.34 1.187 5.976-1.815 5.77-4.578-.153-2.038-1.955-4.094-5.95-4.515a7.422 7.422 0 0 1-.014-.116c2.558.527 5.24-.406 5.977-3.529C23.622 9.417 24 4.457 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.299-1.664-.621-4.3 1.24C16.046 4.747 13.087 8.686 12 10.8Z" />
+  </svg>
+);
 
 type Mode = "text" | "image" | "csv";
 
@@ -37,6 +58,7 @@ export default function App() {
   const [loadingMessage, setLoadingMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showShutdownModal, setShowShutdownModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -179,11 +201,21 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <img
-              src={vectorLogo}
-              alt="Vector Institute"
-              className="h-9 opacity-70 hover:opacity-100 transition-opacity"
-            />
+            <a href="https://aixpert-project.eu/" target="_blank" rel="noopener noreferrer">
+              <img
+                src={aixpertLogo}
+                alt="AIxpert"
+                className="h-12 opacity-70 hover:opacity-100 transition-opacity"
+              />
+            </a>
+            <div className="w-px h-6 bg-slate-700" />
+            <a href="https://vectorinstitute.ai/" target="_blank" rel="noopener noreferrer">
+              <img
+                src={vectorLogo}
+                alt="Vector Institute"
+                className="h-9 opacity-70 hover:opacity-100 transition-opacity"
+              />
+            </a>
             <button
               onClick={handleShutdown}
               className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
@@ -332,22 +364,28 @@ export default function App() {
             <BookOpen size={13} />
             Documentation
           </a>
+          <button
+            onClick={() => setShowAboutModal(true)}
+            className="text-slate-400 hover:text-accent-200 transition-colors"
+          >
+            About
+          </button>
         </div>
         <div className="flex items-center gap-4">
           <a href="https://www.linkedin.com/company/vector-institute/" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="LinkedIn">
-            <Linkedin size={16} />
+            <LinkedInIcon size={16} />
           </a>
           <a href="https://x.com/vectorinst" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="X / Twitter">
-            <Twitter size={16} />
+            <XIcon size={16} />
           </a>
           <a href="https://bsky.app/profile/vectorinstitute.ai" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="Bluesky">
-            {/* Bluesky butterfly mark */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.567 6.479.737 3.123 3.419 4.056 5.977 3.529-.005.039-.01.077-.014.116C2.535 14.315.733 16.37.58 18.409c-.206 2.763 2.43 5.765 5.77 4.578 2.668-.948 4.888-3.77 6.65-6.875 1.762 3.104 3.982 5.927 6.65 6.875 3.34 1.187 5.976-1.815 5.77-4.578-.153-2.038-1.955-4.094-5.95-4.515a7.422 7.422 0 0 1-.014-.116c2.558.527 5.24-.406 5.977-3.529C23.622 9.417 24 4.457 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.299-1.664-.621-4.3 1.24C16.046 4.747 13.087 8.686 12 10.8Z" />
-            </svg>
+            <BlueskyIcon size={16} />
           </a>
         </div>
       </footer>
+
+      {/* About modal */}
+      {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
 
       {/* Shutdown confirmation modal */}
       {showShutdownModal && (
@@ -737,6 +775,274 @@ function ResultPanel({ result }: { result: any | null }) {
             <p className="text-xs text-slate-400 leading-relaxed">{inst.explanation}</p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AboutModal({ onClose }: { onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<"about" | "team" | /* "papers" | */ "connect">("about");
+
+  const tabs: { id: typeof activeTab; label: string }[] = [
+    { id: "about",   label: "About" },
+    { id: "team",    label: "Team" },
+    // { id: "papers",  label: "Publications" },
+    { id: "connect", label: "Connect" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="glass w-full max-w-2xl max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-slate-100">About</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pb-4 flex-shrink-0 border-b border-slate-800">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={clsx(
+                "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                activeTab === tab.id
+                  ? "bg-accent-200 text-black"
+                  : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto custom-scrollbar flex-1 px-6 py-5 space-y-5">
+
+          {activeTab === "about" && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Vector Institute</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  The Vector Institute is dedicated to advancing artificial intelligence research and translating cutting-edge innovations into real-world solutions. Our open-source projects reflect our commitment to collaboration, transparency, and the responsible deployment of AI technologies.
+                </p>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  We build tools, MVPs, reference implementations, and educational resources that empower researchers, developers, and organizations to innovate and solve real-world problems with AI — spanning various domains, designed to be accessible, adaptable, and impactful.
+                </p>
+                <a
+                  href="https://github.com/VectorInstitute"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+                >
+                  <BookOpen size={12} /> Explore Vector's open-source projects
+                </a>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">About FairSense AgentiX</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  FairSense-AgentiX is an intelligent bias detection and risk assessment platform that uses agentic AI workflows to analyze text, images, and datasets for fairness concerns. Unlike traditional ML classifiers that operate as black boxes, FairSense employs a reasoning agent that:
+                </p>
+                <ul className="space-y-1 pl-4 text-sm text-slate-400">
+                  {[
+                    "Plans its analysis strategy based on the input type",
+                    "Selects the right tools for each task (OCR, vision models, embeddings, knowledge retrieval)",
+                    "Critiques its own outputs and refines them iteratively",
+                    "Explains its reasoning process through detailed telemetry",
+                  ].map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="text-accent-200 flex-shrink-0">·</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-slate-300 leading-relaxed pt-1">
+                  This approach delivers more accurate, transparent, and context-aware fairness assessments than static rule-based systems.
+                </p>
+                <a
+                  href="https://vectorinstitute.github.io/fairsense-agentix/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+                >
+                  <BookOpen size={12} /> Read the documentation
+                </a>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Vector AIxpert Program</h3>
+                  <a href="https://aixpert-project.eu/" target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={aixpertLogo}
+                      alt="AIxpert"
+                      className="h-10 opacity-80 hover:opacity-100 transition-opacity"
+                    />
+                  </a>
+                </div>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  This project represents Vector Institute's research contributions to the AIXpert Horizon Europe initiative, focusing on tools, datasets, and evaluation pipelines for fairness-aware generative AI and explainable AI systems. Vector's contribution spans four core areas:
+                </p>
+                <ul className="space-y-1 pl-4 text-sm text-slate-400">
+                  {[
+                    "Explainable & accountable AI — Tools and benchmarks for interpretability, fairness, and transparency",
+                    "Trustworthy agentic AI — Transparent, auditable, human-in-the-loop agentic systems",
+                    "Multimodal evaluation — Benchmarks for audio-video understanding and vision-language fairness",
+                    "Open, reproducible research — Code, datasets, and documentation shared openly",
+                  ].map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="text-accent-200 flex-shrink-0">·</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="https://vectorinstitute.github.io/vector-aixpert/about/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-accent-200 hover:text-accent-100 transition-colors pt-1"
+                >
+                  <BookOpen size={12} /> Full AIXpert vision & consortium details
+                </a>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "team" && (
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Members</h3>
+                {[
+                  {
+                    name: "Shaina Raza, PhD",
+                    role: "Applied ML Scientist — Responsible AI",
+                    email: "shaina.raza@vectorinstitute.ai",
+                    linkedin: "https://www.linkedin.com/in/shainaraza/",
+                    photo: "https://media.licdn.com/dms/image/v2/D5603AQHUgEgXEYb_cw/profile-displayphoto-crop_800_800/B56ZmawXbDI4AI-/0/1759237995702?e=1778112000&v=beta&t=rO90EphvhrTdREsqk1LYZoW9m8IOm277OXPc7dJWlaE",
+                  },
+                  {
+                    name: "Aravind Narayanan",
+                    role: "Associate Applied ML Specialist",
+                    email: "aravind.narayanan@vectorinstitute.ai",
+                    linkedin: "https://www.linkedin.com/in/aravind-n-774665144/",
+                    photo: "https://media.licdn.com/dms/image/v2/D4D03AQFb2AEQkVhjWg/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1695527449774?e=1778112000&v=beta&t=sOHAj_1jCL3I2bL1Lrvi3tgUBZsOPQjzwr1n7dPCw2A",
+                  },
+                  {
+                    name: "Mahshid Alinoori",
+                    role: "Applied ML Specialist",
+                    email: "mahshid.alinoori@vectorinstitute.ai",
+                    linkedin: "https://www.linkedin.com/in/mahshid-alinoori/",
+                    photo: "https://media.licdn.com/dms/image/v2/D5603AQE4YYFri1iOOg/profile-displayphoto-crop_800_800/B56Zs4oGKcIcAI-/0/1766181601721?e=1778112000&v=beta&t=CNQ2NzY_f5ln7NPceo0meHg86PdFuYVJzTHolBz5Xww",
+                  },
+                ].map((member) => (
+                  <div key={member.name} className="flex gap-4 rounded-xl border border-slate-800/50 bg-slate-900/30 p-4">
+                    <img
+                      src={member.photo}
+                      alt={member.name}
+                      className="h-12 w-12 flex-shrink-0 rounded-full object-cover border border-slate-700"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = "none";
+                        el.nextElementSibling?.removeAttribute("style");
+                      }}
+                    />
+                    <div className="h-12 w-12 flex-shrink-0 rounded-full bg-accent-200/20 border border-accent-200/30 items-center justify-center text-accent-200 text-sm font-semibold hidden">
+                      {member.name[0]}
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-200">{member.name}</p>
+                      <p className="text-xs text-accent-200">{member.role}</p>
+                      <div className="flex items-center gap-3 pt-0.5">
+                        <a href={`mailto:${member.email}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors truncate">{member.email}</a>
+                        <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors flex-shrink-0">
+                          <LinkedInIcon size={13} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Contributors</h3>
+                <div className="flex gap-4 rounded-xl border border-slate-800/30 bg-slate-900/20 p-4">
+                  <div className="h-10 w-10 flex-shrink-0 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-400 text-sm font-semibold">
+                    K
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-slate-300">Karanpal Sekhon</p>
+                    <p className="text-xs text-slate-500">Project development contributor</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Publications tab — uncomment when ready to populate
+          {activeTab === "papers" && (
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500">[Placeholder — add published papers and links below.]</p>
+              {[
+                { title: "Paper Title Placeholder", venue: "Conference / Journal, Year", url: "#" },
+                { title: "Paper Title Placeholder", venue: "Conference / Journal, Year", url: "#" },
+              ].map((paper, idx) => (
+                <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-slate-200">{paper.title}</p>
+                  <p className="text-xs text-slate-500">{paper.venue}</p>
+                  <a
+                    href={paper.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+                  >
+                    <BookOpen size={11} /> Read paper
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+          */}
+
+          {activeTab === "connect" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Website</h3>
+                <a
+                  href="https://vectorinstitute.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-accent-200 hover:text-accent-100 transition-colors"
+                >
+                  vectorinstitute.ai
+                </a>
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Socials</h3>
+                {[
+                  { label: "LinkedIn",    href: "https://www.linkedin.com/company/vector-institute/", icon: <LinkedInIcon size={15} /> },
+                  { label: "X / Twitter", href: "https://x.com/vectorinst", icon: <XIcon size={15} /> },
+                  { label: "Bluesky",     href: "https://bsky.app/profile/vectorinstitute.ai", icon: <BlueskyIcon size={15} /> },
+                ].map(({ label, href, icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-xl border border-slate-800/50 bg-slate-900/30 px-4 py-3 text-sm text-slate-300 hover:border-slate-700 hover:text-accent-200 transition-colors"
+                  >
+                    <span className="text-slate-400">{icon}</span>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
