@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Sparkles, Activity, Power, FileText, Image, ShieldAlert, X } from "lucide-react";
+import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen, Linkedin, Twitter } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import fairsenseLogo from "./assets/fairsense-logo.png";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
@@ -310,6 +310,45 @@ export default function App() {
           )}
         </div>
       </section>
+      {/* Footer */}
+      <footer className="mt-12 border-t border-slate-800 pt-6 pb-4 flex items-center justify-between">
+        <div className="flex items-center gap-6 text-xs text-slate-500">
+          <span>Built as part of&nbsp;
+            <a
+              href="https://vectorinstitute.github.io/vector-aixpert/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-accent-200 transition-colors"
+            >
+              Vector AIxpert
+            </a>
+          </span>
+          <a
+            href="https://vectorinstitute.github.io/fairsense-agentix/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-slate-400 hover:text-accent-200 transition-colors"
+          >
+            <BookOpen size={13} />
+            Documentation
+          </a>
+        </div>
+        <div className="flex items-center gap-4">
+          <a href="https://www.linkedin.com/company/vector-institute/" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="LinkedIn">
+            <Linkedin size={16} />
+          </a>
+          <a href="https://x.com/vectorinst" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="X / Twitter">
+            <Twitter size={16} />
+          </a>
+          <a href="https://bsky.app/profile/vectorinstitute.ai" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="Bluesky">
+            {/* Bluesky butterfly mark */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.567 6.479.737 3.123 3.419 4.056 5.977 3.529-.005.039-.01.077-.014.116C2.535 14.315.733 16.37.58 18.409c-.206 2.763 2.43 5.765 5.77 4.578 2.668-.948 4.888-3.77 6.65-6.875 1.762 3.104 3.982 5.927 6.65 6.875 3.34 1.187 5.976-1.815 5.77-4.578-.153-2.038-1.955-4.094-5.95-4.515a7.422 7.422 0 0 1-.014-.116c2.558.527 5.24-.406 5.977-3.529C23.622 9.417 24 4.457 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.299-1.664-.621-4.3 1.24C16.046 4.747 13.087 8.686 12 10.8Z" />
+            </svg>
+          </a>
+        </div>
+      </footer>
+
       {/* Shutdown confirmation modal */}
       {showShutdownModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
