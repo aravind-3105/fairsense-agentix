@@ -40,6 +40,21 @@ const MODE_ICONS: Record<Mode, React.ReactNode> = {
   csv: <ShieldAlert size={14} />
 };
 
+const MODE_DESCRIPTIONS: Record<Mode, { summary: string; details: string }> = {
+  text: {
+    summary: "Identifies bias in written content such as job postings and conversations.",
+    details: "Detects gender, racial, age, disability, and socioeconomic biases in free-form text. The agent plans its analysis, selects embedding and LLM tools, and produces highlighted spans with severity ratings and explanations for each detected instance.",
+  },
+  image: {
+    summary: "Analyzes visual content for stereotypes and representation issues.",
+    details: "Uses vision-language models (VLMs) to examine images for biased visual elements — such as stereotyped portrayals, underrepresentation, or harmful associations. Returns annotated results with per-instance explanations drawn from the visual context.",
+  },
+  csv: {
+    summary: "Evaluates ML deployment scenarios for fairness, security, and compliance risks.",
+    details: "Accepts natural language descriptions or structured CSV data describing an AI deployment. The agent scores risks across dimensions including algorithmic fairness, data bias, regulatory compliance, and security exposure, returning ranked risk cards with mitigation suggestions.",
+  },
+};
+
 interface TimelineEntry {
   timestamp: number;
   event: string;
@@ -259,6 +274,7 @@ export default function App() {
       <section className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
           <ModeSelector mode={mode} onModeChange={setMode} />
+          <ModeDescription mode={mode} />
           {mode === "image" ? (
             <ImageDropzone file={file} onFileChange={setFile} />
           ) : (
@@ -444,6 +460,33 @@ function ModeSelector({
           {MODE_LABELS[key]}
         </button>
       ))}
+    </div>
+  );
+}
+
+function ModeDescription({ mode }: { mode: Mode }) {
+  const [expanded, setExpanded] = useState(false);
+  const desc = MODE_DESCRIPTIONS[mode];
+
+  useEffect(() => setExpanded(false), [mode]);
+
+  return (
+    <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 px-4 py-3 space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-400 leading-relaxed">{desc.summary}</p>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="flex-shrink-0 text-xs text-accent-200 hover:text-accent-100 transition-colors flex items-center gap-1"
+        >
+          {expanded ? "Less" : "More"}
+          <Play size={9} className={clsx("transition-transform", expanded ? "rotate-90" : "rotate-0")} />
+        </button>
+      </div>
+      {expanded && (
+        <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-800/50 pt-2">
+          {desc.details}
+        </p>
+      )}
     </div>
   );
 }
@@ -780,6 +823,62 @@ function ResultPanel({ result }: { result: any | null }) {
   );
 }
 
+function AnalysisModesAccordion() {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const modes = [
+    {
+      icon: <FileText size={14} />,
+      title: "Text Bias Detection",
+      summary: "Identifies bias in written content such as job postings and conversations.",
+      details: "Detects gender, racial, age, disability, and socioeconomic biases in free-form text. The agent plans its analysis, selects embedding and LLM tools, and produces highlighted spans with severity ratings and explanations for each detected instance.",
+    },
+    {
+      icon: <Image size={14} />,
+      title: "Image Bias Detection",
+      summary: "Analyzes visual content for stereotypes and representation issues.",
+      details: "Uses vision-language models (VLMs) to examine images for biased visual elements — such as stereotyped portrayals, underrepresentation, or harmful associations. Returns annotated results with per-instance explanations drawn from the visual context.",
+    },
+    {
+      icon: <ShieldAlert size={14} />,
+      title: "Risk Assessment",
+      summary: "Evaluates ML deployment scenarios for fairness, security, and compliance risks.",
+      details: "Accepts natural language descriptions or structured CSV data describing an AI deployment. The agent scores risks across dimensions including algorithmic fairness, data bias, regulatory compliance, and security exposure, returning ranked risk cards with mitigation suggestions.",
+    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Multi-Modal Analysis</h3>
+      {modes.map((mode, idx) => (
+        <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 overflow-hidden">
+          <button
+            onClick={() => setExpanded(expanded === idx ? null : idx)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-800/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-accent-200">{mode.icon}</span>
+              <div>
+                <p className="text-sm font-medium text-slate-200">{mode.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{mode.summary}</p>
+              </div>
+            </div>
+            <Play
+              size={10}
+              className={clsx("text-slate-500 flex-shrink-0 ml-3 transition-transform", expanded === idx ? "rotate-90" : "rotate-0")}
+            />
+          </button>
+          {expanded === idx && (
+            <div className="px-4 pb-4 pt-1 border-t border-slate-800/50">
+              <p className="text-xs text-slate-400 leading-relaxed">{mode.details}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AboutModal({ onClose }: { onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<"about" | "team" | /* "papers" | */ "connect">("about");
 
@@ -872,6 +971,8 @@ function AboutModal({ onClose }: { onClose: () => void }) {
                   <BookOpen size={12} /> Read the documentation
                 </a>
               </div>
+
+              <AnalysisModesAccordion />
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
