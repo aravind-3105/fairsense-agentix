@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen } from "lucide-react";
+import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen, ChevronLeft } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import fairsenseLogo from "./assets/fairsense-logo.png";
 import aixpertLogo from "./assets/AIXPERT_logo_extended_white-2048x896.png";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
 
 const LinkedInIcon = ({ size = 16 }: { size?: number }) => (
@@ -63,7 +64,10 @@ interface TimelineEntry {
 }
 
 export default function App() {
-  const [mode, setMode] = useState<Mode>("text");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialMode = (searchParams.get("mode") as Mode) ?? "text";
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -200,14 +204,24 @@ export default function App() {
 
   return (
     <main className="min-h-screen px-6 py-10 bg-base">
+      <div className="mb-4">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-1 text-xs text-slate-500 hover:text-accent-200 transition-colors"
+        >
+          <ChevronLeft size={13} /> Home
+        </button>
+      </div>
       <header className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <img
-              src={fairsenseLogo}
-              alt="FairSense AgentiX"
-              className="h-20 mix-blend-screen"
-            />
+            <button onClick={() => navigate("/")} className="contents">
+              <img
+                src={fairsenseLogo}
+                alt="FairSense AgentiX"
+                className="h-20 mix-blend-screen hover:opacity-80 transition-opacity"
+              />
+            </button>
             <div>
               <h1 className="text-3xl font-semibold">FairSense AgentiX</h1>
               <p className="text-slate-400">
