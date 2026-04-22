@@ -282,10 +282,10 @@ class LangChainFAISSTool:
             results = []
             for rank, (doc, score) in enumerate(docs_with_scores):
                 result_dict = doc.metadata.copy()
-                # Convert L2 distance to cosine similarity for normalized vectors:
-                # cos_sim = 1 - (l2_dist² / 2), clamped to [0, 1]
-                cos_sim = max(0.0, 1.0 - (float(score) ** 2) / 2.0)
-                result_dict["score"] = round(cos_sim, 3)
+                # Convert L2 distance to a 0–1 relevance score.
+                # Linear mapping: l2_dist 0→1.0, 2→0.0 (max L2 for normalized vectors)
+                relevance = round(max(0.0, 1.0 - float(score) / 2.0), 3)
+                result_dict["score"] = relevance
                 result_dict["rank"] = rank
                 if doc.page_content:
                     result_dict["text"] = doc.page_content
