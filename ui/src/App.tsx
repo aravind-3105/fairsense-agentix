@@ -56,6 +56,108 @@ const MODE_DESCRIPTIONS: Record<Mode, { summary: string; details: string }> = {
   },
 };
 
+const TEXT_DEMOS: { label: string; text: string }[] = [
+  {
+    label: "Biased job posting",
+    text: `We are looking for a young, ambitious rockstar developer to join our fast-paced startup. The ideal candidate is a recent grad who can hustle hard and thrives in a competitive bro culture. Native English speakers only. Must be willing to work 70+ hours a week — no family obligations should get in the way. The right man for the job earns $130K+. Women need not apply for this senior role.`,
+  },
+  {
+    label: "Gendered performance review",
+    text: `Sarah is technically competent but often comes across as too emotional and aggressive during team meetings. She needs to learn to be more collaborative and likeable, the way her male colleagues are. Her communication style is off-putting to senior leadership. Despite her qualifications, she lacks the executive presence we expect at this level and should consider whether management is really the right path for her.`,
+  },
+];
+
+const RISK_DEMOS: { label: string; text: string }[] = [
+  {
+    label: "Automated hiring system",
+    text: `An automated resume screening model trained on historical hiring decisions from 2000–2018 at a Fortune 500 financial services firm. The model predicts candidate success using features including university prestige ranking, prior employer tier, and applicant names. It is used to shortlist 50,000 applicants per year with no human review at the screening stage. No disparate impact analysis has been conducted.`,
+  },
+  {
+    label: "Retail facial recognition",
+    text: `A facial recognition system deployed across 300 retail locations to flag potential shoplifting suspects in real time. The model was trained on a law enforcement mugshot database and sends automatic alerts to security staff when a customer matches with confidence above 70%. Customers are not informed of the system's use, no opt-out mechanism exists, and the system has not been audited for demographic accuracy disparities.`,
+  },
+];
+
+const DEMO_IMAGE_SVGs = {
+  jobAd: `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" font-family="Arial, sans-serif">
+  <rect width="800" height="560" fill="#ffffff"/>
+  <rect x="0" y="0" width="800" height="90" fill="#1a365d"/>
+  <text x="400" y="58" font-size="32" font-weight="bold" fill="white" text-anchor="middle">NOW HIRING</text>
+  <text x="400" y="82" font-size="14" fill="#90cdf4" text-anchor="middle">TechBros Inc. — Move Fast and Break Things</text>
+  <text x="400" y="135" font-size="24" font-weight="bold" fill="#1a202c" text-anchor="middle">Software Engineer — Rock Star Developer</text>
+  <line x1="60" y1="152" x2="740" y2="152" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="60" y="190" font-size="15" fill="#4a5568">Are you a young, hungry developer ready to hustle 24/7? We want an aggressive go-getter</text>
+  <text x="60" y="215" font-size="15" fill="#4a5568">who fits our bro culture. Native English speakers strongly preferred.</text>
+  <text x="60" y="255" font-size="16" font-weight="bold" fill="#2d3748">Requirements:</text>
+  <text x="80" y="285" font-size="15" fill="#4a5568">• Recent grad preferred — Class of 2021 or later, age 22–28</text>
+  <text x="80" y="313" font-size="15" fill="#4a5568">• Willing to work 70+ hrs/week — no family obligations should interfere</text>
+  <text x="80" y="341" font-size="15" fill="#4a5568">• Strong "cultural fit" — we're a tight-knit brotherhood</text>
+  <text x="80" y="369" font-size="15" fill="#4a5568">• The right man for the job can earn $140K+</text>
+  <text x="80" y="397" font-size="15" fill="#4a5568">• Physically fit and high-energy — remote work not available</text>
+  <line x1="60" y1="430" x2="740" y2="430" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="270" y="450" width="260" height="46" rx="8" fill="#1a365d"/>
+  <text x="400" y="479" font-size="16" font-weight="bold" fill="white" text-anchor="middle">Apply at careers.techbros.io</text>
+  <text x="400" y="530" font-size="12" fill="#a0aec0" text-anchor="middle">Only shortlisted candidates will be contacted. We are an equal opportunity employer.*</text>
+  <text x="400" y="550" font-size="10" fill="#cbd5e0" text-anchor="middle">*Subject to cultural fit requirements</text>
+</svg>`,
+
+  teamPhoto: `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" font-family="Arial, sans-serif">
+  <rect width="800" height="560" fill="#f8fafc"/>
+  <rect x="0" y="0" width="800" height="70" fill="#2d3748"/>
+  <text x="400" y="44" font-size="24" font-weight="bold" fill="white" text-anchor="middle">GlobalVentures Corp — Leadership Team 2024</text>
+  <text x="60" y="110" font-size="13" font-weight="bold" fill="#718096" letter-spacing="2">EXECUTIVE LEADERSHIP</text>
+  <circle cx="130" cy="185" r="48" fill="#4a5568"/>
+  <rect x="83" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="130" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">William Parker</text>
+  <text x="130" y="323" font-size="12" fill="#718096" text-anchor="middle">Chief Executive Officer</text>
+  <circle cx="290" cy="185" r="48" fill="#4a5568"/>
+  <rect x="243" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="290" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">James Mitchell</text>
+  <text x="290" y="323" font-size="12" fill="#718096" text-anchor="middle">Chief Technology Officer</text>
+  <circle cx="450" cy="185" r="48" fill="#4a5568"/>
+  <rect x="403" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="450" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">Robert Chen</text>
+  <text x="450" y="323" font-size="12" fill="#718096" text-anchor="middle">Chief Financial Officer</text>
+  <circle cx="610" cy="185" r="48" fill="#4a5568"/>
+  <rect x="563" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="610" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">David Thompson</text>
+  <text x="610" y="323" font-size="12" fill="#718096" text-anchor="middle">VP Engineering</text>
+  <line x1="60" y1="355" x2="740" y2="355" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="380" font-size="13" font-weight="bold" fill="#718096" letter-spacing="2">SUPPORT &amp; OPERATIONS</text>
+  <circle cx="200" cy="440" r="30" fill="#9b2c2c" opacity="0.5"/>
+  <text x="200" y="490" font-size="12" font-weight="bold" fill="#1a202c" text-anchor="middle">Mary Johnson</text>
+  <text x="200" y="507" font-size="11" fill="#718096" text-anchor="middle">Executive Assistant</text>
+  <circle cx="400" cy="440" r="30" fill="#9b2c2c" opacity="0.5"/>
+  <text x="400" y="490" font-size="12" font-weight="bold" fill="#1a202c" text-anchor="middle">Lisa Wang</text>
+  <text x="400" y="507" font-size="11" fill="#718096" text-anchor="middle">HR Coordinator</text>
+  <circle cx="600" cy="440" r="30" fill="#9b2c2c" opacity="0.5"/>
+  <text x="600" y="490" font-size="12" font-weight="bold" fill="#1a202c" text-anchor="middle">Sarah Miller</text>
+  <text x="600" y="507" font-size="11" fill="#718096" text-anchor="middle">Office Manager</text>
+</svg>`,
+};
+
+async function createDemoImageFile(svgString: string, filename: string): Promise<File> {
+  return new Promise((resolve) => {
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 560;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 800, 560);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => {
+        resolve(new File([blob!], filename, { type: "image/png" }));
+      }, "image/png");
+    };
+    img.src = url;
+  });
+}
+
 interface TimelineEntry {
   timestamp: number;
   event: string;
@@ -325,6 +427,50 @@ export default function App() {
         </div>
 
         <div className="space-y-6">
+          {!result && (
+            <div className="glass p-5 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Try an example</p>
+              {mode === "image" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { key: "jobAd" as const, label: "Biased job advertisement", desc: "Text-based ad with gendered language" },
+                    { key: "teamPhoto" as const, label: "Leadership team photo", desc: "Org chart with representation gap" },
+                  ]).map((demo) => (
+                    <button
+                      key={demo.key}
+                      onClick={async () => {
+                        const f = await createDemoImageFile(DEMO_IMAGE_SVGs[demo.key], `${demo.key}.png`);
+                        setFile(f);
+                      }}
+                      className="group overflow-hidden rounded-xl border border-slate-700 hover:border-accent-200/50 transition-colors text-left"
+                    >
+                      <img
+                        src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(DEMO_IMAGE_SVGs[demo.key])}`}
+                        alt={demo.label}
+                        className="w-full h-16 object-cover object-top"
+                      />
+                      <div className="px-3 py-2 bg-slate-900/80">
+                        <p className="text-xs font-medium text-slate-200">{demo.label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{demo.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(mode === "text" ? TEXT_DEMOS : RISK_DEMOS).map((demo) => (
+                    <button
+                      key={demo.label}
+                      onClick={() => setInput(demo.text)}
+                      className="text-xs rounded-lg border border-slate-700 px-3 py-1.5 text-slate-400 hover:border-accent-200/50 hover:text-accent-200 transition-colors"
+                    >
+                      {demo.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <ResultPanel result={result} />
           {highlightHtml && (
             <div className="glass p-5 space-y-5">

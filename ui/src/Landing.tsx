@@ -85,7 +85,24 @@ export default function Landing() {
   ];
 
   return (
-    <main className="min-h-screen bg-base text-white">
+    <main className="min-h-screen bg-base text-white relative overflow-x-hidden">
+
+      {/* Decorative background: rose glow + dot grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse 100% 50% at 50% 0%, rgba(235,8,138,0.13) 0%, transparent 60%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)",
+          backgroundSize: "28px 28px",
+        }}
+      />
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-slate-800">
