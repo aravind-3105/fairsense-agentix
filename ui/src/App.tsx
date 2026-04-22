@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen, ChevronLeft } from "lucide-react";
+import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import fairsenseLogo from "./assets/fairsense-logo.png";
 import aixpertLogo from "./assets/AIXPERT_logo_extended_white-2048x896.png";
@@ -203,59 +203,43 @@ export default function App() {
   }, [result]);
 
   return (
-    <main className="min-h-screen px-6 py-10 bg-base">
-      <div className="mb-4">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-1 text-xs text-slate-500 hover:text-accent-200 transition-colors"
-        >
-          <ChevronLeft size={13} /> Home
+    <main className="min-h-screen bg-base text-white">
+      <nav className="flex items-center justify-between px-8 py-5 border-b border-slate-800">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2">
+          <img
+            src={fairsenseLogo}
+            alt="FairSense AgentiX"
+            className="h-12 mix-blend-screen hover:opacity-80 transition-opacity"
+          />
+          <span className="text-lg font-semibold">FairSense AgentiX</span>
         </button>
-      </div>
-      <header className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <button onClick={() => navigate("/")} className="contents">
-              <img
-                src={fairsenseLogo}
-                alt="FairSense AgentiX"
-                className="h-20 mix-blend-screen hover:opacity-80 transition-opacity"
-              />
-            </button>
-            <div>
-              <h1 className="text-3xl font-semibold">FairSense AgentiX</h1>
-              <p className="text-slate-400">
-                Agentic fairness & AI-risk analysis platform
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="https://aixpert-project.eu/" target="_blank" rel="noopener noreferrer">
-              <img
-                src={aixpertLogo}
-                alt="AIxpert"
-                className="h-12 opacity-70 hover:opacity-100 transition-opacity"
-              />
-            </a>
-            <div className="w-px h-6 bg-slate-700" />
-            <a href="https://vectorinstitute.ai/" target="_blank" rel="noopener noreferrer">
-              <img
-                src={vectorLogo}
-                alt="Vector Institute"
-                className="h-9 opacity-70 hover:opacity-100 transition-opacity"
-              />
-            </a>
-            <button
-              onClick={handleShutdown}
-              className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
-              title="Shutdown both backend and frontend servers"
-            >
-              <Power size={16} />
-              Shutdown
-            </button>
-          </div>
+        <div className="flex items-center gap-4">
+          <a href="https://aixpert-project.eu/" target="_blank" rel="noopener noreferrer">
+            <img
+              src={aixpertLogo}
+              alt="AIxpert"
+              className="h-8 opacity-70 hover:opacity-100 transition-opacity"
+            />
+          </a>
+          <div className="w-px h-5 bg-slate-700" />
+          <a href="https://vectorinstitute.ai/" target="_blank" rel="noopener noreferrer">
+            <img
+              src={vectorLogo}
+              alt="Vector Institute"
+              className="h-7 opacity-70 hover:opacity-100 transition-opacity"
+            />
+          </a>
+          <button
+            onClick={handleShutdown}
+            className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
+            title="Shutdown both backend and frontend servers"
+          >
+            <Power size={16} />
+            Shutdown
+          </button>
         </div>
-      </header>
+      </nav>
+      <div className="px-8 py-8">
 
       {/* Inline error banner */}
       {errorMessage && (
@@ -413,6 +397,7 @@ export default function App() {
           </a>
         </div>
       </footer>
+      </div>
 
       {/* About modal */}
       {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}

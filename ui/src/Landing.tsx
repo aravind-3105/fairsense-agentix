@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Image, ShieldAlert, ChevronRight, ScanSearch, Brain, BarChart2 } from "lucide-react";
+import { FileText, Image, ShieldAlert, ChevronRight, ChevronDown, ScanSearch, Brain, BarChart2 } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
 import fairsenseLogo from "./assets/fairsense-logo.png";
 import aixpertLogo from "./assets/AIXPERT_logo_extended_white-2048x896.png";
@@ -26,6 +27,11 @@ const BlueskyIcon = ({ size = 16 }: { size?: number }) => (
 
 export default function Landing() {
   const navigate = useNavigate();
+  const detailsRef = useRef<HTMLElement>(null);
+
+  const scrollToDetails = () => {
+    detailsRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const modes: { icon: React.ReactNode; title: string; mode: string; audience: string; description: string; example: string }[] = [
     {
@@ -105,13 +111,13 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="max-w-4xl mx-auto px-8 pt-20 pb-16 text-center space-y-6">
+      {/* Hero — above the fold */}
+      <section className="min-h-[calc(100vh-73px)] flex flex-col items-center justify-center px-8 text-center space-y-6">
         <p className="pill inline-flex">Agentic Fairness Analysis</p>
         <h1 className="text-5xl font-bold leading-tight">
           Detect bias before it<br />becomes a problem.
         </h1>
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">
           FairSense AgentiX uses AI agents to analyze text, images, and deployment scenarios for hidden bias and fairness risks — giving you clear, actionable explanations, not just scores.
         </p>
         <div className="flex items-center justify-center gap-4 pt-2">
@@ -130,59 +136,71 @@ export default function Landing() {
             Read the docs
           </a>
         </div>
+        <button
+          onClick={scrollToDetails}
+          className="flex flex-col items-center gap-1 text-xs text-slate-500 hover:text-accent-200 transition-colors pt-6 animate-bounce"
+        >
+          Learn more
+          <ChevronDown size={16} />
+        </button>
       </section>
 
-      {/* Mode cards */}
-      <section className="max-w-5xl mx-auto px-8 pb-20">
-        <h2 className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500 mb-8">
-          What can it analyse?
-        </h2>
-        <div className="grid gap-6 md:grid-cols-3">
-          {modes.map((m) => (
-            <div
-              key={m.title}
-              className="glass p-6 space-y-4 hover:border-accent-200/30 transition-colors cursor-pointer"
-              onClick={() => navigate(`/analyze?mode=${m.mode}`)}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-accent-200">{m.icon}</span>
-                <h3 className="font-semibold text-slate-100">{m.title}</h3>
-              </div>
-              <p className="text-xs text-accent-200 uppercase tracking-wider">{m.audience}</p>
-              <p className="text-sm text-slate-400 leading-relaxed">{m.description}</p>
-              <p className="text-xs text-slate-600 italic leading-relaxed">{m.example}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Details — below the fold */}
+      <section ref={detailsRef} className="border-t border-slate-800">
 
-      {/* How it works */}
-      <section className="border-t border-slate-800 py-16 px-8">
-        <div className="max-w-3xl mx-auto space-y-10">
-          <h2 className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500">
-            How it works
+        {/* Mode cards */}
+        <div className="max-w-5xl mx-auto px-8 py-20">
+          <h2 className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500 mb-8">
+            What can it analyse?
           </h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            {steps.map((s) => (
-              <div key={s.step} className="space-y-3 text-center">
-                <div className="mx-auto h-10 w-10 rounded-full bg-accent-200/10 border border-accent-200/30 flex items-center justify-center text-accent-200">
-                  {s.icon}
+          <div className="grid gap-6 md:grid-cols-3">
+            {modes.map((m) => (
+              <div
+                key={m.title}
+                className="glass p-6 space-y-4 hover:border-accent-200/30 transition-colors cursor-pointer"
+                onClick={() => navigate(`/analyze?mode=${m.mode}`)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-accent-200">{m.icon}</span>
+                  <h3 className="font-semibold text-slate-100">{m.title}</h3>
                 </div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider">Step {s.step}</p>
-                <p className="font-semibold text-slate-200">{s.title}</p>
-                <p className="text-sm text-slate-400 leading-relaxed">{s.description}</p>
+                <p className="text-xs text-accent-200 uppercase tracking-wider">{m.audience}</p>
+                <p className="text-sm text-slate-400 leading-relaxed">{m.description}</p>
+                <p className="text-xs text-slate-600 italic leading-relaxed">{m.example}</p>
               </div>
             ))}
           </div>
-          <div className="text-center pt-4">
-            <button
-              onClick={() => navigate("/analyze")}
-              className="flex items-center gap-2 mx-auto rounded-xl bg-gradient-to-r from-accent-200 to-accent-100 px-6 py-3 font-semibold text-black transition hover:opacity-90"
-            >
-              Get started <ChevronRight size={16} />
-            </button>
+        </div>
+
+        {/* How it works */}
+        <div className="border-t border-slate-800 py-20 px-8">
+          <div className="max-w-3xl mx-auto space-y-10">
+            <h2 className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500">
+              How it works
+            </h2>
+            <div className="grid gap-8 md:grid-cols-3">
+              {steps.map((s) => (
+                <div key={s.step} className="space-y-3 text-center">
+                  <div className="mx-auto h-10 w-10 rounded-full bg-accent-200/10 border border-accent-200/30 flex items-center justify-center text-accent-200">
+                    {s.icon}
+                  </div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Step {s.step}</p>
+                  <p className="font-semibold text-slate-200">{s.title}</p>
+                  <p className="text-sm text-slate-400 leading-relaxed">{s.description}</p>
+                </div>
+              ))}
+            </div>
+            <div className="text-center pt-4">
+              <button
+                onClick={() => navigate("/analyze")}
+                className="flex items-center gap-2 mx-auto rounded-xl bg-gradient-to-r from-accent-200 to-accent-100 px-6 py-3 font-semibold text-black transition hover:opacity-90"
+              >
+                Get started <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
+
       </section>
 
       {/* Footer */}
