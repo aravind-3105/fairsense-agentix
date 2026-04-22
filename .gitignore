@@ -41,6 +41,7 @@ run_demo.sh
 test_demo.py
 demo_simple.py
 */node_modules
+node_modules/
 /UI_images
 *.js
 *.map
