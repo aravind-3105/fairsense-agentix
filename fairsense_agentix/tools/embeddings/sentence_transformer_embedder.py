@@ -102,7 +102,10 @@ class SentenceTransformerEmbedder:
                     model_name=model_name,
                     model_type="embedder",
                     run_id=self._run_id,
-                    message=f"Downloading embedding model '{model_name}' (first use only, ~30-120s)...",
+                    message=(
+                        f"Downloading embedding model '{model_name}' "
+                        "(first use only, ~30-120s)..."
+                    ),
                 )
 
             # Load model (cached by sentence-transformers after first load)

@@ -129,9 +129,8 @@ class LLMSummarizer:
         self.settings = settings
         self.prompt_loader = prompt_loader
 
-        logger.info(
-            f"LLMSummarizer initialized (model={getattr(langchain_model, 'model_name', 'unknown')})"
-        )
+        _mname = getattr(langchain_model, "model_name", "unknown")
+        logger.info(f"LLMSummarizer initialized (model={_mname})")
 
     def summarize(
         self,
@@ -193,7 +192,7 @@ class LLMSummarizer:
             )
 
         logger.debug(
-            f"Summarizing text (input_length={len(text)}, max_length={max_length})"
+            f"Summarizing text (input_length={len(text)}, max_length={max_length})",
         )
 
         try:
@@ -232,7 +231,7 @@ class LLMSummarizer:
             logger.debug(
                 f"Summary generated (raw_length={len(raw_summary)}, "
                 f"truncated_length={len(summary)}, "
-                f"truncated={len(raw_summary) > max_length})"
+                f"truncated={len(raw_summary) > max_length})",
             )
 
             return summary

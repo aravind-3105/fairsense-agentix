@@ -8,7 +8,13 @@ from typing import Literal, cast
 
 InputType = Literal["text", "image", "csv"]
 WorkflowHint = Literal[
-    "bias_text", "bias_image", "bias_image_vlm", "risk", "text", "image", "csv"
+    "bias_text",
+    "bias_image",
+    "bias_image_vlm",
+    "risk",
+    "text",
+    "image",
+    "csv",
 ]
 
 
@@ -50,10 +56,19 @@ def load_input_payload(path: Path, input_type: InputType) -> str | bytes:
 
 
 def looks_like_csv(value: str) -> bool:
-    """Heuristic for detecting CSV strings."""
+    """Heuristic for detecting CSV strings.
+
+    Requires at least 2 lines that all contain commas, and that the comma
+    count is consistent across lines (i.e. looks like a table, not prose).
+    Single-line strings — even with commas — are treated as plain text.
+    """
     if "," not in value:
         return False
     sample = value.strip().splitlines()[:3]
-    if not sample:
+    if len(sample) < 2:
         return False
-    return all("," in line for line in sample)
+    if not all("," in line for line in sample):
+        return False
+    # Comma counts should be consistent across lines (same number of columns)
+    counts = [line.count(",") for line in sample]
+    return len(set(counts)) == 1

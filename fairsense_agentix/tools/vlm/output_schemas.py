@@ -46,19 +46,19 @@ class BiasVisualAnalysisOutput(BaseModel):
         description=(
             "Detailed objective description of image contents. "
             "Includes people, text, setting, objects, and compositional elements."
-        )
+        ),
     )
 
     reasoning_trace: str = Field(
         description=(
             "Analytical reasoning about visual patterns and relationships. "
             "Documents the VLM's thought process for transparency."
-        )
+        ),
     )
 
     bias_analysis: BiasAnalysisOutput = Field(
         description=(
             "Structured bias analysis output matching standard format. "
             "Includes bias instances, severity levels, and risk assessment."
-        )
+        ),
     )

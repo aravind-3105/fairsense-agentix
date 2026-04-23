@@ -102,7 +102,7 @@ class LangChainEmbedder:
     store and retriever patterns.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - explicit embedder API
         self,
         model_name: str,
         dimension: int,
@@ -142,7 +142,10 @@ class LangChainEmbedder:
                     model_name=model_name,
                     model_type="embedder_langchain",
                     run_id=self._run_id,
-                    message=f"Downloading LangChain embedding model '{model_name}' (first use only, ~30-120s)...",
+                    message=(
+                        f"Downloading LangChain embedding model '{model_name}' "
+                        "(first use only, ~30-120s)..."
+                    ),
                 )
 
             # Prepare model kwargs
@@ -161,7 +164,8 @@ class LangChainEmbedder:
 
             # Verify dimension matches by testing embedding
             logger.info(
-                f"LangChainEmbedder initializing with model={model_name}, dimension={dimension}"
+                f"LangChainEmbedder initializing with model={model_name}, "
+                f"dimension={dimension}",
             )
 
             test_embedding = self.embeddings.embed_query("test")
@@ -178,7 +182,8 @@ class LangChainEmbedder:
                 )
 
             logger.info(
-                f"LangChainEmbedder initialized successfully (model={model_name}, dimension={actual_dim})"
+                f"LangChainEmbedder initialized successfully "
+                f"(model={model_name}, dimension={actual_dim})",
             )
 
             # Emit "model ready" event

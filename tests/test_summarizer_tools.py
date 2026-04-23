@@ -204,7 +204,7 @@ class TestLLMSummarizer:
         mock_model = Mock()
         mock_model.model_name = "gpt-4"
         mock_model.invoke.return_value = AIMessage(
-            content="Brief summary of the analysis highlighting key findings."
+            content="Brief summary of the analysis highlighting key findings.",
         )
 
         mock_telemetry = Mock(spec=TelemetryService)

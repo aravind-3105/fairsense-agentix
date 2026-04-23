@@ -25,7 +25,8 @@ from fairsense_agentix.tools.vlm.output_schemas import BiasVisualAnalysisOutput
 # Check if OpenAI API key is available for real tests
 HAS_OPENAI_KEY = bool(os.getenv("OPENAI_API_KEY"))
 requires_openai = pytest.mark.skipif(
-    not HAS_OPENAI_KEY, reason="OpenAI API key not available"
+    not HAS_OPENAI_KEY,
+    reason="OpenAI API key not available",
 )
 
 
@@ -54,7 +55,7 @@ class TestBiasImageVLMGraphBasic:
             {
                 "image_bytes": fake_image,
                 "options": {},
-            }
+            },
         )
 
         # Verify VLM analysis output structure
@@ -105,7 +106,7 @@ class TestBiasImageVLMGraphBasic:
             {
                 "image_bytes": b"fake_image",
                 "options": {},
-            }
+            },
         )
 
         bias_analysis = result["vlm_analysis"].bias_analysis
@@ -142,7 +143,7 @@ class TestBiasImageVLMGraphBasic:
                     "vlm_max_tokens": 1500,
                     "summary_max_length": 100,
                 },
-            }
+            },
         )
 
         # Verify execution completed
@@ -166,7 +167,7 @@ class TestBiasImageVLMGraphBasic:
                 "image_bytes": b"fake_image",
                 "options": {},
                 "run_id": test_run_id,
-            }
+            },
         )
 
         # Verify run_id propagated
@@ -187,7 +188,7 @@ class TestBiasImageVLMGraphBasic:
             {
                 "image_bytes": b"fake_image",
                 "options": {},
-            }
+            },
         )
 
         html = result["highlighted_html"]
@@ -242,7 +243,7 @@ class TestBiasImageVLMGraphChainOfThought:
             {
                 "image_bytes": b"fake_image",
                 "options": {},
-            }
+            },
         )
 
         reasoning_trace = result["vlm_analysis"].reasoning_trace
@@ -270,7 +271,7 @@ class TestBiasImageVLMGraphChainOfThought:
             {
                 "image_bytes": b"fake_image",
                 "options": {},
-            }
+            },
         )
 
         visual_desc = result["vlm_analysis"].visual_description
@@ -368,7 +369,7 @@ class TestBiasImageVLMGraphRealOpenAI:
             {
                 "image_bytes": image_bytes,
                 "options": {"temperature": 0.3},
-            }
+            },
         )
 
         # Verify VLM analysis structure
@@ -407,7 +408,7 @@ class TestBiasImageVLMGraphRealOpenAI:
             {
                 "image_bytes": image_bytes,
                 "options": {},
-            }
+            },
         )
 
         bias_instances = result["vlm_analysis"].bias_analysis.bias_instances
@@ -456,7 +457,7 @@ class TestBiasImageVLMGraphRealOpenAI:
             {
                 "image_bytes": image_bytes,
                 "options": {"temperature": 0.3},
-            }
+            },
         )
 
         reasoning_trace = result["vlm_analysis"].reasoning_trace
@@ -489,7 +490,7 @@ class TestBiasImageVLMGraphRealOpenAI:
                     "vlm_max_tokens": 1000,
                     "summary_max_length": 50,
                 },
-            }
+            },
         )
 
         # Verify execution completed

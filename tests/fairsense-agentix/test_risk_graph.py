@@ -36,9 +36,12 @@ class TestRiskGraphBasic:
 
         result = graph.invoke(
             {
-                "scenario_text": "Deploying facial recognition system in public spaces for security monitoring",
+                "scenario_text": (
+                    "Deploying facial recognition system in public spaces for "
+                    "security monitoring"
+                ),
                 "options": {},
-            }
+            },
         )
 
         # Verify embedding generated
@@ -90,7 +93,7 @@ class TestRiskGraphBasic:
             {
                 "scenario_text": "Using AI for automated hiring decisions",
                 "options": {"top_k": 3},
-            }
+            },
         )
 
         # Verify only 3 risks returned
@@ -110,7 +113,7 @@ class TestRiskGraphBasic:
             {
                 "scenario_text": "AI chatbot",
                 "options": {},
-            }
+            },
         )
 
         # Verify execution completed
@@ -129,7 +132,7 @@ class TestRiskGraphBasic:
             {
                 "scenario_text": "Test scenario",
                 "options": {"top_k": 2, "embedding_model": "custom-model"},
-            }
+            },
         )
 
         # Verify execution completed with options
@@ -211,7 +214,7 @@ class TestRiskGraphDeterministicFixtures:
         and provides diagnostic suggestions to healthcare providers."""
 
         result = graph.invoke(
-            {"scenario_text": scenario, "options": {"top_k": 4, "rmf_per_risk": 2}}
+            {"scenario_text": scenario, "options": {"top_k": 4, "rmf_per_risk": 2}},
         )
 
         # Verify custom options applied
@@ -246,7 +249,7 @@ class TestRiskGraphDeterministicFixtures:
                 "automated alerting, cross-database matching, real-time tracking,",
                 "historical pattern analysis, and predictive threat modeling",
             ]
-            * 5
+            * 5,
         )  # Repeat to make it longer
 
         result = graph.invoke({"scenario_text": long_scenario, "options": {}})
@@ -273,7 +276,7 @@ class TestRiskGraphGoldenOutputs:
             {
                 "scenario_text": "AI-powered credit scoring system",
                 "options": {},
-            }
+            },
         )
 
         html = result["html_table"]
@@ -302,7 +305,7 @@ class TestRiskGraphGoldenOutputs:
             {
                 "scenario_text": "Autonomous vehicle decision-making AI",
                 "options": {},
-            }
+            },
         )
 
         csv_path = Path(result["csv_path"])
@@ -341,7 +344,7 @@ class TestRiskGraphGoldenOutputs:
             {
                 "scenario_text": "AI content moderation system",
                 "options": {"top_k": 2},
-            }
+            },
         )
 
         csv_path = Path(result["csv_path"])
@@ -375,7 +378,7 @@ class TestRiskGraphGoldenOutputs:
             {
                 "scenario_text": "xyz abc test 123",
                 "options": {},
-            }
+            },
         )
 
         # Even with weird input, should produce valid HTML

@@ -155,7 +155,7 @@ class BLIPCaptionTool:
 
             model_name = "Salesforce/blip-image-captioning-base"
             logger.info(
-                f"⏱️  [BLIP] Loading model: {model_name} (device={self._device})"
+                f"⏱️  [BLIP] Loading model: {model_name} (device={self._device})",
             )
 
             # Load processor (handles image preprocessing)
@@ -166,7 +166,7 @@ class BLIPCaptionTool:
             logger.info(f"⏱️  [BLIP] Loading processor from {model_name}...")
             self._processor = BlipProcessor.from_pretrained(model_name)  # type: ignore[assignment]
             logger.info(
-                f"✓ [BLIP] Processor loaded in {time.time() - processor_start:.2f}s"
+                f"✓ [BLIP] Processor loaded in {time.time() - processor_start:.2f}s",
             )
 
             # Load model with appropriate dtype
@@ -186,12 +186,12 @@ class BLIPCaptionTool:
             if use_safetensors:
                 logger.info(
                     f"Using safetensors format (torch {torch.__version__} < 2.6, "
-                    "avoids CVE-2025-32434 and 76x faster loading)"
+                    "avoids CVE-2025-32434 and 76x faster loading)",
                 )
 
             model_load_start = time.time()
             logger.info(
-                "⏱️  [BLIP] Loading model weights (this may take 5-30s on CPU)..."
+                "⏱️  [BLIP] Loading model weights (this may take 5-30s on CPU)...",
             )
             self._model = BlipForConditionalGeneration.from_pretrained(
                 model_name,
@@ -199,7 +199,8 @@ class BLIPCaptionTool:
                 use_safetensors=use_safetensors,
             )
             logger.info(
-                f"✓ [BLIP] Model weights loaded in {time.time() - model_load_start:.2f}s"
+                f"✓ [BLIP] Model weights loaded in "
+                f"{time.time() - model_load_start:.2f}s",
             )
 
             device_move_start = time.time()
@@ -207,21 +208,27 @@ class BLIPCaptionTool:
             self._model.to(self._device)  # type: ignore[attr-defined]
             self._model.eval()  # type: ignore[attr-defined]  # Inference mode (disable dropout)
             logger.info(
-                f"✓ [BLIP] Model ready on {self._device} in {time.time() - device_move_start:.2f}s"
+                f"✓ [BLIP] Model ready on {self._device} in "
+                f"{time.time() - device_move_start:.2f}s",
             )
 
             total_time = time.time() - load_start
             logger.info(
-                f"✅ [BLIP] Total model load time: {total_time:.2f}s (device={self._device})"
+                f"✅ [BLIP] Total model load time: {total_time:.2f}s "
+                f"(device={self._device})",
             )
 
         except ImportError as e:
-            msg = "transformers not installed. Install with: pip install transformers torch"
+            msg = (
+                "transformers not installed. Install with: "
+                "pip install transformers torch"
+            )
             raise CaptionError(msg) from e
         except Exception as e:
             msg = "Failed to load BLIP model"
             raise CaptionError(
-                msg, context={"device": self._device, "error": str(e)}
+                msg,
+                context={"device": self._device, "error": str(e)},
             ) from e
 
     def caption(self, image_bytes: bytes, max_length: int = 100) -> str:
@@ -289,7 +296,8 @@ class BLIPCaptionTool:
             return self._cache[cache_key]
 
         logger.info(
-            f"⏱️  [BLIP] Starting caption generation (image_size={len(image_bytes)} bytes)"
+            f"⏱️  [BLIP] Starting caption generation "
+            f"(image_size={len(image_bytes)} bytes)",
         )
 
         # Lazy load model if not loaded
@@ -305,7 +313,8 @@ class BLIPCaptionTool:
             image_load_start = time.time()
             image = Image.open(io.BytesIO(image_bytes))
             logger.info(
-                f"✓ [BLIP] Image loaded in {(time.time() - image_load_start) * 1000:.1f}ms"
+                f"✓ [BLIP] Image loaded in "
+                f"{(time.time() - image_load_start) * 1000:.1f}ms",
             )
 
             # Preprocess image
@@ -316,7 +325,8 @@ class BLIPCaptionTool:
             logger.info("⏱️  [BLIP] Preprocessing image...")
             inputs = self._processor(image, return_tensors="pt").to(self._device)  # type: ignore[misc]
             logger.info(
-                f"✓ [BLIP] Preprocessing done in {(time.time() - preprocess_start) * 1000:.1f}ms"
+                f"✓ [BLIP] Preprocessing done in "
+                f"{(time.time() - preprocess_start) * 1000:.1f}ms",
             )
 
             # Generate caption with beam search
@@ -325,7 +335,8 @@ class BLIPCaptionTool:
             # Why This Way: Beam search is standard for seq2seq quality
             generation_start = time.time()
             logger.info(
-                f"⏱️  [BLIP] Generating caption with beam search (max_length={max_length})..."
+                f"⏱️  [BLIP] Generating caption with beam search "
+                f"(max_length={max_length})...",
             )
             with torch.no_grad():  # Disable gradients for inference
                 output = self._model.generate(  # type: ignore[attr-defined]
@@ -343,7 +354,7 @@ class BLIPCaptionTool:
             decode_start = time.time()
             caption = self._processor.decode(output[0], skip_special_tokens=True)  # type: ignore[attr-defined]
             logger.info(
-                f"✓ [BLIP] Decoded in {(time.time() - decode_start) * 1000:.1f}ms"
+                f"✓ [BLIP] Decoded in {(time.time() - decode_start) * 1000:.1f}ms",
             )
 
             # Cache result
@@ -353,8 +364,10 @@ class BLIPCaptionTool:
             self._cache[cache_key] = caption
 
             total_time = time.time() - caption_start
+            preview = caption[:50]
+            suffix = "..." if len(caption) > 50 else ""
             logger.info(
-                f'✅ [BLIP] Caption complete in {total_time:.2f}s: "{caption[:50]}{"..." if len(caption) > 50 else ""}"'
+                f'✅ [BLIP] Caption complete in {total_time:.2f}s: "{preview}{suffix}"',
             )
             return caption
 

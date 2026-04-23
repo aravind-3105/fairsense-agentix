@@ -1,7 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Loader2, Play, Upload, Sparkles, Activity, Power } from "lucide-react";
+import { Loader2, Play, Upload, Activity, Power, FileText, Image, ShieldAlert, X, BookOpen } from "lucide-react";
+import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
+import fairsenseLogo from "./assets/fairsense-logo.png";
+import aixpertLogo from "./assets/AIXPERT_logo_extended_white-2048x896.png";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { analyzeStart, analyzeFileStart, connectToStream, API_BASE } from "./api";
+
+const LinkedInIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect x="2" y="9" width="4" height="12" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
+const XIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+const BlueskyIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.567 6.479.737 3.123 3.419 4.056 5.977 3.529-.005.039-.01.077-.014.116C2.535 14.315.733 16.37.58 18.409c-.206 2.763 2.43 5.765 5.77 4.578 2.668-.948 4.888-3.77 6.65-6.875 1.762 3.104 3.982 5.927 6.65 6.875 3.34 1.187 5.976-1.815 5.77-4.578-.153-2.038-1.955-4.094-5.95-4.515a7.422 7.422 0 0 1-.014-.116c2.558.527 5.24-.406 5.977-3.529C23.622 9.417 24 4.457 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.299-1.664-.621-4.3 1.24C16.046 4.747 13.087 8.686 12 10.8Z" />
+  </svg>
+);
 
 type Mode = "text" | "image" | "csv";
 
@@ -11,6 +35,129 @@ const MODE_LABELS: Record<Mode, string> = {
   csv: "Risk"
 };
 
+const MODE_ICONS: Record<Mode, React.ReactNode> = {
+  text: <FileText size={14} />,
+  image: <Image size={14} />,
+  csv: <ShieldAlert size={14} />
+};
+
+const MODE_DESCRIPTIONS: Record<Mode, { summary: string; details: string }> = {
+  text: {
+    summary: "Identifies bias in written content such as job postings and conversations.",
+    details: "Detects gender, racial, age, disability, and socioeconomic biases in free-form text. The agent plans its analysis, selects embedding and LLM tools, and produces highlighted spans with severity ratings and explanations for each detected instance.",
+  },
+  image: {
+    summary: "Analyzes visual content for stereotypes and representation issues.",
+    details: "Uses vision-language models (VLMs) to examine images for biased visual elements — such as stereotyped portrayals, underrepresentation, or harmful associations. Returns annotated results with per-instance explanations drawn from the visual context.",
+  },
+  csv: {
+    summary: "Evaluates ML deployment scenarios for fairness, security, and compliance risks.",
+    details: "Accepts natural language descriptions or structured CSV data describing an AI deployment. The agent scores risks across dimensions including algorithmic fairness, data bias, regulatory compliance, and security exposure, returning ranked risk cards with mitigation suggestions.",
+  },
+};
+
+const TEXT_DEMOS: { label: string; text: string }[] = [
+  {
+    label: "Biased job posting",
+    text: `We are looking for a young, ambitious rockstar developer to join our fast-paced startup. The ideal candidate is a recent grad who can hustle hard and thrives in a competitive bro culture. Native English speakers only. Must be willing to work 70+ hours a week — no family obligations should get in the way. The right man for the job earns $130K+. Women need not apply for this senior role.`,
+  },
+  {
+    label: "Gendered performance review",
+    text: `Sarah is technically competent but often comes across as too emotional and aggressive during team meetings. She needs to learn to be more collaborative and likeable, the way her male colleagues are. Her communication style is off-putting to senior leadership. Despite her qualifications, she lacks the executive presence we expect at this level and should consider whether management is really the right path for her.`,
+  },
+];
+
+const RISK_DEMOS: { label: string; text: string }[] = [
+  {
+    label: "Automated hiring system",
+    text: `An automated resume screening model trained on historical hiring decisions from 2000–2018 at a Fortune 500 financial services firm. The model predicts candidate success using features including university prestige ranking, prior employer tier, and applicant names. It is used to shortlist 50,000 applicants per year with no human review at the screening stage. No disparate impact analysis has been conducted.`,
+  },
+  {
+    label: "Retail facial recognition",
+    text: `A facial recognition system deployed across 300 retail locations to flag potential shoplifting suspects in real time. The model was trained on a law enforcement mugshot database and sends automatic alerts to security staff when a customer matches with confidence above 70%. Customers are not informed of the system's use, no opt-out mechanism exists, and the system has not been audited for demographic accuracy disparities.`,
+  },
+];
+
+const DEMO_IMAGE_SVGs = {
+  jobAd: `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" font-family="Arial, sans-serif">
+  <rect width="800" height="560" fill="#ffffff"/>
+  <rect x="0" y="0" width="800" height="90" fill="#1a365d"/>
+  <text x="400" y="58" font-size="32" font-weight="bold" fill="white" text-anchor="middle">NOW HIRING</text>
+  <text x="400" y="82" font-size="14" fill="#90cdf4" text-anchor="middle">TechBros Inc. — Move Fast and Break Things</text>
+  <text x="400" y="135" font-size="24" font-weight="bold" fill="#1a202c" text-anchor="middle">Software Engineer — Rock Star Developer</text>
+  <line x1="60" y1="152" x2="740" y2="152" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="60" y="190" font-size="15" fill="#4a5568">Are you a young, hungry developer ready to hustle 24/7? We want an aggressive go-getter</text>
+  <text x="60" y="215" font-size="15" fill="#4a5568">who fits our bro culture. Native English speakers strongly preferred.</text>
+  <text x="60" y="255" font-size="16" font-weight="bold" fill="#2d3748">Requirements:</text>
+  <text x="80" y="285" font-size="15" fill="#4a5568">• Recent grad preferred — Class of 2021 or later, age 22–28</text>
+  <text x="80" y="313" font-size="15" fill="#4a5568">• Willing to work 70+ hrs/week — no family obligations should interfere</text>
+  <text x="80" y="341" font-size="15" fill="#4a5568">• Strong "cultural fit" — we're a tight-knit brotherhood</text>
+  <text x="80" y="369" font-size="15" fill="#4a5568">• The right man for the job can earn $140K+</text>
+  <text x="80" y="397" font-size="15" fill="#4a5568">• Physically fit and high-energy — remote work not available</text>
+  <line x1="60" y1="430" x2="740" y2="430" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="270" y="450" width="260" height="46" rx="8" fill="#1a365d"/>
+  <text x="400" y="479" font-size="16" font-weight="bold" fill="white" text-anchor="middle">Apply at careers.techbros.io</text>
+  <text x="400" y="530" font-size="12" fill="#a0aec0" text-anchor="middle">Only shortlisted candidates will be contacted. We are an equal opportunity employer.*</text>
+  <text x="400" y="550" font-size="10" fill="#cbd5e0" text-anchor="middle">*Subject to cultural fit requirements</text>
+</svg>`,
+
+  teamPhoto: `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" font-family="Arial, sans-serif">
+  <rect width="800" height="560" fill="#f8fafc"/>
+  <rect x="0" y="0" width="800" height="70" fill="#2d3748"/>
+  <text x="400" y="44" font-size="24" font-weight="bold" fill="white" text-anchor="middle">GlobalVentures Corp — Leadership Team 2024</text>
+  <text x="60" y="110" font-size="13" font-weight="bold" fill="#718096" letter-spacing="2">EXECUTIVE LEADERSHIP</text>
+  <circle cx="130" cy="185" r="48" fill="#4a5568"/>
+  <rect x="83" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="130" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">William Parker</text>
+  <text x="130" y="323" font-size="12" fill="#718096" text-anchor="middle">Chief Executive Officer</text>
+  <circle cx="290" cy="185" r="48" fill="#4a5568"/>
+  <rect x="243" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="290" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">James Mitchell</text>
+  <text x="290" y="323" font-size="12" fill="#718096" text-anchor="middle">Chief Technology Officer</text>
+  <circle cx="450" cy="185" r="48" fill="#4a5568"/>
+  <rect x="403" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="450" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">Robert Chen</text>
+  <text x="450" y="323" font-size="12" fill="#718096" text-anchor="middle">Chief Financial Officer</text>
+  <circle cx="610" cy="185" r="48" fill="#4a5568"/>
+  <rect x="563" y="237" width="94" height="6" rx="3" fill="#718096"/>
+  <text x="610" y="305" font-size="13" font-weight="bold" fill="#1a202c" text-anchor="middle">David Thompson</text>
+  <text x="610" y="323" font-size="12" fill="#718096" text-anchor="middle">VP Engineering</text>
+  <line x1="60" y1="355" x2="740" y2="355" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="380" font-size="13" font-weight="bold" fill="#718096" letter-spacing="2">SUPPORT &amp; OPERATIONS</text>
+  <circle cx="200" cy="440" r="30" fill="#9b2c2c" opacity="0.5"/>
+  <text x="200" y="490" font-size="12" font-weight="bold" fill="#1a202c" text-anchor="middle">Mary Johnson</text>
+  <text x="200" y="507" font-size="11" fill="#718096" text-anchor="middle">Executive Assistant</text>
+  <circle cx="400" cy="440" r="30" fill="#9b2c2c" opacity="0.5"/>
+  <text x="400" y="490" font-size="12" font-weight="bold" fill="#1a202c" text-anchor="middle">Lisa Wang</text>
+  <text x="400" y="507" font-size="11" fill="#718096" text-anchor="middle">HR Coordinator</text>
+  <circle cx="600" cy="440" r="30" fill="#9b2c2c" opacity="0.5"/>
+  <text x="600" y="490" font-size="12" font-weight="bold" fill="#1a202c" text-anchor="middle">Sarah Miller</text>
+  <text x="600" y="507" font-size="11" fill="#718096" text-anchor="middle">Office Manager</text>
+</svg>`,
+};
+
+async function createDemoImageFile(svgString: string, filename: string): Promise<File> {
+  return new Promise((resolve) => {
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 560;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 800, 560);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => {
+        resolve(new File([blob!], filename, { type: "image/png" }));
+      }, "image/png");
+    };
+    img.src = url;
+  });
+}
+
 interface TimelineEntry {
   timestamp: number;
   event: string;
@@ -19,7 +166,10 @@ interface TimelineEntry {
 }
 
 export default function App() {
-  const [mode, setMode] = useState<Mode>("text");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialMode = (searchParams.get("mode") as Mode) ?? "text";
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,6 +177,9 @@ export default function App() {
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [showLoadingBanner, setShowLoadingBanner] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showShutdownModal, setShowShutdownModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -99,7 +252,7 @@ export default function App() {
 
           // Check if this is an error event
           if (data.event === "analysis_error") {
-            alert(`Analysis failed: ${data.context?.message || "Unknown error"}`);
+            setErrorMessage(data.context?.message ? String(data.context.message) : "Analysis failed. Check the timeline for details.");
             setLoading(false); // Stop loading spinner
           }
 
@@ -115,46 +268,32 @@ export default function App() {
       // Step 3: Analysis is now running in background, events will stream in!
     } catch (err) {
       console.error(err);
-      alert("Analysis failed. Check logs for details.");
+      setErrorMessage("Analysis failed. Check logs for details.");
       setLoading(false);
     }
   }
 
-  async function handleShutdown() {
-    // Confirmation dialog to prevent accidental shutdowns
-    const confirmed = window.confirm(
-      "Are you sure you want to shutdown the server?\n\n" +
-      "This will stop both the backend and frontend servers and clean up ports.\n" +
-      "You'll need to restart the server manually to use the application again."
-    );
+  function handleShutdown() {
+    setShowShutdownModal(true);
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function executeShutdown() {
+    setShowShutdownModal(false);
     try {
-      // Call the shutdown endpoint
       const response = await fetch(`${API_BASE}/v1/shutdown`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
-        // Show success message briefly before server shuts down
-        alert("Server shutdown initiated. Both servers will stop in 1 second.");
-
-        // Close any open WebSocket connections
         wsRef.current?.close();
-
-        // UI will become unresponsive as backend shuts down - this is expected
+        setErrorMessage(null);
       } else {
-        alert("Failed to shutdown server. Check console for details.");
+        setErrorMessage("Failed to shutdown server. Check console for details.");
       }
     } catch (err) {
       console.error("Shutdown error:", err);
-      alert("Error communicating with server. It may have already shut down.");
+      setErrorMessage("Error communicating with server. It may have already shut down.");
     }
   }
 
@@ -166,18 +305,32 @@ export default function App() {
   }, [result]);
 
   return (
-    <main className="min-h-screen px-6 py-10 bg-base">
-      <header className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sparkles className="text-accent-200" />
-            <div>
-              <h1 className="text-3xl font-semibold">FairSense AgentiX</h1>
-              <p className="text-slate-400">
-                Agentic fairness & AI-risk analysis platform
-              </p>
-            </div>
-          </div>
+    <main className="min-h-screen bg-base text-white">
+      <nav className="flex items-center justify-between px-8 py-5 border-b border-slate-800">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2">
+          <img
+            src={fairsenseLogo}
+            alt="FairSense AgentiX"
+            className="h-12 mix-blend-screen hover:opacity-80 transition-opacity"
+          />
+          <span className="text-lg font-semibold">FairSense AgentiX</span>
+        </button>
+        <div className="flex items-center gap-4">
+          <a href="https://aixpert-project.eu/" target="_blank" rel="noopener noreferrer">
+            <img
+              src={aixpertLogo}
+              alt="AIxpert"
+              className="h-8 opacity-70 hover:opacity-100 transition-opacity"
+            />
+          </a>
+          <div className="w-px h-5 bg-slate-700" />
+          <a href="https://vectorinstitute.ai/" target="_blank" rel="noopener noreferrer">
+            <img
+              src={vectorLogo}
+              alt="Vector Institute"
+              className="h-7 opacity-70 hover:opacity-100 transition-opacity"
+            />
+          </a>
           <button
             onClick={handleShutdown}
             className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
@@ -187,11 +340,22 @@ export default function App() {
             Shutdown
           </button>
         </div>
-      </header>
+      </nav>
+      <div className="px-8 py-8">
+
+      {/* Inline error banner */}
+      {errorMessage && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3 text-sm text-red-300">
+          <span className="flex-1">{errorMessage}</span>
+          <button onClick={() => setErrorMessage(null)} className="flex-shrink-0 text-red-400 hover:text-red-200 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Model Download Loading Banner */}
       {showLoadingBanner && (
-        <div className="mb-6 bg-yellow-500/10 border-2 border-yellow-500/50 rounded-xl p-6 animate-pulse">
+        <div className="mb-6 bg-yellow-500/10 border-2 border-yellow-500/50 rounded-xl p-6">
           <div className="flex items-start gap-4">
             <Loader2 className="text-yellow-400 animate-spin flex-shrink-0 mt-1" size={24} />
             <div className="flex-1">
@@ -210,6 +374,7 @@ export default function App() {
       <section className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
           <ModeSelector mode={mode} onModeChange={setMode} />
+          <ModeDescription mode={mode} />
           {mode === "image" ? (
             <ImageDropzone file={file} onFileChange={setFile} />
           ) : (
@@ -246,7 +411,7 @@ export default function App() {
               )}
             </button>
             <button
-              className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:border-slate-500"
+              className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:border-slate-500 hover:bg-slate-800 transition-colors"
               onClick={() => {
                 setInput("");
                 setFile(null);
@@ -262,6 +427,50 @@ export default function App() {
         </div>
 
         <div className="space-y-6">
+          {!result && (
+            <div className="glass p-5 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Try an example</p>
+              {mode === "image" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { key: "jobAd" as const, label: "Biased job advertisement", desc: "Text-based ad with gendered language" },
+                    { key: "teamPhoto" as const, label: "Leadership team photo", desc: "Org chart with representation gap" },
+                  ]).map((demo) => (
+                    <button
+                      key={demo.key}
+                      onClick={async () => {
+                        const f = await createDemoImageFile(DEMO_IMAGE_SVGs[demo.key], `${demo.key}.png`);
+                        setFile(f);
+                      }}
+                      className="group overflow-hidden rounded-xl border border-slate-700 hover:border-accent-200/50 transition-colors text-left"
+                    >
+                      <img
+                        src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(DEMO_IMAGE_SVGs[demo.key])}`}
+                        alt={demo.label}
+                        className="w-full h-16 object-cover object-top"
+                      />
+                      <div className="px-3 py-2 bg-slate-900/80">
+                        <p className="text-xs font-medium text-slate-200">{demo.label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{demo.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(mode === "text" ? TEXT_DEMOS : RISK_DEMOS).map((demo) => (
+                    <button
+                      key={demo.label}
+                      onClick={() => setInput(demo.text)}
+                      className="text-xs rounded-lg border border-slate-700 px-3 py-1.5 text-slate-400 hover:border-accent-200/50 hover:text-accent-200 transition-colors"
+                    >
+                      {demo.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <ResultPanel result={result} />
           {highlightHtml && (
             <div className="glass p-5 space-y-5">
@@ -286,13 +495,90 @@ export default function App() {
               )}
 
               <div
-                className="prose prose-invert max-w-none text-sm leading-relaxed custom-scrollbar max-h-[500px] overflow-y-auto pr-2"
+                className="custom-scrollbar max-h-[500px] overflow-y-auto pr-2"
                 dangerouslySetInnerHTML={highlightHtml}
               />
             </div>
           )}
         </div>
       </section>
+      {/* Footer */}
+      <footer className="mt-12 border-t border-slate-800 pt-6 pb-4 flex items-center justify-between">
+        <div className="flex items-center gap-6 text-xs text-slate-500">
+          <span>Built as part of&nbsp;
+            <a
+              href="https://vectorinstitute.github.io/vector-aixpert/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-accent-200 transition-colors"
+            >
+              Vector AIxpert
+            </a>
+          </span>
+          <a
+            href="https://vectorinstitute.github.io/fairsense-agentix/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-slate-400 hover:text-accent-200 transition-colors"
+          >
+            <BookOpen size={13} />
+            Documentation
+          </a>
+          <button
+            onClick={() => setShowAboutModal(true)}
+            className="text-slate-400 hover:text-accent-200 transition-colors"
+          >
+            About
+          </button>
+        </div>
+        <div className="flex items-center gap-4">
+          <a href="https://www.linkedin.com/company/vector-institute/" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="LinkedIn">
+            <LinkedInIcon size={16} />
+          </a>
+          <a href="https://x.com/vectorinst" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="X / Twitter">
+            <XIcon size={16} />
+          </a>
+          <a href="https://bsky.app/profile/vectorinstitute.ai" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors" title="Bluesky">
+            <BlueskyIcon size={16} />
+          </a>
+        </div>
+      </footer>
+      </div>
+
+      {/* About modal */}
+      {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
+
+      {/* Shutdown confirmation modal */}
+      {showShutdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-100">Shutdown server?</h2>
+              <button onClick={() => setShowShutdownModal(false)} className="text-slate-400 hover:text-slate-200 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              This will stop both the backend and frontend servers. You'll need to restart manually to use the application again.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowShutdownModal(false)}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:border-slate-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeShutdown}
+                className="flex items-center gap-2 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-2 text-sm text-red-300 hover:bg-red-900/40 hover:border-red-600 transition-colors"
+              >
+                <Power size={14} />
+                Shutdown
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -311,13 +597,41 @@ function ModeSelector({
           key={key}
           onClick={() => onModeChange(key)}
           className={clsx(
-            "flex-1 rounded-lg px-4 py-3 text-sm font-semibold transition",
-            mode === key ? "bg-accent-200 text-black" : "text-slate-400"
+            "flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition",
+            mode === key ? "bg-accent-200 text-black" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
           )}
         >
+          {MODE_ICONS[key]}
           {MODE_LABELS[key]}
         </button>
       ))}
+    </div>
+  );
+}
+
+function ModeDescription({ mode }: { mode: Mode }) {
+  const [expanded, setExpanded] = useState(false);
+  const desc = MODE_DESCRIPTIONS[mode];
+
+  useEffect(() => setExpanded(false), [mode]);
+
+  return (
+    <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 px-4 py-3 space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-400 leading-relaxed">{desc.summary}</p>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="flex-shrink-0 text-xs text-accent-200 hover:text-accent-100 transition-colors flex items-center gap-1"
+        >
+          {expanded ? "Less" : "More"}
+          <Play size={9} className={clsx("transition-transform", expanded ? "rotate-90" : "rotate-0")} />
+        </button>
+      </div>
+      {expanded && (
+        <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-800/50 pt-2">
+          {desc.details}
+        </p>
+      )}
     </div>
   );
 }
@@ -329,10 +643,31 @@ function ImageDropzone({
   file: File | null;
   onFileChange: (f: File | null) => void;
 }) {
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   return (
-    <label className="glass flex cursor-pointer flex-col items-center justify-center gap-3 p-10 text-slate-400 hover:border-slate-500">
-      <Upload />
-      <span>{file ? file.name : "Drop an image or click to browse"}</span>
+    <label className="glass flex cursor-pointer flex-col items-center justify-center gap-3 p-6 text-slate-400 hover:border-slate-500 transition-colors">
+      {previewUrl ? (
+        <>
+          <img
+            src={previewUrl}
+            alt="Selected preview"
+            className="max-h-48 max-w-full rounded-lg object-contain opacity-90"
+          />
+          <span className="text-xs text-slate-400 truncate max-w-full px-2">{file!.name}</span>
+        </>
+      ) : (
+        <>
+          <Upload />
+          <span>Drop an image or click to browse</span>
+        </>
+      )}
       <input
         type="file"
         accept="image/*"
@@ -343,8 +678,42 @@ function ImageDropzone({
   );
 }
 
+const EVENT_LABELS: Record<string, string> = {
+  router_decision:        "Router Decision",
+  llm_call:               "LLM Call",
+  model_download_start:   "Downloading Model",
+  model_download_complete:"Model Ready",
+  model_download_failed:  "Download Failed",
+  analysis_complete:      "Analysis Complete",
+  analysis_error:         "Analysis Error",
+  log_info:               "Info",
+  log_warning:            "Warning",
+};
+
+const EVENT_DOT: Record<string, string> = {
+  analysis_complete:      "bg-green-400",
+  model_download_complete:"bg-green-400",
+  analysis_error:         "bg-red-400",
+  model_download_failed:  "bg-red-400",
+  log_warning:            "bg-yellow-400",
+  model_download_start:   "bg-yellow-400",
+};
+
+function eventDot(event: string) {
+  return EVENT_DOT[event] ?? "bg-slate-500";
+}
+
+function eventLabel(event: string) {
+  return EVENT_LABELS[event] ?? event.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function TimelinePanel({ events }: { events: TimelineEntry[] }) {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
+  const bottomRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [events]);
 
   if (!events.length) {
     return (
@@ -387,9 +756,19 @@ function TimelinePanel({ events }: { events: TimelineEntry[] }) {
           const messageText = message ? String(message) : null;
 
           return (
-            <li key={`${evt.timestamp}-${idx}`} className="rounded-xl bg-slate-900/40 border border-slate-800/40 p-3 hover:bg-slate-900/60 transition-colors">
+            <li ref={idx === events.length - 1 ? bottomRef : null} key={`${evt.timestamp}-${idx}`} className={clsx(
+                "rounded-xl border p-3 transition-colors",
+                evt.event === "analysis_error" || evt.event === "model_download_failed"
+                  ? "bg-red-900/20 border-red-700/40 hover:bg-red-900/30"
+                  : evt.event === "analysis_complete" || evt.event === "model_download_complete"
+                  ? "bg-green-900/20 border-green-700/40 hover:bg-green-900/30"
+                  : "bg-slate-900/40 border-slate-800/40 hover:bg-slate-900/60"
+              )}>
               <div className="flex items-center justify-between">
-                <span className="uppercase tracking-wider text-xs font-bold text-slate-300">{evt.event}</span>
+                <span className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                  <span className={clsx("inline-block h-2 w-2 rounded-full flex-shrink-0", eventDot(evt.event))} />
+                  {eventLabel(evt.event)}
+                </span>
                 <span className="text-xs text-slate-500">
                   {new Date(evt.timestamp * 1000).toLocaleTimeString()}
                 </span>
@@ -495,21 +874,51 @@ function ResultPanel({ result }: { result: any | null }) {
       <div className="glass p-5 space-y-4">
         <header className="space-y-2">
           <p className="pill">Risk Insights</p>
-          <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
-            <span className="inline-block w-1 h-5 bg-accent-200 rounded-full" />
-            Top Risks
-          </h3>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
+              <span className="inline-block w-1 h-5 bg-accent-200 rounded-full" />
+              Top Risks
+            </h3>
+            <a
+              href="https://airisk.mit.edu/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-accent-200 transition-colors flex-shrink-0"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              MIT AI Risk Repository
+            </a>
+          </div>
         </header>
         <div className="space-y-3">
-          {risks.slice(0, 5).map((risk: any, idx: number) => (
+          {risks.slice(0, 5).filter((r: any) => (r.score ?? 0) > 0).map((risk: any, idx: number) => (
             <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4 space-y-2 hover:border-slate-700/70 transition-colors">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold text-slate-200">{risk.name}</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-200/20 text-accent-200">
+              <div className="flex justify-between items-start gap-3">
+                <div className="space-y-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-200 leading-snug">
+                    {risk.risk_name ?? risk.name ?? "Unknown Risk"}
+                  </p>
+                  {risk.category && (
+                    <p className="flex items-center gap-1 text-xs text-slate-500 uppercase tracking-wide">
+                      {risk.category}
+                      {idx === 0 && (
+                        <span className="relative group cursor-help inline-flex flex-shrink-0 normal-case tracking-normal text-slate-600 hover:text-slate-400 transition-colors">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                          </svg>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                            Risk categories follow the MIT AI Risk Repository Domain Taxonomy. The number (e.g. 3.1) identifies the domain and subcategory.
+                          </span>
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-200/20 text-accent-200">
                   {risk.score?.toFixed(2)}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">{risk.description}</p>
+              <p className="text-xs text-slate-400 leading-relaxed">{risk.description ?? risk.text}</p>
             </div>
           ))}
         </div>
@@ -584,6 +993,332 @@ function ResultPanel({ result }: { result: any | null }) {
             <p className="text-xs text-slate-400 leading-relaxed">{inst.explanation}</p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AnalysisModesAccordion() {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const modes = [
+    {
+      icon: <FileText size={14} />,
+      title: "Text Bias Detection",
+      summary: "Identifies bias in written content such as job postings and conversations.",
+      details: "Detects gender, racial, age, disability, and socioeconomic biases in free-form text. The agent plans its analysis, selects embedding and LLM tools, and produces highlighted spans with severity ratings and explanations for each detected instance.",
+    },
+    {
+      icon: <Image size={14} />,
+      title: "Image Bias Detection",
+      summary: "Analyzes visual content for stereotypes and representation issues.",
+      details: "Uses vision-language models (VLMs) to examine images for biased visual elements — such as stereotyped portrayals, underrepresentation, or harmful associations. Returns annotated results with per-instance explanations drawn from the visual context.",
+    },
+    {
+      icon: <ShieldAlert size={14} />,
+      title: "Risk Assessment",
+      summary: "Evaluates ML deployment scenarios for fairness, security, and compliance risks.",
+      details: "Accepts natural language descriptions or structured CSV data describing an AI deployment. The agent scores risks across dimensions including algorithmic fairness, data bias, regulatory compliance, and security exposure, returning ranked risk cards with mitigation suggestions.",
+    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Multi-Modal Analysis</h3>
+      {modes.map((mode, idx) => (
+        <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 overflow-hidden">
+          <button
+            onClick={() => setExpanded(expanded === idx ? null : idx)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-800/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-accent-200">{mode.icon}</span>
+              <div>
+                <p className="text-sm font-medium text-slate-200">{mode.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{mode.summary}</p>
+              </div>
+            </div>
+            <Play
+              size={10}
+              className={clsx("text-slate-500 flex-shrink-0 ml-3 transition-transform", expanded === idx ? "rotate-90" : "rotate-0")}
+            />
+          </button>
+          {expanded === idx && (
+            <div className="px-4 pb-4 pt-1 border-t border-slate-800/50">
+              <p className="text-xs text-slate-400 leading-relaxed">{mode.details}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AboutModal({ onClose }: { onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<"about" | "team" | /* "papers" | */ "connect">("about");
+
+  const tabs: { id: typeof activeTab; label: string }[] = [
+    { id: "about",   label: "About" },
+    { id: "team",    label: "Team" },
+    // { id: "papers",  label: "Publications" },
+    { id: "connect", label: "Connect" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="glass w-full max-w-2xl max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-slate-100">About</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pb-4 flex-shrink-0 border-b border-slate-800">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={clsx(
+                "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                activeTab === tab.id
+                  ? "bg-accent-200 text-black"
+                  : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto custom-scrollbar flex-1 px-6 py-5 space-y-5">
+
+          {activeTab === "about" && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Vector Institute</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  The Vector Institute is dedicated to advancing artificial intelligence research and translating cutting-edge innovations into real-world solutions. Our open-source projects reflect our commitment to collaboration, transparency, and the responsible deployment of AI technologies.
+                </p>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  We build tools, MVPs, reference implementations, and educational resources that empower researchers, developers, and organizations to innovate and solve real-world problems with AI — spanning various domains, designed to be accessible, adaptable, and impactful.
+                </p>
+                <a
+                  href="https://github.com/VectorInstitute"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+                >
+                  <BookOpen size={12} /> Explore Vector's open-source projects
+                </a>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">About FairSense AgentiX</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  FairSense-AgentiX is an intelligent bias detection and risk assessment platform that uses agentic AI workflows to analyze text, images, and datasets for fairness concerns. Unlike traditional ML classifiers that operate as black boxes, FairSense employs a reasoning agent that:
+                </p>
+                <ul className="space-y-1 pl-4 text-sm text-slate-400">
+                  {[
+                    "Plans its analysis strategy based on the input type",
+                    "Selects the right tools for each task (OCR, vision models, embeddings, knowledge retrieval)",
+                    "Critiques its own outputs and refines them iteratively",
+                    "Explains its reasoning process through detailed telemetry",
+                  ].map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="text-accent-200 flex-shrink-0">·</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-slate-300 leading-relaxed pt-1">
+                  This approach delivers more accurate, transparent, and context-aware fairness assessments than static rule-based systems.
+                </p>
+                <a
+                  href="https://vectorinstitute.github.io/fairsense-agentix/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+                >
+                  <BookOpen size={12} /> Read the documentation
+                </a>
+              </div>
+
+              <AnalysisModesAccordion />
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Vector AIxpert Program</h3>
+                  <a href="https://aixpert-project.eu/" target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={aixpertLogo}
+                      alt="AIxpert"
+                      className="h-10 opacity-80 hover:opacity-100 transition-opacity"
+                    />
+                  </a>
+                </div>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  This project represents Vector Institute's research contributions to the AIXpert Horizon Europe initiative, focusing on tools, datasets, and evaluation pipelines for fairness-aware generative AI and explainable AI systems. Vector's contribution spans four core areas:
+                </p>
+                <ul className="space-y-1 pl-4 text-sm text-slate-400">
+                  {[
+                    "Explainable & accountable AI — Tools and benchmarks for interpretability, fairness, and transparency",
+                    "Trustworthy agentic AI — Transparent, auditable, human-in-the-loop agentic systems",
+                    "Multimodal evaluation — Benchmarks for audio-video understanding and vision-language fairness",
+                    "Open, reproducible research — Code, datasets, and documentation shared openly",
+                  ].map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="text-accent-200 flex-shrink-0">·</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="https://vectorinstitute.github.io/vector-aixpert/about/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-accent-200 hover:text-accent-100 transition-colors pt-1"
+                >
+                  <BookOpen size={12} /> Full AIXpert vision & consortium details
+                </a>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "team" && (
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Members</h3>
+                {[
+                  {
+                    name: "Shaina Raza, PhD",
+                    role: "Applied ML Scientist — Responsible AI",
+                    email: "shaina.raza@vectorinstitute.ai",
+                    linkedin: "https://www.linkedin.com/in/shainaraza/",
+                    photo: "https://media.licdn.com/dms/image/v2/D5603AQHUgEgXEYb_cw/profile-displayphoto-crop_800_800/B56ZmawXbDI4AI-/0/1759237995702?e=1778112000&v=beta&t=rO90EphvhrTdREsqk1LYZoW9m8IOm277OXPc7dJWlaE",
+                  },
+                  {
+                    name: "Aravind Narayanan",
+                    role: "Associate Applied ML Specialist",
+                    email: "aravind.narayanan@vectorinstitute.ai",
+                    linkedin: "https://www.linkedin.com/in/aravind-n-774665144/",
+                    photo: "https://media.licdn.com/dms/image/v2/D4D03AQFb2AEQkVhjWg/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1695527449774?e=1778112000&v=beta&t=sOHAj_1jCL3I2bL1Lrvi3tgUBZsOPQjzwr1n7dPCw2A",
+                  },
+                  {
+                    name: "Mahshid Alinoori",
+                    role: "Applied ML Specialist",
+                    email: "mahshid.alinoori@vectorinstitute.ai",
+                    linkedin: "https://www.linkedin.com/in/mahshid-alinoori/",
+                    photo: "https://media.licdn.com/dms/image/v2/D5603AQE4YYFri1iOOg/profile-displayphoto-crop_800_800/B56Zs4oGKcIcAI-/0/1766181601721?e=1778112000&v=beta&t=CNQ2NzY_f5ln7NPceo0meHg86PdFuYVJzTHolBz5Xww",
+                  },
+                ].map((member) => (
+                  <div key={member.name} className="flex gap-4 rounded-xl border border-slate-800/50 bg-slate-900/30 p-4">
+                    <img
+                      src={member.photo}
+                      alt={member.name}
+                      className="h-12 w-12 flex-shrink-0 rounded-full object-cover border border-slate-700"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = "none";
+                        el.nextElementSibling?.removeAttribute("style");
+                      }}
+                    />
+                    <div className="h-12 w-12 flex-shrink-0 rounded-full bg-accent-200/20 border border-accent-200/30 items-center justify-center text-accent-200 text-sm font-semibold hidden">
+                      {member.name[0]}
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-200">{member.name}</p>
+                      <p className="text-xs text-accent-200">{member.role}</p>
+                      <div className="flex items-center gap-3 pt-0.5">
+                        <a href={`mailto:${member.email}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors truncate">{member.email}</a>
+                        <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-accent-200 transition-colors flex-shrink-0">
+                          <LinkedInIcon size={13} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Contributors</h3>
+                <div className="flex gap-4 rounded-xl border border-slate-800/30 bg-slate-900/20 p-4">
+                  <div className="h-10 w-10 flex-shrink-0 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-400 text-sm font-semibold">
+                    K
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-slate-300">Karanpal Sekhon</p>
+                    <p className="text-xs text-slate-500">Project development contributor</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Publications tab — uncomment when ready to populate
+          {activeTab === "papers" && (
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500">[Placeholder — add published papers and links below.]</p>
+              {[
+                { title: "Paper Title Placeholder", venue: "Conference / Journal, Year", url: "#" },
+                { title: "Paper Title Placeholder", venue: "Conference / Journal, Year", url: "#" },
+              ].map((paper, idx) => (
+                <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-slate-200">{paper.title}</p>
+                  <p className="text-xs text-slate-500">{paper.venue}</p>
+                  <a
+                    href={paper.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-accent-200 hover:text-accent-100 transition-colors"
+                  >
+                    <BookOpen size={11} /> Read paper
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+          */}
+
+          {activeTab === "connect" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Website</h3>
+                <a
+                  href="https://vectorinstitute.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-accent-200 hover:text-accent-100 transition-colors"
+                >
+                  vectorinstitute.ai
+                </a>
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Socials</h3>
+                {[
+                  { label: "LinkedIn",    href: "https://www.linkedin.com/company/vector-institute/", icon: <LinkedInIcon size={15} /> },
+                  { label: "X / Twitter", href: "https://x.com/vectorinst", icon: <XIcon size={15} /> },
+                  { label: "Bluesky",     href: "https://bsky.app/profile/vectorinstitute.ai", icon: <BlueskyIcon size={15} /> },
+                ].map(({ label, href, icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-xl border border-slate-800/50 bg-slate-900/30 px-4 py-3 text-sm text-slate-300 hover:border-slate-700 hover:text-accent-200 transition-colors"
+                  >
+                    <span className="text-slate-400">{icon}</span>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );

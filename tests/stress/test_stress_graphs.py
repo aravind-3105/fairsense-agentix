@@ -255,7 +255,7 @@ class TestRiskGraphStress:
             {
                 "scenario_text": "AI deployment in healthcare",
                 "options": {"top_k": 1000},  # Extreme value
-            }
+            },
         )
 
         # Should cap at reasonable limit
@@ -271,7 +271,7 @@ class TestRiskGraphStress:
             {
                 "scenario_text": "AI deployment",
                 "options": {"top_k": 0},  # Invalid
-            }
+            },
         )
 
         # Should use default
@@ -287,7 +287,7 @@ class TestRiskGraphStress:
             {
                 "scenario_text": "AI deployment",
                 "options": {"top_k": -5},  # Invalid
-            }
+            },
         )
 
         # Should use default
@@ -362,7 +362,7 @@ class TestOrchestratorGraphStress:
                 "input_type": "text",  # Explicit type
                 "content": ambiguous_content,
                 "options": {},
-            }
+            },
         )
 
         # Should respect explicit type
@@ -380,7 +380,7 @@ class TestOrchestratorGraphStress:
                 "input_type": "text",
                 "content": large_text,
                 "options": {},
-            }
+            },
         )
 
         # Should complete workflow
@@ -398,7 +398,7 @@ class TestOrchestratorGraphStress:
                 "input_type": "image",
                 "content": large_image,
                 "options": {},
-            }
+            },
         )
 
         # Should route to VLM image workflow (default mode)
@@ -416,7 +416,7 @@ class TestOrchestratorGraphStress:
                 "input_type": "text",
                 "content": unicode_content,
                 "options": {},
-            }
+            },
         )
 
         # Should handle Unicode through entire pipeline
@@ -480,7 +480,7 @@ class TestResourceLimits:
                     "llm_max_tokens": -1000,  # Invalid value
                     "summary_max_length": None,  # Invalid type
                 },
-            }
+            },
         )
 
         # Should use defaults and complete
@@ -490,7 +490,10 @@ class TestResourceLimits:
 
 @pytest.mark.skipif(
     True,  # Skip by default - only run manually for extreme stress
-    reason="Extreme stress test - run manually with: pytest tests/stress/test_stress_graphs.py::test_extreme_memory_stress -v",
+    reason=(
+        "Extreme stress test - run manually with: "
+        "pytest tests/stress/test_stress_graphs.py::test_extreme_memory_stress -v"
+    ),
 )
 def test_extreme_memory_stress() -> None:
     """EXTREME: Test with 100MB+ input (manual run only)."""

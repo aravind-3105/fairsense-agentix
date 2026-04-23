@@ -26,15 +26,44 @@ Outputs (LangChain format)
 - data/indexes/rmf_meta.json
 """
 
+from __future__ import annotations
+
+import importlib.util
+import logging
+import os
+import sys
 from pathlib import Path
-from typing import TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import pandas as pd
 from langchain_core.documents import Document
 
-from fairsense_agentix.configs import settings
-from fairsense_agentix.tools.embeddings import LangChainEmbedder
-from fairsense_agentix.tools.faiss_index import LangChainFAISSTool
+
+if TYPE_CHECKING:
+    from fairsense_agentix.tools.embeddings import LangChainEmbedder
+
+logger = logging.getLogger(__name__)
+
+
+def _load_runtime_settings() -> Any:
+    """Load the Settings singleton without importing package ``__init__``.
+
+    Importing ``fairsense_agentix.configs.settings`` normally runs
+    ``fairsense_agentix/__init__.py``, which pulls heavy deps (e.g. transformers)
+    even when this script exits early.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    path = repo_root / "fairsense_agentix" / "configs" / "settings.py"
+    spec = importlib.util.spec_from_file_location(
+        "fairsense_agentix_configs_settings_cli",
+        path,
+    )
+    if spec is None or spec.loader is None:
+        msg = f"Cannot load settings module from {path}"
+        raise RuntimeError(msg)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.settings
 
 
 class DatasetConfig(TypedDict):
@@ -67,24 +96,25 @@ def build_index(
     embedder : LangChainEmbedder
         LangChain embedder for generating vectors
     """
-    print(f"\n{'=' * 60}")
-    print(f"Building index: {output_name}")
-    print(f"{'=' * 60}")
+    logger.info("")
+    logger.info("%s", "=" * 60)
+    logger.info("Building index: %s", output_name)
+    logger.info("%s", "=" * 60)
 
     # Load CSV
-    print(f"Loading {csv_path}...")
+    logger.info("Loading %s...", csv_path)
     df = pd.read_csv(csv_path)
-    print(f"  Loaded {len(df)} documents")
+    logger.info("  Loaded %s documents", len(df))
 
     # Validate required column exists
     if text_column not in df.columns:
         raise ValueError(
             f"Column '{text_column}' not found in {csv_path}. "
-            f"Available columns: {df.columns.tolist()}"
+            f"Available columns: {df.columns.tolist()}",
         )
 
     # Convert DataFrame to LangChain Documents
-    print(f"Creating LangChain documents from column '{text_column}'...")
+    logger.info("Creating LangChain documents from column '%s'...", text_column)
     documents = []
     metadata_list = []
 
@@ -103,11 +133,13 @@ def build_index(
         )
         documents.append(doc)
 
-    print(f"  Created {len(documents)} documents")
+    logger.info("  Created %s documents", len(documents))
 
     # Build FAISS index using LangChain (much simpler!)
-    print("Building LangChain FAISS index...")
-    print(f"  (Embedding {len(documents)} documents...)")
+    logger.info("Building LangChain FAISS index...")
+    logger.info("  (Embedding %s documents...)", len(documents))
+
+    from fairsense_agentix.tools.faiss_index import LangChainFAISSTool  # noqa: PLC0415
 
     faiss_tool = LangChainFAISSTool.from_documents(
         documents=documents,
@@ -115,46 +147,58 @@ def build_index(
         metadata=metadata_list,
     )
 
-    print(f"  ✓ Index built with {len(documents)} vectors")
+    logger.info("  Index built with %s vectors", len(documents))
 
     # Save index (LangChain format: folder with index.faiss + index.pkl)
     output_dir = Path("data/indexes")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Saving index to {output_dir}/{output_name}/...")
+    logger.info("Saving index to %s/%s/...", output_dir, output_name)
     faiss_tool.save_local(
         folder_path=output_dir,
         index_name=output_name,
     )
 
-    print(f"  ✓ Saved index to {output_dir}/{output_name}/index.faiss")
-    print(f"  ✓ Saved docstore to {output_dir}/{output_name}/index.pkl")
-    print(f"  ✓ Saved metadata to {output_dir}/{output_name}_meta.json")
+    logger.info("  Saved index to %s/%s/index.faiss", output_dir, output_name)
+    logger.info("  Saved docstore to %s/%s/index.pkl", output_dir, output_name)
+    logger.info("  Saved metadata to %s/%s_meta.json", output_dir, output_name)
 
-    print(f"✓ Successfully built {output_name} index!")
+    logger.info("Successfully built %s index.", output_name)
 
 
-def main() -> None:
+def _artifact_lines_for_index(output_name: str) -> list[str]:
+    """Return expected output paths for a built index (LangChain layout)."""
+    base = Path("data/indexes")
+    return [
+        str(base / output_name / "index.faiss"),
+        str(base / output_name / "index.pkl"),
+        str(base / f"{output_name}_meta.json"),
+    ]
+
+
+def main() -> int:
     """Build FAISS indexes for all configured datasets using LangChain.
 
     Phase 6.0: Updated to use LangChainEmbedder and LangChainFAISSTool for
     simpler index building with .from_documents() API.
+
+    Returns
+    -------
+    int
+        0 if at least one index was built, 1 if nothing was built or inputs missing.
     """
+    level_name = os.environ.get("LOGLEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(levelname)s %(message)s",
+        stream=sys.stderr,
+        force=True,
+    )
     print("\n" + "=" * 60)
     print("FAISS Index Builder (LangChain)")
     print("=" * 60)
 
-    # Initialize LangChain embedder
-    print(f"\nInitializing LangChain embedder: {settings.embedding_model}")
-    embedder = LangChainEmbedder(
-        model_name=settings.embedding_model,
-        dimension=settings.embedding_dimension,
-        normalize=True,  # For cosine similarity
-    )
-    print(f"  ✓ Model loaded: {embedder.model_name}")
-    print(f"  ✓ Dimension: {embedder.dimension}")
-
-    # Define datasets to process
     datasets: list[DatasetConfig] = [
         {
             "csv_path": Path("data/raw/ai_risks.csv"),
@@ -168,8 +212,34 @@ def main() -> None:
         },
     ]
 
-    # Build each index
+    available = [d for d in datasets if d["csv_path"].is_file()]
+    if not available:
+        logger.error("No input CSVs found. Expected at least one of:")
+        for d in datasets:
+            logger.error("  - %s", d["csv_path"])
+        logger.error("Generate them (e.g. scripts/transform_mit_data.py) and retry.")
+        return 1
+
+    # Defer settings + embedder until CSVs exist (avoids package __init__ / ST).
+    settings = _load_runtime_settings()
+    from fairsense_agentix.tools.embeddings import LangChainEmbedder  # noqa: PLC0415
+
+    logger.info("")
+    logger.info("Initializing LangChain embedder: %s", settings.embedding_model)
+    embedder = LangChainEmbedder(
+        model_name=settings.embedding_model,
+        dimension=settings.embedding_dimension,
+        normalize=True,  # For cosine similarity
+    )
+    logger.info("  Model loaded: %s", embedder.model_name)
+    logger.info("  Dimension: %s", embedder.dimension)
+
+    indexes_built: list[str] = []
+
     for dataset in datasets:
+        if not dataset["csv_path"].is_file():
+            logger.warning("%s not found. Skipping.", dataset["csv_path"])
+            continue
         try:
             build_index(
                 csv_path=dataset["csv_path"],
@@ -177,26 +247,34 @@ def main() -> None:
                 output_name=dataset["output_name"],
                 embedder=embedder,
             )
-        except FileNotFoundError:
-            print(f"\n⚠️  WARNING: {dataset['csv_path']} not found. Skipping...")
         except Exception as e:
-            print(f"\n❌ ERROR building {dataset['output_name']}: {e}")
+            logger.error("Error building %s: %s", dataset["output_name"], e)
             raise
+        indexes_built.append(dataset["output_name"])
 
-    # Summary
-    print("\n" + "=" * 60)
-    print("✓ All indexes built successfully!")
-    print("=" * 60)
-    print("\nBuilt indexes (LangChain format):")
-    print("  - data/indexes/risks/index.faiss")
-    print("  - data/indexes/risks/index.pkl")
-    print("  - data/indexes/risks_meta.json")
-    print("  - data/indexes/rmf/index.faiss")
-    print("  - data/indexes/rmf/index.pkl")
-    print("  - data/indexes/rmf_meta.json")
-    print("\nYou can now use these indexes with LangChainFAISSTool!")
-    print("Retriever pattern available: faiss_tool.as_retriever()")
+    if not indexes_built:
+        logger.error("No indexes were built.")
+        return 1
+
+    logger.info("")
+    logger.info("%s", "=" * 60)
+    logger.info(
+        "Finished building %s index(es): %s",
+        len(indexes_built),
+        ", ".join(indexes_built),
+    )
+    logger.info("%s", "=" * 60)
+    logger.info("")
+    logger.info("Output files (LangChain format):")
+    for name in indexes_built:
+        for line in _artifact_lines_for_index(name):
+            logger.info("  - %s", line)
+    logger.info("")
+    logger.info("You can use these indexes with LangChainFAISSTool.")
+    logger.info("Retriever pattern: faiss_tool.as_retriever()")
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -98,7 +98,7 @@ class FAISSIndexTool:
         if metadata_path is None:
             # Convert risks.faiss -> risks_meta.json
             metadata_path = index_path.with_suffix("").with_name(
-                f"{index_path.stem}_meta.json"
+                f"{index_path.stem}_meta.json",
             )
         self.metadata_path = metadata_path
 
@@ -296,7 +296,8 @@ class FAISSIndexTool:
             actual_dim = query_vector.shape[1]
             if actual_dim != expected_dim:
                 raise FAISSError(
-                    f"Query dimension mismatch: expected {expected_dim}, got {actual_dim}",
+                    f"Query dimension mismatch: expected {expected_dim}, "
+                    f"got {actual_dim}",
                     context={
                         "expected_dimension": expected_dim,
                         "actual_dimension": actual_dim,
@@ -309,7 +310,9 @@ class FAISSIndexTool:
 
             # Build result list
             results = []
-            for rank, (idx, score) in enumerate(zip(indices[0], distances[0])):
+            for rank, (idx, score) in enumerate(
+                zip(indices[0], distances[0], strict=True)
+            ):
                 # Skip invalid indices (FAISS returns -1 for missing results)
                 if idx == -1:
                     continue

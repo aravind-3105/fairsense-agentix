@@ -239,7 +239,10 @@ class TestBLIPCaptionTool:
     @patch("transformers.BlipForConditionalGeneration.from_pretrained")
     @patch("torch.cuda.is_available")
     def test_initialization_preload(
-        self, mock_cuda, mock_model_cls, mock_processor_cls
+        self,
+        mock_cuda,
+        mock_model_cls,
+        mock_processor_cls,
     ):
         """Verify preload loads model at initialization."""
         from fairsense_agentix.tools.caption.blip_tool import (  # noqa: PLC0415
@@ -373,7 +376,11 @@ class TestBLIP2CaptionTool:
     @patch("transformers.Blip2ForConditionalGeneration.from_pretrained")
     @patch("torch.cuda.is_available")
     def test_warns_when_gpu_unavailable(
-        self, mock_cuda, mock_model_cls, mock_processor_cls, caplog
+        self,
+        mock_cuda,
+        mock_model_cls,
+        mock_processor_cls,
+        caplog,
     ):
         """Verify warning logged when GPU requested but unavailable.
 
@@ -407,7 +414,8 @@ class TestBLIP2CaptionTool:
             )
             for record in caplog.records
         ), (
-            f"Should log warning about GPU unavailability. Got: {[r.message for r in caplog.records]}"
+            "Should log warning about GPU unavailability. "
+            f"Got: {[r.message for r in caplog.records]}"
         )
 
         # Verify fallback to CPU occurred
@@ -455,7 +463,8 @@ class TestCaptionErrorHandling:
     def test_caption_error_includes_context(self):
         """Verify CaptionError can carry debugging context."""
         error = CaptionError(
-            "Test error", context={"device": "cuda", "max_length": 100}
+            "Test error",
+            context={"device": "cuda", "max_length": 100},
         )
 
         assert error.message == "Test error"
@@ -465,7 +474,8 @@ class TestCaptionErrorHandling:
     def test_caption_error_string_includes_context(self):
         """Verify CaptionError __str__ includes context for logging."""
         error = CaptionError(
-            "Caption failed", context={"device": "gpu", "error": "OOM"}
+            "Caption failed",
+            context={"device": "gpu", "error": "OOM"},
         )
 
         error_str = str(error)
