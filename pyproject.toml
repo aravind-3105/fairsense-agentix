@@ -1,5 +1,5 @@
 [project]
-name = "fairsense-agentix"
+name = "fairsense-agentix-test1"
 version = "0.1.2"
 description = "An agentic fairness and AI-risk analysis platform for detecting bias in text and images"
 readme = {file = "README.md", content-type = "text/markdown"}
