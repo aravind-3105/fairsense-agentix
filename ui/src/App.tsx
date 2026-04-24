@@ -857,6 +857,18 @@ function BiasLegend() {
   );
 }
 
+// TODO: Instead of stripping citations, link [N] and (Author et al., YYYY) to their
+// source papers using the MIT AI Risk Repository paper metadata. Requires rebuilding
+// the FAISS index with paper URLs included in risk metadata.
+function stripCitations(text: string): string {
+  return text
+    .replace(/\[\d+(?:,\s*\d+)*\]/g, "")        // [95, 170], [35]
+    .replace(/\([A-Z][^()]*\d{4}[^()]*\)/g, "")  // (Author, 2021), (A and B, 2019; C, 2016), etc.
+    .replace(/\s+([.,?!;:])/g, "$1")              // remove space before punctuation
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function ResultPanel({ result }: { result: any | null }) {
   const [imageExpanded, setImageExpanded] = useState(false);
 
@@ -918,7 +930,7 @@ function ResultPanel({ result }: { result: any | null }) {
                   {risk.score?.toFixed(2)}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">{risk.description ?? risk.text}</p>
+              <p className="text-xs text-slate-400 leading-relaxed">{stripCitations(risk.description ?? risk.text ?? "")}</p>
             </div>
           ))}
         </div>
