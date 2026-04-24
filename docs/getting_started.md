@@ -261,20 +261,28 @@ Once running, you'll have access to:
 
 ### Using the UI
 
-The web interface provides:
+The web interface has two pages:
 
-1. **Unified Input** - Text field or drag-and-drop image upload
-2. **Mode Selection** - Choose between:
-   - Bias (Text) - Analyze text content
-   - Bias (Image) - Analyze visual content
-   - Risk - Assess deployment scenarios
-3. **Live Timeline** - Watch the agent's reasoning process in real-time
-4. **Results Panel** - View structured outputs with:
-   - Bias instances with severity levels
-   - Highlighted text/annotated images
-   - Risk tables with mitigation strategies
-5. **Batch Jobs** - Process multiple items at once
-6. **Shutdown Button** - Gracefully stop both servers
+**Landing page (`/`)** — Introduces the platform with a hero section, mode cards (click any card to jump directly into that mode), and a how-it-works overview.
+
+**Analysis app (`/analyze`)** — The main tool. Select a mode from the tab bar at the top:
+
+| Mode | Input | What it detects |
+|------|-------|-----------------|
+| **Bias (Text)** | Paste text | Gender, age, racial, disability, socioeconomic bias |
+| **Bias (Image)** | Upload image | Visual stereotypes, underrepresentation |
+| **Risk** | Describe an AI deployment | Fairness, security, compliance risks (sourced from MIT AI Risk Repository) |
+
+Each mode includes **clickable demo examples** on the right — select one to pre-fill the input and run a sample analysis immediately.
+
+Once you submit:
+
+1. **Agent Timeline** (left) — live stream of agent reasoning steps
+2. **Results Panel** (right) — structured output:
+   - Bias mode: scored instances with highlighted text and severity badges
+   - Risk mode: top matched risks with category, relevance score, and link to the MIT AI Risk Repository
+
+**Shutdown Button** — top-right of the app page; gracefully stops both servers.
 
 ### Shutdown the Server
 

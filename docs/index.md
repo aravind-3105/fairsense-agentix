@@ -45,7 +45,7 @@ FairSense intelligently orchestrates a suite of specialized tools:
 ### 🌐 Production-Ready APIs
 - **FastAPI REST API** for programmatic access
 - **WebSocket streaming** for real-time agent telemetry
-- **React UI** with live timeline visualization
+- **React UI** with landing page, demo examples, and live timeline visualization
 - **Batch processing** for large-scale analysis jobs
 
 ### ⚙️ Highly Configurable
@@ -142,11 +142,12 @@ This starts:
 - **Backend API** at `http://localhost:8000`
 - **React UI** at `http://localhost:5173`
 
-The UI provides:
-- Text input field and image drag-and-drop
-- Live agent timeline showing reasoning steps
-- Downloadable results (HTML highlights, CSV tables)
-- Batch job management
+The UI has two pages:
+
+- **Landing page** (`/`) — introduces the platform with a hero section, background gradient, and three analysis mode cards (Bias Text, Bias Image, Risk). Click any card to jump directly into that mode.
+- **Analysis app** (`/analyze`) — select a mode from the tab bar, then paste text, upload an image, or describe an AI deployment scenario. Each mode includes **clickable demo examples** in the right column to pre-fill inputs instantly. Results show a live agent timeline on the left and structured output on the right.
+
+Risk results link to the [MIT AI Risk Repository](https://airisk.mit.edu/) and display relevance scores (0–1) with category labels from the repository's Domain Taxonomy.
 
 ---
 
