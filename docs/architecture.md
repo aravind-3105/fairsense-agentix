@@ -9,37 +9,39 @@ This page documents the system architecture of FairSense-AgentiX, including the 
 FairSense-AgentiX is built on an **agentic architecture** that uses a ReAct (Reasoning + Acting) pattern to intelligently analyze content for bias and AI risks. Unlike traditional ML pipelines, the system dynamically selects tools, evaluates outputs, and refines results through an iterative feedback loop.
 
 ```mermaid
-graph TB
-    Client[Client Entry Point<br/>API/CLI/GUI]
+flowchart TB
+    Client(["Client\nAPI · CLI · GUI"])
 
-    subgraph FairSense API
-        API[FairSense Class<br/>analyze_text/analyze_image/assess_risk]
+    subgraph api ["FairSense API"]
+        API["FairSense Class\nanalyze_text · analyze_image · assess_risk"]
     end
 
-    subgraph Orchestrator Supergraph
-        Router[Router<br/>Workflow Selection]
-        Preflight[Preflight Evaluation]
-        Executor[Execute Workflow]
-        Evaluator[Post-hoc Evaluation]
-        Decision[Decide Action]
-        Refinement[Apply Refinement]
-        Finalize[Finalize Result]
+    subgraph orch ["Orchestrator Supergraph"]
+        Router["Router\nWorkflow Selection"]
+        Preflight["Preflight\nEvaluation"]
+        Executor["Execute\nWorkflow"]
+        Evaluator["Post-hoc\nEvaluation"]
+        Decision{"Decide\nAction"}
+        Refinement["Apply\nRefinement"]
+        Finalize["Finalize\nResult"]
     end
 
-    subgraph Workflow Subgraphs
-        BiasText[Bias Text Workflow<br/>LLM → Summarize → Highlight]
-        BiasImage[Bias Image Workflow<br/>OCR + Caption → LLM → Highlight]
-        BiasVLM[Bias Image VLM Workflow<br/>VLM → Highlight]
-        Risk[Risk Workflow<br/>Embed → FAISS → RMF]
+    subgraph wf ["Workflow Subgraphs"]
+        direction LR
+        BiasText["Bias Text\nLLM → Summarize → Highlight"]
+        BiasImage["Bias Image\nOCR + Caption → LLM → Highlight"]
+        BiasVLM["Bias Image VLM\nVLM → Highlight"]
+        Risk["Risk Assessment\nEmbed → FAISS → RMF"]
     end
 
-    subgraph Tool Ecosystem
-        OCR[OCR Tool<br/>Tesseract/PaddleOCR]
-        Caption[Caption Tool<br/>BLIP/BLIP-2]
-        VLM[VLM Tool<br/>GPT-4V/Claude Vision]
-        LLM[LLM Tool<br/>GPT-4/Claude]
-        Embedder[Embedder<br/>sentence-transformers]
-        FAISS[FAISS Indices<br/>Risks + RMF]
+    subgraph tools ["Tool Ecosystem"]
+        direction LR
+        OCR["OCR\nTesseract / PaddleOCR"]
+        Caption["Caption\nBLIP / BLIP-2"]
+        VLM["VLM\nGPT-4V / Claude Vision"]
+        LLM["LLM\nGPT-4 / Claude"]
+        Embedder["Embedder\nsentence-transformers"]
+        FAISS["FAISS Indices\nRisks + RMF"]
     end
 
     Client --> API
@@ -52,8 +54,8 @@ graph TB
     Executor --> Risk
     Executor --> Evaluator
     Evaluator --> Decision
-    Decision -->|accept/fail| Finalize
-    Decision -->|refine| Refinement
+    Decision -- "accept / fail" --> Finalize
+    Decision -- "refine" --> Refinement
     Refinement --> Router
     Finalize --> API
 
@@ -65,9 +67,12 @@ graph TB
     Risk --> Embedder
     Risk --> FAISS
 
-    style Orchestrator fill:#e1f5ff
-    style Workflow Subgraphs fill:#fff4e6
-    style Tool Ecosystem fill:#f3e5f5
+    style Client fill:#fce4ec,stroke:#eb088a,stroke-width:3px,color:#9c0057
+    style api fill:#fce4ec,stroke:#f48fb1,color:#000
+    style orch fill:#e3f2fd,stroke:#90caf9,color:#000
+    style wf fill:#fff3e0,stroke:#ffcc80,color:#000
+    style tools fill:#f3e5f5,stroke:#ce93d8,color:#000
+    style Decision fill:#fff9c4,stroke:#f9a825,color:#000
 ```
 
 ### Key Design Principles
@@ -123,22 +128,31 @@ graph TB
 #### State Flow
 
 ```mermaid
-stateDiagram-v2
-    [*] --> request_plan
+flowchart LR
+    S((" ")) --> request_plan
+
+    request_plan["request_plan"]
+    preflight_eval["preflight_eval"]
+    execute_workflow["execute_workflow"]
+    posthoc_eval["posthoc_eval"]
+    decide_action{"decide_action"}
+    apply_refinement["apply_refinement\n*(max 2-3 iterations)*"]
+    finalize["finalize"]
+    E((" "))
+
     request_plan --> preflight_eval
-    preflight_eval --> execute_workflow : passed
-    preflight_eval --> finalize : failed
+    preflight_eval -- "passed" --> execute_workflow
+    preflight_eval -- "failed" --> finalize
     execute_workflow --> posthoc_eval
     posthoc_eval --> decide_action
-    decide_action --> finalize : accept/fail
-    decide_action --> apply_refinement : refine
-    apply_refinement --> request_plan
-    finalize --> [*]
+    decide_action -- "accept/fail" --> finalize
+    decide_action -- "refine" --> apply_refinement
+    apply_refinement -- "retry" --> request_plan
+    finalize --> E
 
-    note right of apply_refinement
-        Refinement Loop
-        (max 2-3 iterations)
-    end note
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style decide_action fill:#fff9c4,stroke:#f9a825,color:#000
 ```
 
 **Key Features:**
@@ -196,13 +210,17 @@ stateDiagram-v2
 
 **Flow:**
 ```mermaid
-graph LR
-    START --> analyze_bias[Analyze Bias<br/>LLM call with structured output]
-    analyze_bias --> summarize{Need Summary?<br/>text > 500 chars}
-    summarize -->|yes| generate_summary[Generate Summary<br/>LLM call]
-    summarize -->|no| highlight[Highlight HTML<br/>Span extraction]
+flowchart LR
+    S((" ")) --> analyze_bias["Analyze Bias\nLLM call with structured output"]
+    analyze_bias --> summarize{"Need Summary?\ntext > 500 chars"}
+    summarize -- "yes" --> generate_summary["Generate Summary\nLLM call"]
+    summarize -- "no" --> highlight["Highlight HTML\nSpan extraction"]
     generate_summary --> highlight
-    highlight --> END
+    highlight --> E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style summarize fill:#fff9c4,stroke:#f9a825,color:#000
 ```
 
 **Nodes:**
@@ -223,18 +241,21 @@ graph LR
 
 **Flow:**
 ```mermaid
-graph LR
-    START --> parallel[Parallel Execution]
-    parallel --> ocr[OCR<br/>Extract text]
-    parallel --> caption[Caption<br/>Describe image]
-    ocr --> merge[Merge Text<br/>Combine OCR + caption]
+flowchart LR
+    S((" ")) --> ocr["OCR\nExtract text"]
+    S --> caption["Caption\nDescribe image"]
+    ocr --> merge["Merge Text\nCombine OCR + caption"]
     caption --> merge
-    merge --> analyze_bias[Analyze Bias<br/>LLM call]
-    analyze_bias --> summarize{Need Summary?}
-    summarize -->|yes| generate_summary[Generate Summary]
-    summarize -->|no| highlight[Highlight HTML]
+    merge --> analyze_bias["Analyze Bias\nLLM call"]
+    analyze_bias --> summarize{"Need Summary?"}
+    summarize -- "yes" --> generate_summary["Generate Summary"]
+    summarize -- "no" --> highlight["Highlight HTML"]
     generate_summary --> highlight
-    highlight --> END
+    highlight --> E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style summarize fill:#fff9c4,stroke:#f9a825,color:#000
 ```
 
 **Nodes:**
@@ -263,13 +284,17 @@ graph LR
 
 **Flow:**
 ```mermaid
-graph LR
-    START --> vlm_analyze[VLM Analysis<br/>Single multimodal call]
-    vlm_analyze --> summarize{Need Summary?}
-    summarize -->|yes| generate_summary[Generate Summary]
-    summarize -->|no| highlight[Highlight HTML]
+flowchart LR
+    S((" ")) --> vlm_analyze["VLM Analysis\nSingle multimodal call"]
+    vlm_analyze --> summarize{"Need Summary?"}
+    summarize -- "yes" --> generate_summary["Generate Summary"]
+    summarize -- "no" --> highlight["Highlight HTML"]
     generate_summary --> highlight
-    highlight --> END
+    highlight --> E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style summarize fill:#fff9c4,stroke:#f9a825,color:#000
 ```
 
 **Nodes:**
@@ -298,14 +323,17 @@ graph LR
 
 **Flow:**
 ```mermaid
-graph LR
-    START --> embed[Embed Scenario<br/>Text → vector]
-    embed --> retrieve_risks[Retrieve Risks<br/>FAISS similarity search]
-    retrieve_risks --> retrieve_rmf[Retrieve RMF<br/>Per-risk recommendations]
-    retrieve_rmf --> join[Join Tables<br/>Combine risks + RMF]
-    join --> format[Format Output<br/>HTML table + CSV]
-    format --> persist[Persist CSV<br/>Save to outputs/]
-    persist --> END
+flowchart LR
+    S((" ")) --> embed["Embed Scenario\nText → vector"]
+    embed --> retrieve_risks["Retrieve Risks\nFAISS similarity search"]
+    retrieve_risks --> retrieve_rmf["Retrieve RMF\nPer-risk recommendations"]
+    retrieve_rmf --> join["Join Tables\nCombine risks + RMF"]
+    join --> format["Format Output\nHTML table + CSV"]
+    format --> persist["Persist CSV\nSave to outputs/"]
+    persist --> E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
 ```
 
 **Nodes:**
@@ -646,6 +674,7 @@ sequenceDiagram
     C->>O: analyze_image(image_bytes)
     O->>R: request_plan("image", bytes)
     R-->>O: SelectionPlan(workflow_id="bias_image_vlm")
+    O->>O: preflight_eval (validate plan)
     O->>BV: invoke(image_bytes, options)
     BV->>VLM: analyze_image(bytes, prompt, BiasVisualAnalysisOutput)
     Note over VLM: Single multimodal LLM call<br/>with CoT reasoning
@@ -655,6 +684,7 @@ sequenceDiagram
     O->>E: posthoc_eval(result)
     E-->>O: EvaluationResult(passed=true)
     O->>O: decide_action → accept
+    O->>O: finalize
     O-->>C: BiasResult
 ```
 
@@ -673,6 +703,7 @@ sequenceDiagram
     C->>O: assess_risk("deployment scenario")
     O->>R: request_plan("csv", content)
     R-->>O: SelectionPlan(workflow_id="risk")
+    O->>O: preflight_eval (validate plan)
     O->>RG: invoke(scenario_text, options)
     RG->>Embed: embed(scenario_text)
     Embed-->>RG: [384-dim vector]
@@ -685,6 +716,7 @@ sequenceDiagram
     Form-->>RG: html_table, csv_path
     RG-->>O: {risks, rmf_recommendations, html_table, csv_path}
     O->>O: decide_action → accept
+    O->>O: finalize
     O-->>C: RiskResult
 ```
 
