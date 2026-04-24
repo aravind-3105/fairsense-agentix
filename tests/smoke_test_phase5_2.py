@@ -135,9 +135,12 @@ class TestPhase52Integration:
         # Invoke with sample input
         result = graph.invoke(
             {
-                "text": "Sample job posting: Looking for a young, energetic salesman to join our team.",
+                "text": (
+                    "Sample job posting: Looking for a young, energetic salesman "
+                    "to join our team."
+                ),
                 "options": {"temperature": 0.3},
-            }
+            },
         )
 
         # Verify graph produced expected output structure
@@ -164,7 +167,7 @@ class TestPhase52Integration:
             {
                 "image_bytes": b"fake_image_data",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify output structure
@@ -189,7 +192,7 @@ class TestPhase52Integration:
             {
                 "scenario": "AI system making loan approval decisions",
                 "options": {},
-            }
+            },
         )
 
         # Verify output structure

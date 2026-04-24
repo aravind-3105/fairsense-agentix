@@ -37,7 +37,7 @@ class TestBiasTextGraphIntegration:
             {
                 "text": "Hiring software engineers",
                 "options": {},
-            }
+            },
         )
 
         # Verify complete pipeline execution
@@ -62,7 +62,7 @@ class TestBiasTextGraphIntegration:
 
         # Case 2: Short text with explicit option triggers summary
         result_option = graph.invoke(
-            {"text": "Short text", "options": {"enable_summary": True}}
+            {"text": "Short text", "options": {"enable_summary": True}},
         )
         assert result_option["summary"] is not None
 
@@ -91,7 +91,7 @@ class TestBiasImageGraphIntegration:
             {
                 "image_bytes": b"fake_image_data",
                 "options": {"validate_image_bytes": False},
-            }
+            },
         )
 
         # Verify parallel extraction outputs (proves both branches executed)
@@ -139,7 +139,7 @@ class TestRiskGraphIntegration:
                 "scenario_text": "Deploying facial recognition in public spaces",
                 "run_id": "test-run-123",
                 "options": {},
-            }
+            },
         )
 
         # Verify complete sequential pipeline
@@ -176,7 +176,7 @@ class TestRiskGraphIntegration:
                 "scenario_text": "AI deployment scenario",
                 "run_id": "test-run-456",
                 "options": {"top_k": 3},
-            }
+            },
         )
 
         # Should return at most 3 risks
@@ -204,11 +204,11 @@ class TestCrossGraphIntegration:
 
         # Execute in random order to prove no shared state
         risk_result = risk_graph.invoke(
-            {"scenario_text": "Test scenario", "run_id": "test-r1", "options": {}}
+            {"scenario_text": "Test scenario", "run_id": "test-r1", "options": {}},
         )
         text_result = text_graph.invoke({"text": "Test text", "options": {}})
         image_result = image_graph.invoke(
-            {"image_bytes": b"test_image", "options": {"validate_image_bytes": False}}
+            {"image_bytes": b"test_image", "options": {"validate_image_bytes": False}},
         )
 
         # All should produce valid outputs

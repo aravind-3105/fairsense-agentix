@@ -193,7 +193,7 @@ class TesseractOCRTool:
             result = " ".join(texts)
             logger.debug(
                 f"Tesseract extracted {len(texts)} text segments "
-                f"({len(result)} chars total, language={language})"
+                f"({len(result)} chars total, language={language})",
             )
             return result
 

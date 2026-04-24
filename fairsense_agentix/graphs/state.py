@@ -70,7 +70,7 @@ class SelectionPlan(BaseModel):
     """
 
     workflow_id: Literal["bias_text", "bias_image", "bias_image_vlm", "risk"] = Field(
-        description="Which workflow to execute"
+        description="Which workflow to execute",
     )
 
     reasoning: str = Field(description="Human-readable explanation of router decision")
@@ -207,7 +207,7 @@ class OrchestratorState(BaseModel):
 
     # Input
     input_type: Literal["text", "image", "csv"] = Field(
-        description="Type of input being processed"
+        description="Type of input being processed",
     )
 
     content: str | bytes = Field(description="The actual input content")
@@ -468,7 +468,9 @@ class BiasImageVLMState(BaseModel):
     # VLM Analysis (single call with embedded CoT)
     vlm_analysis: Any = Field(
         default=None,
-        description="VLM output with reasoning traces (BiasVisualAnalysisOutput object)",
+        description=(
+            "VLM output with reasoning traces (BiasVisualAnalysisOutput object)"
+        ),
     )
 
     # Post-processing (reuses existing formatter/summarizer)
@@ -484,7 +486,10 @@ class BiasImageVLMState(BaseModel):
 
     image_base64: str | None = Field(
         default=None,
-        description="Base64-encoded image with data URL for UI display (data:image/...;base64,...)",
+        description=(
+            "Base64-encoded image with data URL for UI display "
+            "(data:image/...;base64,...)"
+        ),
     )
 
     run_id: str = Field(

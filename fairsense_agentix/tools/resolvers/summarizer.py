@@ -91,7 +91,7 @@ def _resolve_summarizer_tool(settings: Settings) -> SummarizerTool:
             )
 
         logger.info(
-            f"Creating LLMSummarizer (plain text model from {settings.llm_provider})"
+            f"Creating LLMSummarizer (plain text model from {settings.llm_provider})",
         )
 
         return LLMSummarizer(

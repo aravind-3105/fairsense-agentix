@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 import uuid
@@ -46,6 +47,9 @@ from fairsense_agentix.services import telemetry
 from fairsense_agentix.services.event_bus import AgentEventBus
 
 
+logger = logging.getLogger(__name__)
+
+
 # Module-level state (initialized in lifespan)
 engine: FairSense
 event_bus: AgentEventBus
@@ -71,25 +75,25 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     global engine, event_bus  # noqa: PLW0603
 
     # STARTUP: Preload models and tools
-    print("🔥 FairSense AgentiX starting up...")
-    print("⏳ Preloading models and tools (this takes 30-45s)...")
+    logger.info("🔥 FairSense AgentiX starting up...")
+    logger.info("⏳ Preloading models and tools (this takes 30-45s)...")
 
     # Initialize FairSense (triggers eager tool loading via api.py __init__)
     engine = FairSense()
-    print("✅ FairSense engine initialized with all models loaded")
+    logger.info("✅ FairSense engine initialized with all models loaded")
 
     # Initialize event bus for WebSocket streaming
     event_bus = AgentEventBus(telemetry)
     loop = asyncio.get_running_loop()
     event_bus.attach_loop(loop)
-    print("✅ Event bus attached to event loop")
+    logger.info("✅ Event bus attached to event loop")
 
-    print("🚀 Server ready! All requests will be fast now.")
+    logger.info("🚀 Server ready! All requests will be fast now.")
 
     yield  # Server runs here
 
     # SHUTDOWN: Cleanup
-    print("🛑 Shutting down FairSense AgentiX...")
+    logger.info("🛑 Shutting down FairSense AgentiX...")
 
 
 app = FastAPI(
@@ -129,7 +133,7 @@ async def shutdown(background_tasks: BackgroundTasks) -> dict[str, str]:
     def _shutdown() -> None:
         """Background task to exit cleanly after response is sent."""
         time.sleep(1)  # Give time for response to be sent
-        print("🛑 Shutdown requested via API - exiting gracefully...")
+        logger.info("🛑 Shutdown requested via API - exiting gracefully...")
         os._exit(0)  # Clean exit - launcher will detect and cleanup ports
 
     background_tasks.add_task(_shutdown)
@@ -157,7 +161,7 @@ async def analyze_upload(
     data = await file.read()
     # Convert filename string to Path for proper extension detection
     detected = input_type or detect_input_type(
-        Path(file.filename) if file.filename else data
+        Path(file.filename) if file.filename else data,
     )
 
     # Handle image vs text with proper error handling
@@ -239,7 +243,7 @@ async def analyze_upload_start(
     # Read and process file
     data = await file.read()
     detected = input_type or detect_input_type(
-        Path(file.filename) if file.filename else data
+        Path(file.filename) if file.filename else data,
     )
 
     # Handle image vs text with proper error handling
@@ -366,7 +370,7 @@ async def _run_analysis(
             else str(content).encode("utf-8")
         )
         bias_result = await anyio.to_thread.run_sync(
-            lambda: fs.analyze_image(image_bytes, run_id=run_id, **options)
+            lambda: fs.analyze_image(image_bytes, run_id=run_id, **options),
         )
         return AnalyzeResponse.from_bias_result(bias_result)
 
@@ -377,12 +381,12 @@ async def _run_analysis(
     )
     if input_type == "csv":
         risk_result = await anyio.to_thread.run_sync(
-            lambda: fs.assess_risk(text_content, run_id=run_id, **options)
+            lambda: fs.assess_risk(text_content, run_id=run_id, **options),
         )
         return AnalyzeResponse.from_risk_result(risk_result)
 
     bias_result = await anyio.to_thread.run_sync(
-        lambda: fs.analyze_text(text_content, run_id=run_id, **options)
+        lambda: fs.analyze_text(text_content, run_id=run_id, **options),
     )
     return AnalyzeResponse.from_bias_result(bias_result)
 
@@ -403,13 +407,15 @@ async def _run_analysis_background(
     3. Publishes a final 'complete' event through WebSocket with the full result
     """
     try:
-        print(f"[DEBUG] Background task started for run_id={run_id}")
+        logger.debug("Background task started for run_id=%s", run_id)
 
         # Run the analysis WITH our run_id so all telemetry uses it
         result = await _run_analysis(fs, input_type, content, options, run_id=run_id)
 
-        print(
-            f"[DEBUG] Analysis completed, result run_id={result.metadata['run_id']}, our run_id={run_id}"
+        logger.debug(
+            "Analysis completed, result run_id=%s, our run_id=%s",
+            result.metadata["run_id"],
+            run_id,
         )
 
         # Store result for potential polling
@@ -433,7 +439,9 @@ async def _run_analysis_background(
             queue = event_bus._queues.get(run_id)
             if queue:
                 event_bus._loop.call_soon_threadsafe(
-                    event_bus._enqueue, queue, completion_payload
+                    event_bus._enqueue,
+                    queue,
+                    completion_payload,
                 )
 
     except Exception as e:  # pragma: no cover - best effort error handling
@@ -453,5 +461,7 @@ async def _run_analysis_background(
             queue = event_bus._queues.get(run_id)
             if queue:
                 event_bus._loop.call_soon_threadsafe(
-                    event_bus._enqueue, queue, error_payload
+                    event_bus._enqueue,
+                    queue,
+                    error_payload,
                 )

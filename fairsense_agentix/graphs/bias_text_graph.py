@@ -305,19 +305,27 @@ def analyze_bias(state: BiasTextState) -> dict:
                     using_fallback=True,
                 )
                 # Fallback to hardcoded prompt if template not found
-                prompt_template = """You are a bias detection specialist analyzing text for various forms of bias.
-
-Your task is to carefully analyze the provided text and identify ANY instances of bias across these categories:
-- **Gender bias**: Gendered language, stereotypes, exclusionary terms
-- **Age bias**: Age discrimination, ageist assumptions, generational stereotypes
-- **Racial/ethnic bias**: Racial stereotypes, cultural assumptions, exclusionary language
-- **Disability bias**: Ableist language, accessibility assumptions, capability stereotypes
-- **Socioeconomic bias**: Class-based assumptions, privilege bias, economic stereotypes
-
-**TEXT TO ANALYZE:**
-{text}
-
-Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [...], "overall_assessment": str, "risk_level": str}}"""
+                prompt_template = (
+                    "You are a bias detection specialist analyzing text for "
+                    "various forms of bias.\n\n"
+                    "Your task is to carefully analyze the provided text and "
+                    "identify ANY instances of bias across these categories:\n"
+                    "- **Gender bias**: Gendered language, stereotypes, "
+                    "exclusionary terms\n"
+                    "- **Age bias**: Age discrimination, ageist assumptions, "
+                    "generational stereotypes\n"
+                    "- **Racial/ethnic bias**: Racial stereotypes, cultural "
+                    "assumptions, exclusionary language\n"
+                    "- **Disability bias**: Ableist language, accessibility "
+                    "assumptions, capability stereotypes\n"
+                    "- **Socioeconomic bias**: Class-based assumptions, "
+                    "privilege bias, economic stereotypes\n\n"
+                    "**TEXT TO ANALYZE:**\n"
+                    "{text}\n\n"
+                    "Return valid JSON with structure: "
+                    '{{"bias_detected": bool, "bias_instances": [...], '
+                    '"overall_assessment": str, "risk_level": str}}'
+                )
 
             # Build prompt with text
             prompt = prompt_template.format(text=text)
@@ -328,7 +336,8 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
                 prompt += (
                     "\nEvaluator feedback to address:\n"
                     f"{feedback_section}\n"
-                    "Ensure the refreshed analysis explicitly incorporates the feedback above.\n"
+                    "Ensure the refreshed analysis explicitly incorporates "
+                    "the feedback above.\n"
                 )
 
             # Call LLM via registry with structured output
@@ -336,7 +345,9 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
             # Fake LLM now returns JSON string that we parse into BiasAnalysisOutput
             with telemetry.timer("bias_text.llm_call", temperature=temperature):
                 llm_output = registry.llm.predict(
-                    prompt=prompt, temperature=temperature, max_tokens=max_tokens
+                    prompt=prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                 )
 
             # Parse LLM output into BiasAnalysisOutput
@@ -355,7 +366,8 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
                 try:
                     bias_analysis = BiasAnalysisOutput.model_validate_json(llm_output)
                     telemetry.log_info(
-                        "bias_analysis_parsed", format="json_to_pydantic"
+                        "bias_analysis_parsed",
+                        format="json_to_pydantic",
                     )
                 except Exception as e:
                     telemetry.log_error(
@@ -364,13 +376,13 @@ Return valid JSON with structure: {{"bias_detected": bool, "bias_instances": [..
                         output_preview=llm_output[:100],
                     )
                     raise ValueError(
-                        f"Failed to parse LLM output into BiasAnalysisOutput: {e}"
+                        f"Failed to parse LLM output into BiasAnalysisOutput: {e}",
                     ) from e
             else:
                 # Unexpected type
                 raise TypeError(
                     f"Unexpected LLM output type: {type(llm_output)}. "
-                    "Expected BiasAnalysisOutput or JSON string."
+                    "Expected BiasAnalysisOutput or JSON string.",
                 )
 
             telemetry.log_info(
@@ -416,7 +428,8 @@ def summarize(state: BiasTextState) -> dict:
     """
     with telemetry.timer("bias_text.summarize"):
         telemetry.log_info(
-            "bias_text_summarize_start", run_id=state.run_id or "unknown"
+            "bias_text_summarize_start",
+            run_id=state.run_id or "unknown",
         )
 
         try:
@@ -450,7 +463,8 @@ def summarize(state: BiasTextState) -> dict:
 
                 with telemetry.timer("bias_text.summarizer_tool"):
                     summary = registry.summarizer.summarize(
-                        text=text_to_summarize, max_length=max_length
+                        text=text_to_summarize,
+                        max_length=max_length,
                     )
                 telemetry.log_info(
                     "bias_text_summarize_complete",
@@ -503,7 +517,8 @@ def highlight(state: BiasTextState) -> dict:
     """
     with telemetry.timer("bias_text.highlight"):
         telemetry.log_info(
-            "bias_text_highlight_start", run_id=state.run_id or "unknown"
+            "bias_text_highlight_start",
+            run_id=state.run_id or "unknown",
         )
 
         try:
@@ -523,7 +538,8 @@ def highlight(state: BiasTextState) -> dict:
                 telemetry.log_info("spans_extracted", span_count=len(spans))
             else:
                 telemetry.log_warning(
-                    "highlight_no_analysis", reason="no_bias_analysis"
+                    "highlight_no_analysis",
+                    reason="no_bias_analysis",
                 )
 
             # Get bias type colors from configuration
@@ -534,10 +550,13 @@ def highlight(state: BiasTextState) -> dict:
             try:
                 with telemetry.timer("bias_text.formatter_tool"):
                     highlighted_html = registry.formatter.highlight_fragment(
-                        text=state.text, spans=spans, bias_types=bias_types
+                        text=state.text,
+                        spans=spans,
+                        bias_types=bias_types,
                     )
                 telemetry.log_info(
-                    "bias_text_highlight_complete", html_length=len(highlighted_html)
+                    "bias_text_highlight_complete",
+                    html_length=len(highlighted_html),
                 )
             except Exception as e:
                 telemetry.log_error("highlighting_failed", error=e)

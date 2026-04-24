@@ -12,8 +12,16 @@ The script intelligently maps risks to appropriate RMF functions based on:
 """
 
 import csv
+import logging
+import os
 import sys
 from pathlib import Path
+
+
+# Intentionally do not import `fairsense_agentix` here: importing the package runs
+# `__init__.py` and pulls heavy deps (e.g. transformers). This script only needs stdlib.
+
+logger = logging.getLogger(__name__)
 
 
 def clean_text(text: str) -> str:
@@ -88,7 +96,9 @@ def map_domain_to_severity(domain: str) -> str:
 
 
 def map_domain_to_rmf_functions(
-    domain: str, timing: str, intent: str
+    domain: str,
+    timing: str,
+    intent: str,
 ) -> list[dict[str, str]]:
     """Map a risk's characteristics to appropriate NIST AI-RMF functions.
 
@@ -100,53 +110,132 @@ def map_domain_to_rmf_functions(
 
     # GOVERN recommendations (policy, oversight, accountability)
     govern_templates = {
-        "discrimination": "Establish governance policies for fairness testing and bias monitoring across all AI systems",
-        "privacy": "Implement data governance frameworks ensuring privacy-by-design principles and compliance with regulations",
-        "misinformation": "Create oversight mechanisms to verify information accuracy and establish content moderation policies",
-        "malicious": "Define security governance policies and incident response procedures for AI system threats",
-        "socioeconomic": "Establish governance structures for monitoring societal impacts and stakeholder engagement",
-        "ai system": "Create technical governance frameworks for AI safety, testing protocols, and risk management",
-        "human-computer": "Develop human oversight policies ensuring appropriate human control and intervention capabilities",
+        "discrimination": (
+            "Establish governance policies for fairness testing and bias monitoring "
+            "across all AI systems"
+        ),
+        "privacy": (
+            "Implement data governance frameworks ensuring privacy-by-design "
+            "principles and compliance with regulations"
+        ),
+        "misinformation": (
+            "Create oversight mechanisms to verify information accuracy and "
+            "establish content moderation policies"
+        ),
+        "malicious": (
+            "Define security governance policies and incident response procedures "
+            "for AI system threats"
+        ),
+        "socioeconomic": (
+            "Establish governance structures for monitoring societal impacts and "
+            "stakeholder engagement"
+        ),
+        "ai system": (
+            "Create technical governance frameworks for AI safety, testing "
+            "protocols, and risk management"
+        ),
+        "human-computer": (
+            "Develop human oversight policies ensuring appropriate human control "
+            "and intervention capabilities"
+        ),
     }
 
     # MAP recommendations (risk identification and categorization)
     map_templates = {
-        "discrimination": "Conduct comprehensive bias audits across protected characteristics and use cases",
-        "privacy": "Map data flows and identify privacy risks throughout the AI system lifecycle",
-        "misinformation": "Identify potential sources of misinformation and map information pathways",
-        "malicious": "Perform threat modeling to identify attack surfaces and security vulnerabilities",
-        "socioeconomic": "Map potential socioeconomic impacts across different stakeholder groups",
-        "ai system": "Conduct technical risk assessments identifying failure modes and safety boundaries",
-        "human-computer": "Map human-AI interaction points and identify areas requiring human oversight",
+        "discrimination": (
+            "Conduct comprehensive bias audits across protected characteristics "
+            "and use cases"
+        ),
+        "privacy": (
+            "Map data flows and identify privacy risks throughout the AI system "
+            "lifecycle"
+        ),
+        "misinformation": (
+            "Identify potential sources of misinformation and map information pathways"
+        ),
+        "malicious": (
+            "Perform threat modeling to identify attack surfaces and security "
+            "vulnerabilities"
+        ),
+        "socioeconomic": (
+            "Map potential socioeconomic impacts across different stakeholder groups"
+        ),
+        "ai system": (
+            "Conduct technical risk assessments identifying failure modes and "
+            "safety boundaries"
+        ),
+        "human-computer": (
+            "Map human-AI interaction points and identify areas requiring human "
+            "oversight"
+        ),
     }
 
     # MEASURE recommendations (testing, benchmarking, monitoring)
     measure_templates = {
-        "discrimination": "Implement continuous bias metrics tracking across demographic groups and contexts",
-        "privacy": "Deploy privacy-preserving measurement techniques and conduct regular privacy audits",
-        "misinformation": "Establish accuracy benchmarks and implement fact-checking validation protocols",
-        "malicious": "Deploy security monitoring systems and conduct penetration testing regularly",
-        "socioeconomic": "Measure societal impacts using validated metrics and stakeholder feedback mechanisms",
-        "ai system": "Implement comprehensive testing suites for robustness, reliability, and safety",
-        "human-computer": "Measure user trust, reliance patterns, and human-AI collaboration effectiveness",
+        "discrimination": (
+            "Implement continuous bias metrics tracking across demographic groups "
+            "and contexts"
+        ),
+        "privacy": (
+            "Deploy privacy-preserving measurement techniques and conduct regular "
+            "privacy audits"
+        ),
+        "misinformation": (
+            "Establish accuracy benchmarks and implement fact-checking validation "
+            "protocols"
+        ),
+        "malicious": (
+            "Deploy security monitoring systems and conduct penetration testing "
+            "regularly"
+        ),
+        "socioeconomic": (
+            "Measure societal impacts using validated metrics and stakeholder "
+            "feedback mechanisms"
+        ),
+        "ai system": (
+            "Implement comprehensive testing suites for robustness, reliability, "
+            "and safety"
+        ),
+        "human-computer": (
+            "Measure user trust, reliance patterns, and human-AI collaboration "
+            "effectiveness"
+        ),
     }
 
     # MANAGE recommendations (incident response, mitigation, improvement)
     manage_templates = {
-        "discrimination": "Establish bias remediation procedures and fairness improvement feedback loops",
-        "privacy": "Implement privacy incident response plans and data protection mitigation strategies",
-        "misinformation": "Create content correction mechanisms and misinformation mitigation workflows",
-        "malicious": "Deploy security incident response and threat mitigation capabilities",
-        "socioeconomic": "Establish harm mitigation procedures and stakeholder support mechanisms",
-        "ai system": "Implement safety fallbacks, failure recovery procedures, and continuous improvement processes",
-        "human-computer": "Manage human oversight escalation and intervention procedures",
+        "discrimination": (
+            "Establish bias remediation procedures and fairness improvement "
+            "feedback loops"
+        ),
+        "privacy": (
+            "Implement privacy incident response plans and data protection "
+            "mitigation strategies"
+        ),
+        "misinformation": (
+            "Create content correction mechanisms and misinformation mitigation "
+            "workflows"
+        ),
+        "malicious": (
+            "Deploy security incident response and threat mitigation capabilities"
+        ),
+        "socioeconomic": (
+            "Establish harm mitigation procedures and stakeholder support mechanisms"
+        ),
+        "ai system": (
+            "Implement safety fallbacks, failure recovery procedures, and "
+            "continuous improvement processes"
+        ),
+        "human-computer": (
+            "Manage human oversight escalation and intervention procedures"
+        ),
     }
 
     # Select appropriate templates based on domain
     for keyword, template in govern_templates.items():
         if keyword in domain_lower:
             recommendations.append(
-                {"function": "GOVERN", "action": template, "priority": "HIGH"}
+                {"function": "GOVERN", "action": template, "priority": "HIGH"},
             )
             break
 
@@ -157,14 +246,14 @@ def map_domain_to_rmf_functions(
                     "function": "MAP",
                     "action": template,
                     "priority": "HIGH" if timing == "1 - Pre-deployment" else "MEDIUM",
-                }
+                },
             )
             break
 
     for keyword, template in measure_templates.items():
         if keyword in domain_lower:
             recommendations.append(
-                {"function": "MEASURE", "action": template, "priority": "HIGH"}
+                {"function": "MEASURE", "action": template, "priority": "HIGH"},
             )
             break
 
@@ -175,7 +264,7 @@ def map_domain_to_rmf_functions(
                     "function": "MANAGE",
                     "action": template,
                     "priority": "MEDIUM" if intent == "2 - Unintentional" else "HIGH",
-                }
+                },
             )
             break
 
@@ -186,25 +275,33 @@ def map_domain_to_rmf_functions(
             recommendations.append(
                 {
                     "function": "GOVERN",
-                    "action": "Establish AI risk management governance policies and accountability structures",
+                    "action": (
+                        "Establish AI risk management governance policies and "
+                        "accountability structures"
+                    ),
                     "priority": "HIGH",
-                }
+                },
             )
         if not any(r["function"] == "MAP" for r in recommendations):
             recommendations.append(
                 {
                     "function": "MAP",
-                    "action": "Conduct comprehensive risk assessment and impact analysis",
+                    "action": (
+                        "Conduct comprehensive risk assessment and impact analysis"
+                    ),
                     "priority": "MEDIUM",
-                }
+                },
             )
         if not any(r["function"] == "MEASURE" for r in recommendations):
             recommendations.append(
                 {
                     "function": "MEASURE",
-                    "action": "Implement monitoring and measurement systems for risk indicators",
+                    "action": (
+                        "Implement monitoring and measurement systems for risk "
+                        "indicators"
+                    ),
                     "priority": "MEDIUM",
-                }
+                },
             )
 
     return recommendations
@@ -215,7 +312,7 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
 
     Returns a dictionary mapping risk_id -> risk metadata for RMF generation.
     """
-    print(f"Reading risks from: {input_path}")
+    logger.info("Reading risks from: %s", input_path)
 
     risks = []
     risk_metadata = {}  # For RMF generation
@@ -226,7 +323,7 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
         header_found = False
         for line_num, line in enumerate(f):
             if "Category level" in line:
-                print(f"DEBUG: Found header row at line {line_num + 1}")
+                logger.debug("Found header row at line %s", line_num + 1)
                 # Rewind to start of file
                 f.seek(0)
                 # Skip all lines before the header
@@ -236,7 +333,9 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
                 break
 
         if not header_found:
-            print("ERROR: Could not find header row with 'Category level' column")
+            logger.error(
+                "Could not find header row with 'Category level' column",
+            )
             return {}
 
         # Now read CSV starting from the actual header row
@@ -244,9 +343,10 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
 
         # Debug: Print actual column names
         if reader.fieldnames:
-            print(
-                f"DEBUG: CSV columns found: {reader.fieldnames[:10]}"
-            )  # First 10 columns
+            logger.debug(
+                "CSV columns found (first 10): %s",
+                reader.fieldnames[:10],
+            )
 
         total_rows = 0
         filtered_by_category = 0
@@ -257,8 +357,13 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
 
             # Debug: Print first few rows
             if total_rows <= 5:
-                print(
-                    f"DEBUG Row {total_rows}: Category level = '{row.get('Category level', '')}', Description length = {len(row.get('Description', ''))}"
+                cat_level = row.get("Category level", "")
+                desc_len = len(row.get("Description", ""))
+                logger.debug(
+                    "Row %s: category_level=%r description_length=%s",
+                    total_rows,
+                    cat_level,
+                    desc_len,
                 )
 
             # Skip header rows and paper-level entries
@@ -297,7 +402,7 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
                     "description": description,
                     "severity": severity,
                     "category": category,
-                }
+                },
             )
 
             # Store metadata for RMF generation
@@ -312,31 +417,33 @@ def transform_risks_data(input_path: Path, output_path: Path) -> dict[str, dict]
 
             risk_id_counter += 1
 
-    # Print filtering summary
-    print("\nFiltering summary:")
-    print(f"  Total rows read: {total_rows}")
-    print(f"  Filtered by category level: {filtered_by_category}")
-    print(f"  Filtered by description length: {filtered_by_description}")
-    print(f"  Final risk entries: {len(risks)}")
+    logger.info("")
+    logger.info("Filtering summary:")
+    logger.info("  Total rows read: %s", total_rows)
+    logger.info("  Filtered by category level: %s", filtered_by_category)
+    logger.info("  Filtered by description length: %s", filtered_by_description)
+    logger.info("  Final risk entries: %s", len(risks))
 
-    # Write ai_risks.csv
-    print(f"\nWriting {len(risks)} risks to: {output_path}")
+    logger.info("")
+    logger.info("Writing %s risks to: %s", len(risks), output_path)
     with open(output_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(
-            f, fieldnames=["id", "risk_name", "description", "severity", "category"]
+            f,
+            fieldnames=["id", "risk_name", "description", "severity", "category"],
         )
         writer.writeheader()
         writer.writerows(risks)
 
-    print(f"✓ Created ai_risks.csv with {len(risks)} risk entries")
+    logger.info("Created ai_risks.csv with %s risk entries", len(risks))
     return risk_metadata
 
 
 def generate_rmf_recommendations(
-    risk_metadata: dict[str, dict], output_path: Path
+    risk_metadata: dict[str, dict],
+    output_path: Path,
 ) -> None:
     """Generate NIST AI-RMF recommendations for each risk."""
-    print("Generating RMF recommendations...")
+    logger.info("Generating RMF recommendations...")
 
     recommendations = []
     rmf_id_counter = 1
@@ -344,7 +451,9 @@ def generate_rmf_recommendations(
     for risk_id, metadata in risk_metadata.items():
         # Generate 2-4 recommendations per risk across different RMF functions
         rmf_recs = map_domain_to_rmf_functions(
-            metadata["domain"], metadata["timing"], metadata["intent"]
+            metadata["domain"],
+            metadata["timing"],
+            metadata["intent"],
         )
 
         for rec in rmf_recs:
@@ -355,36 +464,55 @@ def generate_rmf_recommendations(
                     "function": rec["function"],
                     "action": rec["action"],
                     "priority": rec["priority"],
-                }
+                },
             )
             rmf_id_counter += 1
 
     # Write ai_rmf.csv
-    print(f"Writing {len(recommendations)} RMF recommendations to: {output_path}")
+    logger.info(
+        "Writing %s RMF recommendations to: %s",
+        len(recommendations),
+        output_path,
+    )
     with open(output_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(
-            f, fieldnames=["id", "risk_id", "function", "action", "priority"]
+            f,
+            fieldnames=["id", "risk_id", "function", "action", "priority"],
         )
         writer.writeheader()
         writer.writerows(recommendations)
 
-    print(f"✓ Created ai_rmf.csv with {len(recommendations)} RMF recommendations")
+    logger.info(
+        "Created ai_rmf.csv with %s RMF recommendations",
+        len(recommendations),
+    )
 
-    # Print statistics
+    # Statistics
     function_counts: dict[str, int] = {}
     for rec in recommendations:
         func = rec["function"]
         function_counts[func] = function_counts.get(func, 0) + 1
 
-    print("\nRMF Function Distribution:")
+    logger.info("")
+    logger.info("RMF function distribution:")
     for func in ["GOVERN", "MAP", "MEASURE", "MANAGE"]:
         count = function_counts.get(func, 0)
         percentage = (count / len(recommendations) * 100) if recommendations else 0
-        print(f"  {func}: {count} ({percentage:.1f}%)")
+        logger.info("  %s: %s (%.1f%%)", func, count, percentage)
 
 
 def main() -> int:
     """Run main transformation pipeline."""
+    level_name = os.environ.get("LOGLEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    # Root may already have handlers (e.g. from other tools); force our CLI format.
+    logging.basicConfig(
+        level=level,
+        format="%(levelname)s %(message)s",
+        stream=sys.stderr,
+        force=True,
+    )
+
     print("=" * 70)
     print("MIT AI Risk Repository → FairSense-AgentiX Data Transformation")
     print("=" * 70)
@@ -392,9 +520,9 @@ def main() -> int:
 
     # Paths
     raw_dir = Path(__file__).parent.parent / "data" / "raw"
-    input_file = (
-        raw_dir
-        / "Copy of The AI Risk Repository V3_26_03_2025 (please create a copy) - AI Risk Database v3.csv"
+    input_file = raw_dir / (
+        "Copy of The AI Risk Repository V3_26_03_2025 (please create a copy) "
+        "- AI Risk Database v3.csv"
     )
 
     risks_output = raw_dir / "ai_risks.csv"
@@ -402,8 +530,10 @@ def main() -> int:
 
     # Check input file exists
     if not input_file.exists():
-        print(f"ERROR: Input file not found: {input_file}")
-        print("Please ensure the MIT AI Risk Repository CSV is in data/raw/")
+        logger.error("Input file not found: %s", input_file)
+        logger.error(
+            "Please ensure the MIT AI Risk Repository CSV is in data/raw/",
+        )
         return 1
 
     # Transform risks data

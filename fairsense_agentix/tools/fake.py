@@ -22,6 +22,7 @@ Examples
 """
 
 import csv
+import html
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -198,11 +199,13 @@ class FakeLLMTool:
                         "severity": "medium",
                         "text_span": "sample text",
                         "visual_element": "",
-                        "explanation": f"Deterministic fake bias instance (seed={seed:.2f})",
+                        "explanation": (
+                            f"Deterministic fake bias instance (seed={seed:.2f})"
+                        ),
                         "start_char": 0,
                         "end_char": 11,
                         "evidence_source": "text",
-                    }
+                    },
                 ],
                 "overall_assessment": (
                     "Fake LLM deterministic output. The text demonstrates "
@@ -256,7 +259,8 @@ class FakeSummarizerTool:
         # Deterministic summary
         summary = (
             "**Summary**: Minimal bias detected. Text is generally inclusive with\n"
-            "neutral language across gender, age, and racial dimensions. Consider adding explicit\n"
+            "neutral language across gender, age, and racial dimensions. "
+            "Consider adding explicit\n"
             "diversity statements for improvement. Confidence: 0.85"
         )
         return summary[:max_length]
@@ -380,33 +384,40 @@ class FakeFAISSIndexTool:
         for i in range(top_k):
             if is_rmf_index:
                 # RMF recommendation format (with function field for evaluator)
+                _rmf_line = (
+                    f"RMF Recommendation {i + 1}: Implement controls "
+                    f"(seed={vector_sum:.2f})"
+                )
                 results.append(
                     {
                         "id": f"RMF{i:03d}",
                         "rmf_id": f"RMF{i:03d}",
-                        "text": f"RMF Recommendation {i + 1}: Implement controls (seed={vector_sum:.2f})",
-                        "recommendation": f"RMF Recommendation {i + 1}: Implement controls (seed={vector_sum:.2f})",
+                        "text": _rmf_line,
+                        "recommendation": _rmf_line,
                         "function": rmf_functions[
                             i % 4
                         ],  # Cycle through all 4 functions
                         "category": f"Category {(i % 3) + 1}",
                         "score": 0.95 - (i * 0.1),  # Descending scores
                         "relevance_score": 0.95 - (i * 0.1),
-                    }
+                    },
                 )
             else:
                 # Risk format (original behavior)
+                _risk_line = (
+                    f"Risk {i + 1}: Bias in training data (seed={vector_sum:.2f})"
+                )
                 results.append(
                     {
                         "id": f"RISK{i:03d}",
                         "risk_id": f"RISK{i:03d}",
-                        "text": f"Risk {i + 1}: Bias in training data (seed={vector_sum:.2f})",
-                        "description": f"Risk {i + 1}: Bias in training data (seed={vector_sum:.2f})",
+                        "text": _risk_line,
+                        "description": _risk_line,
                         "score": 0.95 - (i * 0.1),  # Descending scores
                         "severity": "high" if i < 2 else "medium",
                         "category": "fairness",
                         "likelihood": "medium",
-                    }
+                    },
                 )
 
         return results
@@ -460,6 +471,10 @@ class FakeFormatterTool:
         """Generate fake highlighted HTML."""
         self.call_count_highlight += 1
 
+        phase_note = (
+            "Note: This is a Phase 4 fake. "
+            "Real highlighting will be implemented in Phase 5+."
+        )
         # Simple HTML with styles
         return f"""<!DOCTYPE html>
 <html>
@@ -490,9 +505,9 @@ class FakeFormatterTool:
 <body>
     <h1>Bias Analysis - Highlighted Text</h1>
     <div class="text-content">
-        <p>{text}</p>
+        <p>{html.escape(text)}</p>
     </div>
-    <p><em>Note: This is a Phase 4 fake. Real highlighting will be implemented in Phase 5+.</em></p>
+    <p><em>{phase_note}</em></p>
 </body>
 </html>"""
 
@@ -510,10 +525,15 @@ class FakeFormatterTool:
         self.call_count_highlight += 1
 
         # Simple fragment with inline styles (dark-mode compatible)
-        return f"""<div style="background-color: #1a1a1a; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; font-family: 'Inter', sans-serif; line-height: 1.6;">
-    <p style="margin: 0;">{text}</p>
-    <p style="margin-top: 1rem; font-size: 0.875rem; opacity: 0.7;"><em>Note: This is a fake formatter for testing.</em></p>
-</div>"""
+        return (
+            f'<div style="background-color: #1a1a1a; color: #e2e8f0; padding: 1rem; '
+            f"border-radius: 0.5rem; font-family: 'Inter', sans-serif; "
+            f'line-height: 1.6;">\n'
+            f'    <p style="margin: 0;">{html.escape(text)}</p>\n'
+            f'    <p style="margin-top: 1rem; font-size: 0.875rem; opacity: 0.7;">'
+            f"<em>Note: This is a fake formatter for testing.</em></p>\n"
+            f"</div>"
+        )
 
     def table(
         self,
@@ -531,7 +551,7 @@ class FakeFormatterTool:
             headers = list(data[0].keys())
 
         # Build HTML table
-        html = """<!DOCTYPE html>
+        html_doc = """<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -563,25 +583,25 @@ class FakeFormatterTool:
 
         # Add headers
         for header in headers:
-            html += f"                <th>{header}</th>\n"
-        html += """            </tr>
+            html_doc += f"                <th>{html.escape(str(header))}</th>\n"
+        html_doc += """            </tr>
         </thead>
         <tbody>
 """
 
         # Add data rows
         for row in data:
-            html += "            <tr>\n"
+            html_doc += "            <tr>\n"
             for header in headers:
                 value = row.get(header, "")
-                html += f"                <td>{value}</td>\n"
-            html += "            </tr>\n"
+                html_doc += f"                <td>{html.escape(str(value))}</td>\n"
+            html_doc += "            </tr>\n"
 
-        html += """        </tbody>
+        html_doc += """        </tbody>
     </table>
 </body>
 </html>"""
-        return html
+        return html_doc
 
 
 class FakePersistenceTool:

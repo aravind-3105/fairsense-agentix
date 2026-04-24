@@ -56,10 +56,12 @@ class RiskEvaluatorOutput(BaseModel):
     score: int = Field(..., ge=0, le=100, description="Quality score (0-100)")
     justification: str = Field(..., description="Why this score was assigned")
     issues: list[str] = Field(
-        default_factory=list, description="Specific quality issues found"
+        default_factory=list,
+        description="Specific quality issues found",
     )
     suggested_changes: dict[str, Any] = Field(
-        default_factory=dict, description="Refinement hints (e.g., {'top_k': 10})"
+        default_factory=dict,
+        description="Refinement hints (e.g., {'top_k': 10})",
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict,
@@ -127,7 +129,7 @@ def evaluate_bias_output(
             "suggested_changes": critique.suggested_changes,
             "workflow_id": context.workflow_id,
             "run_id": context.run_id,
-        }
+        },
     }
 
     refinement_hints: dict[str, Any] = {}
@@ -136,12 +138,12 @@ def evaluate_bias_output(
     if not passed:
         issues.append(critique.justification)
         feedback = critique.suggested_changes or [
-            "Re-check every bias category and cite exact spans."
+            "Re-check every bias category and cite exact spans.",
         ]
         refinement_hints = {
             "options": {
                 "bias_prompt_feedback": feedback,
-            }
+            },
         }
 
     return EvaluationResult(
@@ -165,7 +167,9 @@ def _simulate_bias_evaluator(feedback_applied: bool) -> BiasEvaluatorOutput:
 
     return BiasEvaluatorOutput(
         score=85,
-        justification="Simulation mode (fake provider): analysis considered sufficient.",
+        justification=(
+            "Simulation mode (fake provider): analysis considered sufficient."
+        ),
         suggested_changes=[],
     )
 
@@ -212,13 +216,16 @@ def _invoke_bias_evaluator_llm(
         [
             (
                 "system",
-                "You critique fairness analyses and return structured JSON as instructed.",
+                (
+                    "You critique fairness analyses and return structured "
+                    "JSON as instructed."
+                ),
             ),
             (
                 "user",
                 prompt_template,
             ),
-        ]
+        ],
     ).partial(
         bias_analysis_json=analysis_section,
         analysis_summary=summary_section or "None",
@@ -237,7 +244,10 @@ def _serialize_bias_analysis(analysis: Any) -> str:
     """Convert bias analysis payload to readable JSON for evaluator prompt."""
     if isinstance(analysis, BiasAnalysisOutput):
         return json.dumps(
-            analysis.model_dump(), indent=2, ensure_ascii=False, default=str
+            analysis.model_dump(),
+            indent=2,
+            ensure_ascii=False,
+            default=str,
         )
     if isinstance(analysis, str):
         # Already serialized (fake provider)
@@ -354,7 +364,7 @@ def evaluate_risk_output(
             refinement_hints={
                 "options": {
                     "top_k": options.get("top_k", 5) + 5,  # K-bump
-                }
+                },
             },
             explanation="Risk assessment returned no results",
             metadata={"risk": {"risk_count": 0, "empty_result": True}},
@@ -398,7 +408,10 @@ def evaluate_risk_output(
 
     # Compute score (0-100) based on checks passed
     score = _compute_risk_score(
-        breadth_passed, duplicates_passed, score_passed, coverage_passed
+        breadth_passed,
+        duplicates_passed,
+        score_passed,
+        coverage_passed,
     )
 
     # Generate refinement hints if failing
@@ -408,7 +421,7 @@ def evaluate_risk_output(
         refinement_hints = {
             "options": {
                 "top_k": min(current_top_k + 5, 20),  # K-bump with cap at 20
-            }
+            },
         }
 
     # Build metadata
@@ -427,7 +440,7 @@ def evaluate_risk_output(
             },
             "workflow_id": context.workflow_id,
             "run_id": context.run_id,
-        }
+        },
     }
 
     explanation = (

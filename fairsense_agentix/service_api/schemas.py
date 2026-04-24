@@ -16,7 +16,7 @@ class AnalyzeRequest(BaseModel):
     """Request payload for /v1/analyze."""
 
     content: str = Field(
-        description="Input text or base64 data (for uploads use /upload)"
+        description="Input text or base64 data (for uploads use /upload)",
     )
     input_type: WorkflowID | None = Field(
         default=None,

@@ -49,17 +49,22 @@ Requirements:
 - Cultural fit with our team (we're like a brotherhood here)
 - Willing to work long hours (this isn't a 9-5 job)
 
-We're looking for young, energetic professionals who can keep up with our demanding pace.
+We're looking for young, energetic professionals who can keep up with our \
+demanding pace.
 The ideal candidate is a digital native who grew up with technology.""",
             "options": {},
         },
         "large": {
             "text": """Senior Leadership Position - Executive Vice President
 
-Our prestigious Fortune 500 company is seeking an Executive Vice President to lead our operations division. This is an opportunity for a seasoned professional who has proven themselves in the upper echelons of corporate leadership.
+Our prestigious Fortune 500 company is seeking an Executive Vice President to lead our \
+operations division. This is an opportunity for a seasoned professional who has proven \
+themselves in the upper echelons of corporate leadership.
 
 ABOUT THE ROLE:
-This position requires someone who can command respect in the boardroom and navigate complex business relationships. You'll be interfacing with C-suite executives, major shareholders, and key stakeholders on a daily basis.
+This position requires someone who can command respect in the boardroom and navigate \
+complex business relationships. You'll be interfacing with C-suite executives, major \
+shareholders, and key stakeholders on a daily basis.
 
 IDEAL CANDIDATE PROFILE:
 - Graduated from an Ivy League institution or equivalent top-tier university
@@ -79,13 +84,26 @@ REQUIREMENTS:
 - Clean-cut, professional appearance meeting corporate standards
 
 COMPENSATION & BENEFITS:
-We offer a compensation package commensurate with the elite nature of this position. This role provides access to our executive dining facilities, country club membership, and other privileges befitting senior leadership. We maintain very high standards and expect the same from our leadership team.
+We offer a compensation package commensurate with the elite nature of this position. \
+This role provides access to our executive dining facilities, country club membership, \
+and other privileges befitting senior leadership. We maintain very high standards and \
+expect the same from our leadership team.
 
-Our company culture values those who have earned their position through years of dedication in established corporate environments. We seek individuals who understand the importance of hierarchy, tradition, and maintaining our company's prestigious reputation in the business community.
+Our company culture values those who have earned their position through years \
+of dedication in established corporate environments. We seek individuals who \
+understand the importance of hierarchy, tradition, and maintaining our \
+company's prestigious reputation in the business community.
 
-The successful candidate will be someone who doesn't require special accommodations, can work the demanding hours expected at this level, and fits naturally into our executive team's dynamics. We're looking for a proven leader who embodies the values and standards that have made our company successful for over a century.
+The successful candidate will be someone who doesn't require special \
+accommodations, can work the demanding hours expected at this level, and fits \
+naturally into our executive team's dynamics. We're looking for a proven leader \
+who embodies the values and standards that have made our company successful \
+for over a century.
 
-NOTE: This position requires full-time presence in our corporate headquarters. Remote work arrangements are not available for executive positions. Candidates should be prepared for a rigorous interview process including presentations to our board of directors.""",
+NOTE: This position requires full-time presence in our corporate headquarters. \
+Remote work arrangements are not available for executive positions. Candidates \
+should be prepared for a rigorous interview process including presentations to \
+our board of directors.""",
             "options": {},
         },
     }
@@ -114,7 +132,10 @@ def get_risk_inputs() -> dict[str, dict[str, Any]]:
     """Get risk assessment benchmark inputs of varying sizes."""
     return {
         "small": {
-            "scenario_text": "Deploying facial recognition system in public spaces for security monitoring.",
+            "scenario_text": (
+                "Deploying facial recognition system in public spaces for "
+                "security monitoring."
+            ),
             "options": {"top_k": 3},
         },
         "medium": {
@@ -146,7 +167,8 @@ SYSTEM CAPABILITIES:
    - Provide treatment recommendations based on latest medical literature
 
 2. Treatment Planning
-   - Recommend personalized treatment plans based on patient demographics, medical history, and genetic data
+   - Recommend personalized treatment plans based on patient demographics, \
+medical history, and genetic data
    - Predict treatment outcomes and potential complications
    - Optimize medication dosing based on patient-specific factors
    - Identify patients at high risk for adverse events
@@ -178,7 +200,9 @@ DEPLOYMENT SCOPE:
 - Radiology departments (automated image analysis)
 - Pharmacy (medication interaction checking and dosing)
 
-The system will process over 100,000 patient encounters per month and will be integrated into critical clinical workflows. Healthcare providers will rely on the system's recommendations for time-sensitive medical decisions.""",
+The system will process over 100,000 patient encounters per month and will \
+be integrated into critical clinical workflows. Healthcare providers will rely \
+on the system's recommendations for time-sensitive medical decisions.""",
             "options": {"top_k": 10, "rmf_per_risk": 5},
         },
     }
@@ -306,16 +330,17 @@ def benchmark_graph(
             }
 
             print("\n    Results:")
+            p50 = timing_stats["p50"]
+            p95 = timing_stats["p95"]
+            p99 = timing_stats["p99"]
             print(
-                f"      Latency (p50/p95/p99): {timing_stats['p50']:.3f}s / {timing_stats['p95']:.3f}s / {timing_stats['p99']:.3f}s"
+                f"      Latency (p50/p95/p99): {p50:.3f}s / {p95:.3f}s / {p99:.3f}s",
             )
             print(f"      Memory delta (mean): {memory_stats['mean']:.2f} MB")
-            print(
-                f"      Throughput: {results['input_sizes'][size_name]['throughput_ops_per_sec']:.2f} ops/sec"
-            )
-            print(
-                f"      Success rate: {results['input_sizes'][size_name]['success_rate']:.1%}"
-            )
+            _tp = results["input_sizes"][size_name]["throughput_ops_per_sec"]
+            print(f"      Throughput: {_tp:.2f} ops/sec")
+            _sr = results["input_sizes"][size_name]["success_rate"]
+            print(f"      Success rate: {_sr:.1%}")
         else:
             print(f"    No successful iterations for {size_name}")
 
@@ -472,8 +497,11 @@ def main() -> None:
         print(f"\n{graph_name.upper()}:")
         for size_name, size_results in graph_results["input_sizes"].items():
             latency = size_results["latency_seconds"]
+            lp50 = latency["p50"]
+            lp95 = latency["p95"]
+            lp99 = latency["p99"]
             print(
-                f"  {size_name:8s}: p50={latency['p50']:.3f}s  p95={latency['p95']:.3f}s  p99={latency['p99']:.3f}s"
+                f"  {size_name:8s}: p50={lp50:.3f}s  p95={lp95:.3f}s  p99={lp99:.3f}s",
             )
 
     print("\n" + "=" * 70 + "\n")

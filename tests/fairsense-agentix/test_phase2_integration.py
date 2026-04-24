@@ -42,13 +42,16 @@ class TestPhase2Integration:
         result = graph.invoke(
             {
                 "input_type": "text",
-                "content": "We're looking for young, energetic professionals. Recent graduates preferred.",
+                "content": (
+                    "We're looking for young, energetic professionals. "
+                    "Recent graduates preferred."
+                ),
                 "options": {
                     "llm_model": "gpt-4-turbo",
                     "temperature": 0.5,
                     "enable_summary": True,
                 },
-            }
+            },
         )
 
         # Verify orchestrator coordination
@@ -71,7 +74,8 @@ class TestPhase2Integration:
         assert result["workflow_result"]["workflow_id"] == "bias_text"
         assert result["workflow_result"]["bias_analysis"] is not None
         assert isinstance(
-            result["workflow_result"]["bias_analysis"], BiasAnalysisOutput
+            result["workflow_result"]["bias_analysis"],
+            BiasAnalysisOutput,
         )
         assert result["workflow_result"]["summary"] is not None
         assert result["workflow_result"]["highlighted_html"] is not None
@@ -119,7 +123,7 @@ class TestPhase2Integration:
                 "options": {
                     "validate_image_bytes": False,
                 },
-            }
+            },
         )
 
         # Verify orchestrator coordination (VLM is default mode)
@@ -142,7 +146,8 @@ class TestPhase2Integration:
         # Verify VLM analysis structure
         assert result["workflow_result"]["bias_analysis"] is not None
         assert isinstance(
-            result["workflow_result"]["bias_analysis"], BiasAnalysisOutput
+            result["workflow_result"]["bias_analysis"],
+            BiasAnalysisOutput,
         )
         assert result["workflow_result"]["summary"] is not None
         assert result["workflow_result"]["highlighted_html"] is not None
@@ -173,12 +178,15 @@ class TestPhase2Integration:
         result = graph.invoke(
             {
                 "input_type": "csv",
-                "content": "Deploying facial recognition system in public spaces for real-time security monitoring and identification",
+                "content": (
+                    "Deploying facial recognition system in public spaces for "
+                    "real-time security monitoring and identification"
+                ),
                 "options": {
                     "embedding_model": "all-MiniLM-L6-v2",
                     "top_k": 5,
                 },
-            }
+            },
         )
 
         # Verify orchestrator coordination

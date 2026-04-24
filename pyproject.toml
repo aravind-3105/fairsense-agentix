@@ -125,6 +125,11 @@ strict_equality = true
 extra_checks = true
 mypy_path = "src"
 
+# Third-party wheels without types or stubs (ignore_missing_imports is false globally).
+[[tool.mypy.overrides]]
+module = ["faiss", "paddleocr", "pytesseract"]
+ignore_missing_imports = true
+
 [tool.ruff]
 include = ["*.py", "pyproject.toml", "*.ipynb"]
 exclude = []
@@ -158,12 +163,10 @@ select = [
 fixable = ["A", "B", "COM", "C4", "RET", "SIM", "ICN", "Q", "RSE", "D", "E", "F", "I", "W", "N", "ERA", "PL"]
 ignore = [
     "B905", # `zip()` without an explicit `strict=` parameter
-    "E501", # line too long
     "D203", # 1 blank line required before class docstring
     "D213", # Multi-line docstring summary should start at the second line
     "PLR2004", # Replace magic number with named constant
     "PLR0913", # Too many arguments
-    "COM812", # Missing trailing comma
     "ERA001", # Found commented-out code (too many false positives with math comments)
     "A001", # Ignore variable `input` is shadowing a Python builtin (common for torch)
     "A002", # Ignore variable `input` is shadowing a Python builtin in function (common for torch)

@@ -17,6 +17,21 @@ openai, and anthropic clients, making console output much more readable.
 import logging
 
 
+def ensure_root_logging(level: int = logging.INFO) -> None:
+    """Attach a stderr handler if the root logger has no handlers yet.
+
+    ``configure_logging()`` only adjusts named logger levels; it does not add
+    handlers. Call this from CLI entrypoints (``run_server.py``,
+    ``server.start()``) so INFO/DEBUG lines are visible when the host process
+    never called ``logging.basicConfig``. No-op if handlers already exist.
+    """
+    if not logging.root.handlers:
+        logging.basicConfig(
+            level=level,
+            format="%(levelname)s:%(name)s:%(message)s",
+        )
+
+
 def configure_logging() -> None:
     """Configure logging levels for clean console output.
 
@@ -40,14 +55,14 @@ def configure_logging() -> None:
     # Transformers: Show loading progress, hide verbose warnings
     logging.getLogger("transformers").setLevel(logging.INFO)  # ← Changed: show loading
     logging.getLogger("transformers.modeling_utils").setLevel(
-        logging.WARNING
+        logging.WARNING,
     )  # ← Hide tensor warnings
     logging.getLogger("transformers.configuration_utils").setLevel(logging.WARNING)
     logging.getLogger("transformers.modeling_attn_mask_utils").setLevel(logging.WARNING)
 
     # Sentence Transformers: Show loading progress
     logging.getLogger("sentence_transformers").setLevel(
-        logging.INFO
+        logging.INFO,
     )  # ← Keep progress visible
 
     # Keep our application logs visible

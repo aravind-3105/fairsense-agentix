@@ -28,7 +28,7 @@ def _make_bias_workflow_result() -> dict:
                 explanation="Gendered language",
                 start_char=0,
                 end_char=13,
-            )
+            ),
         ],
         overall_assessment="High severity bias",
         risk_level="high",
@@ -282,7 +282,7 @@ class TestEvaluateRiskOutput:
         workflow_result = self._make_risk_workflow_result(
             rmf_recs={
                 "R1": [{"function": "Govern"}, {"function": "Govern"}],
-            }
+            },
         )
         evaluation = evaluate_risk_output(
             workflow_result,
@@ -300,7 +300,7 @@ class TestEvaluateRiskOutput:
             risks=[
                 {"id": "R1", "description": "Same risk", "score": 0.8},
                 {"id": "R2", "description": "Same risk", "score": 0.7},
-            ]
+            ],
         )
         evaluation = evaluate_risk_output(
             workflow_result,
@@ -317,7 +317,7 @@ class TestEvaluateRiskOutput:
             risks=[
                 {"id": "R1", "description": "Risk 1", "score": 0.1},
                 {"id": "R2", "description": "Risk 2", "score": 0.2},
-            ]
+            ],
         )
         evaluation = evaluate_risk_output(
             workflow_result,
@@ -331,7 +331,7 @@ class TestEvaluateRiskOutput:
     def test_evaluate_risk_output_insufficient_coverage(self):
         """Test evaluation fails with too few risks."""
         workflow_result = self._make_risk_workflow_result(
-            risks=[{"id": "R1", "description": "Only risk", "score": 0.8}]
+            risks=[{"id": "R1", "description": "Only risk", "score": 0.8}],
         )
         evaluation = evaluate_risk_output(
             workflow_result,
@@ -359,7 +359,7 @@ class TestEvaluateRiskOutput:
     def test_evaluate_risk_output_k_bump_refinement(self):
         """Test k-bump refinement hint generation."""
         workflow_result = self._make_risk_workflow_result(
-            risks=[{"id": "R1", "description": "Risk", "score": 0.1}]
+            risks=[{"id": "R1", "description": "Risk", "score": 0.1}],
         )
         evaluation = evaluate_risk_output(
             workflow_result,

@@ -7,7 +7,7 @@ assess_risk).
 
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from fairsense_agentix.tools.llm.output_schemas import BiasAnalysisOutput
 
@@ -45,14 +45,22 @@ class ResultMetadata(BaseModel):
     execution_time_seconds: float = Field(description="Total execution time")
     router_reasoning: str = Field(description="Why this workflow was selected")
     router_confidence: float = Field(
-        ge=0.0, le=1.0, description="Router confidence (0.0-1.0)"
+        ge=0.0,
+        le=1.0,
+        description="Router confidence (0.0-1.0)",
     )
     refinement_count: int = Field(ge=0, description="Number of refinement iterations")
     preflight_score: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Pre-execution quality score (Phase 7+)"
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Pre-execution quality score (Phase 7+)",
     )
     posthoc_score: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Post-execution quality score (Phase 7+)"
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Post-execution quality score (Phase 7+)",
     )
 
 
@@ -107,34 +115,42 @@ class BiasResult(BaseModel):
     """
 
     status: Literal["success", "failed", "partial"] = Field(
-        description="Execution status"
+        description="Execution status",
     )
     bias_detected: Optional[bool] = Field(None, description="Whether bias was detected")
     risk_level: Optional[Literal["low", "medium", "high"]] = Field(
-        None, description="Overall risk level"
+        None,
+        description="Overall risk level",
     )
     bias_analysis: Optional[Union[BiasAnalysisOutput, str]] = Field(
-        None, description="Structured or string bias analysis"
+        None,
+        description="Structured or string bias analysis",
     )
     bias_instances: Optional[list[dict[str, Any]]] = Field(
-        None, description="Individual bias instances with details"
+        None,
+        description="Individual bias instances with details",
     )
     summary: Optional[str] = Field(None, description="Optional condensed summary")
     highlighted_html: Optional[str] = Field(
-        None, description="HTML with color-coded bias highlighting"
+        None,
+        description="HTML with color-coded bias highlighting",
     )
 
     # Image-specific fields (None for text workflow)
     ocr_text: Optional[str] = Field(None, description="OCR extracted text (image only)")
     caption_text: Optional[str] = Field(
-        None, description="Generated caption (image only)"
+        None,
+        description="Generated caption (image only)",
     )
     merged_text: Optional[str] = Field(
-        None, description="Combined OCR + caption text (image only)"
+        None,
+        description="Combined OCR + caption text (image only)",
     )
     image_base64: Optional[str] = Field(
         None,
-        description="Base64-encoded image with data URL for UI display (VLM workflow only)",
+        description=(
+            "Base64-encoded image with data URL for UI display (VLM workflow only)"
+        ),
     )
 
     # Metadata and diagnostics
@@ -142,11 +158,9 @@ class BiasResult(BaseModel):
     errors: list[str] = Field(default_factory=list, description="Error messages")
     warnings: list[str] = Field(default_factory=list, description="Warning messages")
 
-    class Config:
-        """Pydantic config."""
-
-        # Allow BiasAnalysisOutput to be serialized
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,  # BiasAnalysisOutput in bias_analysis union
+    )
 
 
 class RiskResult(BaseModel):
@@ -191,19 +205,23 @@ class RiskResult(BaseModel):
     """
 
     status: Literal["success", "failed", "partial"] = Field(
-        description="Execution status"
+        description="Execution status",
     )
     embedding: Optional[list[float]] = Field(
-        None, description="Vector embedding of scenario"
+        None,
+        description="Vector embedding of scenario",
     )
     risks: list[dict[str, Any]] = Field(
-        default_factory=list, description="Top-k AI risks from semantic search"
+        default_factory=list,
+        description="Top-k AI risks from semantic search",
     )
     rmf_recommendations: dict[str, list[dict[str, Any]]] = Field(
-        default_factory=dict, description="AI-RMF recommendations per risk"
+        default_factory=dict,
+        description="AI-RMF recommendations per risk",
     )
     html_table: Optional[str] = Field(
-        None, description="Formatted HTML table of risks + recommendations"
+        None,
+        description="Formatted HTML table of risks + recommendations",
     )
     csv_path: Optional[str] = Field(None, description="Path to exported CSV file")
 

@@ -81,19 +81,23 @@ class FakeVLMTool:
         fake_output = BiasVisualAnalysisOutput(
             visual_description=(
                 "Image shows 3 people in a modern office environment. "
-                "Two individuals appear male-presenting (ages ~35-40), positioned centrally "
-                "and standing at a whiteboard. One individual appears female-presenting (age ~30), "
-                "seated at a desk in the background. Professional attire visible on all individuals. "
-                "Whiteboard contains text 'Q4 Strategy Meeting'. Setting suggests corporate context."
+                "Two individuals appear male-presenting (ages ~35-40), "
+                "positioned centrally and standing at a whiteboard. "
+                "One individual appears female-presenting (age ~30), seated at a "
+                "desk in the background. Professional attire visible on all "
+                "individuals. Whiteboard contains text 'Q4 Strategy Meeting'. "
+                "Setting suggests corporate context."
             ),
             reasoning_trace=(
-                "Analyzing compositional patterns: The two male-presenting individuals occupy "
-                "central, prominent positions and are engaged in active presentation behavior. "
-                "The female-presenting individual is spatially peripheral and in a passive, "
-                "note-taking posture. This spatial arrangement reinforces traditional gender "
-                "role stereotypes (men as leaders/speakers, women as support/listeners). "
-                "Age representation is narrow (30-40 range), suggesting potential age bias "
-                "through exclusion of younger or older individuals in leadership context."
+                "Analyzing compositional patterns: The two male-presenting "
+                "individuals occupy central, prominent positions and are engaged "
+                "in active presentation behavior. The female-presenting individual "
+                "is spatially peripheral and in a passive, note-taking posture. "
+                "This spatial arrangement reinforces traditional gender role "
+                "stereotypes (men as leaders/speakers, women as support/listeners). "
+                "Age representation is narrow (30-40 range), suggesting potential "
+                "age bias through exclusion of younger or older individuals in "
+                "leadership context."
             ),
             bias_analysis=BiasAnalysisOutput(
                 bias_detected=True,
@@ -106,11 +110,12 @@ class FakeVLMTool:
                             "peripheral support role"
                         ),
                         explanation=(
-                            "Visual composition shows 2 male-presenting individuals in "
-                            "central authoritative positions (standing, presenting at whiteboard) "
-                            "while 1 female-presenting individual is peripheral and in passive role "
-                            "(seated, note-taking). This reinforces gender stereotypes about "
-                            "leadership and professional roles."
+                            "Visual composition shows 2 male-presenting individuals "
+                            "in central authoritative positions (standing, presenting "
+                            "at whiteboard) while 1 female-presenting individual is "
+                            "peripheral and in passive role (seated, note-taking). "
+                            "This reinforces gender stereotypes about leadership and "
+                            "professional roles."
                         ),
                         start_char=0,
                         end_char=0,
@@ -119,12 +124,16 @@ class FakeVLMTool:
                     BiasInstance(
                         type="age",
                         severity="low",
-                        text_span="Narrow age representation (30-40 range) in leadership context",
+                        text_span=(
+                            "Narrow age representation (30-40 range) in leadership "
+                            "context"
+                        ),
                         explanation=(
-                            "All visible individuals appear to be in the 30-40 age range, "
-                            "suggesting exclusion of both younger professionals (potential ageism "
-                            "about credibility/experience) and older individuals (potential ageism "
-                            "about relevance/adaptability) from leadership representation."
+                            "All visible individuals appear to be in the 30-40 age "
+                            "range, suggesting exclusion of both younger professionals "
+                            "(potential ageism about credibility/experience) and older "
+                            "individuals (potential ageism about relevance/"
+                            "adaptability) from leadership representation."
                         ),
                         start_char=0,
                         end_char=0,
@@ -132,18 +141,19 @@ class FakeVLMTool:
                     ),
                 ],
                 overall_assessment=(
-                    "Image exhibits moderate bias through gender-stereotyped role representation "
-                    "and narrow age range in professional leadership context. The 2:1 male-to-female "
-                    "ratio combined with spatial/postural hierarchy reinforces traditional gender "
-                    "norms. Age homogeneity suggests exclusionary assumptions about leadership "
-                    "demographics."
+                    "Image exhibits moderate bias through gender-stereotyped role "
+                    "representation and narrow age range in professional leadership "
+                    "context. The 2:1 male-to-female ratio combined with "
+                    "spatial/postural hierarchy reinforces traditional gender norms. "
+                    "Age homogeneity suggests exclusionary assumptions about "
+                    "leadership demographics."
                 ),
                 risk_level="medium",
             ),
         )
 
         logger.info(
-            "FakeVLM: Returned mock analysis with 2 bias instances (1 gender, 1 age)"
+            "FakeVLM: Returned mock analysis with 2 bias instances (1 gender, 1 age)",
         )
 
         return fake_output

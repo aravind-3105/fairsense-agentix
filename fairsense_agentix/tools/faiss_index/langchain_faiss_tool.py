@@ -129,7 +129,7 @@ class LangChainFAISSTool:
         self.index_path = index_path  # For FAISSIndexTool protocol
 
         logger.info(
-            f"LangChainFAISSTool initialized (docs={len(metadata)}, top_k={top_k})"
+            f"LangChainFAISSTool initialized (docs={len(metadata)}, top_k={top_k})",
         )
 
     @classmethod
@@ -210,7 +210,7 @@ class LangChainFAISSTool:
             # but we can check consistency later during search
 
             logger.info(
-                f"Loaded LangChain FAISS index: {index_name} ({len(metadata)} docs)"
+                f"Loaded LangChain FAISS index: {index_name} ({len(metadata)} docs)",
             )
 
             # Reconstruct index_path for protocol
@@ -477,7 +477,7 @@ class LangChainFAISSTool:
                 metadata = [doc.metadata for doc in documents]
 
             logger.info(
-                f"Created LangChain FAISS index from {len(documents)} documents"
+                f"Created LangChain FAISS index from {len(documents)} documents",
             )
 
             return cls(
@@ -531,7 +531,10 @@ class LangChainFAISSTool:
                 json.dump(self.metadata, f, indent=2)
 
             logger.info(
-                f"Saved LangChain FAISS index: {index_name} ({len(self.metadata)} docs)"
+                (
+                    f"Saved LangChain FAISS index: {index_name} "
+                    f"({len(self.metadata)} docs)"
+                ),
             )
 
         except Exception as e:

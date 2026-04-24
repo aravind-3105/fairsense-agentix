@@ -304,7 +304,9 @@ class FairSense:
         return self._build_risk_result(result, execution_time)
 
     def _build_bias_result(
-        self, raw_result: dict[str, Any], execution_time: float
+        self,
+        raw_result: dict[str, Any],
+        execution_time: float,
     ) -> BiasResult:
         """Build BiasResult from orchestrator output."""
         final = raw_result["final_result"]
@@ -334,7 +336,7 @@ class FairSense:
             # Unexpected type (shouldn't happen with new design)
             raise TypeError(
                 f"Unexpected bias_analysis type: {type(bias_analysis)}. "
-                "Expected BiasAnalysisOutput."
+                "Expected BiasAnalysisOutput.",
             )
 
         # Build metadata
@@ -367,7 +369,9 @@ class FairSense:
         )
 
     def _build_risk_result(
-        self, raw_result: dict[str, Any], execution_time: float
+        self,
+        raw_result: dict[str, Any],
+        execution_time: float,
     ) -> RiskResult:
         """Build RiskResult from orchestrator output."""
         final = raw_result["final_result"]

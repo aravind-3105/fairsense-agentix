@@ -71,7 +71,7 @@ def _resolve_ocr_tool(settings: Settings) -> OCRTool:
         selected_tool = "paddleocr" if has_gpu else "tesseract"
         logger.info(
             f"Auto-selected OCR tool: {selected_tool} "
-            f"(GPU={'available' if has_gpu else 'not available'})"
+            f"(GPU={'available' if has_gpu else 'not available'})",
         )
     else:
         selected_tool = settings.ocr_tool
@@ -108,7 +108,9 @@ def _resolve_ocr_tool(settings: Settings) -> OCRTool:
                 msg,
                 context={
                     "error": str(e),
-                    "install": "pip install pytesseract && apt-get install tesseract-ocr",
+                    "install": (
+                        "pip install pytesseract && apt-get install tesseract-ocr"
+                    ),
                 },
             ) from e
 

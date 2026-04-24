@@ -49,7 +49,8 @@ class TestFakePersistence:
     def test_fake_returns_paths_without_writing(self, tmp_path):
         """Test fake persistence returns paths but doesn't write files."""
         fake = FakePersistenceTool(
-            output_dir=tmp_path / "outputs", actually_write=False
+            output_dir=tmp_path / "outputs",
+            actually_write=False,
         )
 
         data = [{"col1": "value1"}]

@@ -15,7 +15,7 @@ class AgentEventBus:
     def __init__(self, telemetry: TelemetryService) -> None:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._queues: dict[str, asyncio.Queue[dict[str, Any]]] = defaultdict(
-            asyncio.Queue
+            asyncio.Queue,
         )
         telemetry.register_observer(self._handle_event)
 

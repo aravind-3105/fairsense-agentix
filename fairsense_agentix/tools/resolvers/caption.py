@@ -71,7 +71,7 @@ def _resolve_caption_tool(settings: Settings) -> CaptionTool:
         selected_model = "blip2" if has_gpu else "blip"
         logger.info(
             f"Auto-selected caption model: {selected_model} "
-            f"(GPU={'available' if has_gpu else 'not available'})"
+            f"(GPU={'available' if has_gpu else 'not available'})",
         )
     else:
         selected_model = settings.caption_model

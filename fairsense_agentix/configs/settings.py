@@ -205,7 +205,9 @@ class Settings(BaseSettings):
 
     caption_force_cpu: bool = Field(
         default=False,
-        description="Force CPU for captioning even if GPU available (for testing/debugging)",
+        description=(
+            "Force CPU for captioning even if GPU available (for testing/debugging)"
+        ),
     )
 
     caption_preload: bool = Field(
@@ -366,7 +368,10 @@ class Settings(BaseSettings):
         default=3,
         ge=1,
         le=4,
-        description="Minimum number of unique RMF functions for breadth check (1-4: Govern, Map, Measure, Manage)",
+        description=(
+            "Minimum number of unique RMF functions for breadth check "
+            "(1-4: Govern, Map, Measure, Manage)"
+        ),
     )
 
     risk_evaluator_min_avg_score: float = Field(
@@ -484,7 +489,10 @@ class Settings(BaseSettings):
         }
 
     @field_validator(
-        "faiss_risks_index_path", "faiss_rmf_index_path", "cache_dir", "output_dir"
+        "faiss_risks_index_path",
+        "faiss_rmf_index_path",
+        "cache_dir",
+        "output_dir",
     )
     @classmethod
     def expand_path(cls, v: Path) -> Path:

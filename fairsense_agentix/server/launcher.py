@@ -5,6 +5,7 @@ and frontend (React/Vite) server processes with health checking, graceful
 shutdown, and cross-platform support.
 """
 
+import logging
 import os
 import platform
 import signal
@@ -16,6 +17,11 @@ from pathlib import Path
 from typing import Optional
 
 import requests
+
+from fairsense_agentix.logging_config import ensure_root_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class ServerLauncher:
@@ -65,11 +71,20 @@ class ServerLauncher:
         self.verbose = verbose
         self.reload = reload
 
+        # So logger.debug() from _log_debug() is emitted when verbose=True
+        # (parent logger is INFO)
+        logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+
         self.backend_proc: Optional[subprocess.Popen] = None
         self.frontend_proc: Optional[subprocess.Popen] = None
 
         # Setup signal handlers for graceful shutdown
         self._setup_signal_handlers()
+
+    def _log_debug(self, msg: str, *args: object) -> None:
+        """Log at DEBUG only when verbose=True (keeps quiet mode clean)."""
+        if self.verbose:
+            logger.debug(msg, *args)
 
     def _setup_signal_handlers(self) -> None:
         """Register signal handlers for graceful shutdown on Ctrl+C."""
@@ -78,7 +93,7 @@ class ServerLauncher:
 
     def _handle_shutdown(self, _signum: int, _frame: object) -> None:
         """Handle shutdown signals (SIGINT/SIGTERM)."""
-        print("\n\n🛑 Shutting down servers...")
+        logger.info("🛑 Shutting down servers...")
         self.stop()
         sys.exit(0)
 
@@ -110,27 +125,29 @@ class ServerLauncher:
 
     def _start_backend_with_health_check(self) -> None:
         """Start backend and wait for it to be ready."""
-        print(f"\n▶️  Starting backend on port {self.backend_port}...")
+        logger.info("▶️  Starting backend on port %s...", self.backend_port)
         try:
             self.backend_proc = self._start_backend()
         except Exception as e:
-            print(f"❌ Failed to start backend: {e}")
+            logger.error("❌ Failed to start backend: %s", e)
             self.stop()
             sys.exit(1)
 
-        print("⏳ Waiting for backend to be ready (preloading models, 1-2 minutes)...")
-        print("   Initial startup delay before health checks: 10 seconds...")
+        logger.info(
+            "⏳ Waiting for backend to be ready (preloading models, 1-2 minutes)...",
+        )
+        logger.info("   Initial startup delay before health checks: 10 seconds...")
         time.sleep(10)
 
         if not self._wait_for_backend():
             self._print_backend_troubleshooting()
             self.stop()
             sys.exit(1)
-        print("✅ Backend ready")
+        logger.info("✅ Backend ready")
 
     def _start_frontend_with_health_check(self) -> None:
         """Start frontend and wait for it to be ready."""
-        print(f"\n▶️  Starting frontend on port {self.frontend_port}...")
+        logger.info("▶️  Starting frontend on port %s...", self.frontend_port)
         try:
             self.frontend_proc = self._start_frontend()
         except FileNotFoundError:
@@ -138,48 +155,69 @@ class ServerLauncher:
             self.stop()
             sys.exit(1)
         except Exception as e:
-            print(f"❌ Failed to start frontend: {e}")
+            logger.error("❌ Failed to start frontend: %s", e)
             self.stop()
             sys.exit(1)
 
-        print("⏳ Waiting for frontend to be ready...")
+        logger.info("⏳ Waiting for frontend to be ready...")
         if not self._wait_for_frontend():
             self._print_frontend_troubleshooting()
             self.stop()
             sys.exit(1)
-        print("✅ Frontend ready")
+        logger.info("✅ Frontend ready")
 
     def _open_browser_if_enabled(self) -> None:
         """Open browser if configured to do so."""
         if self.open_browser:
-            print(f"\n🌐 Opening browser at http://localhost:{self.frontend_port}")
+            logger.info(
+                "🌐 Opening browser at http://localhost:%s",
+                self.frontend_port,
+            )
             time.sleep(1)
             webbrowser.open(f"http://localhost:{self.frontend_port}")
 
     def _print_backend_troubleshooting(self) -> None:
         """Print backend troubleshooting instructions."""
-        print(f"❌ Backend failed to start on port {self.backend_port}")
-        print("\n💡 Troubleshooting:")
-        print(f"   • Check if port {self.backend_port} is already in use")
-        print(f"   • Run: lsof -i :{self.backend_port}  (macOS/Linux)")
-        print(f"   • Run: netstat -ano | findstr :{self.backend_port}  (Windows)")
-        print("   • Check .env file for FAIRSENSE_LLM_API_KEY and other settings")
+        logger.error(
+            "❌ Backend failed to start on port %s",
+            self.backend_port,
+        )
+        logger.info("💡 Troubleshooting:")
+        logger.info("   • Check if port %s is already in use", self.backend_port)
+        logger.info("   • Run: lsof -i :%s  (macOS/Linux)", self.backend_port)
+        logger.info(
+            "   • Run: netstat -ano | findstr :%s  (Windows)",
+            self.backend_port,
+        )
+        logger.info(
+            "   • Check .env file for FAIRSENSE_LLM_API_KEY and other settings",
+        )
 
     def _print_frontend_troubleshooting(self) -> None:
         """Print frontend troubleshooting instructions."""
-        print(f"❌ Frontend failed to start on port {self.frontend_port}")
-        print("\n💡 Troubleshooting:")
-        print(f"   • Check if port {self.frontend_port} is already in use")
-        print("   • Ensure npm dependencies are installed: cd ui && npm install")
-        print("   • Check ui/ directory exists and contains package.json")
+        logger.error(
+            "❌ Frontend failed to start on port %s",
+            self.frontend_port,
+        )
+        logger.info("💡 Troubleshooting:")
+        logger.info(
+            "   • Check if port %s is already in use",
+            self.frontend_port,
+        )
+        logger.info(
+            "   • Ensure npm dependencies are installed: cd ui && npm install",
+        )
+        logger.info(
+            "   • Check ui/ directory exists and contains package.json",
+        )
 
     def _print_nodejs_install_instructions(self) -> None:
         """Print Node.js installation instructions."""
-        print("❌ npm not found")
-        print("\n💡 Install Node.js:")
-        print("   • macOS: brew install node")
-        print("   • Windows: https://nodejs.org/")
-        print("   • Linux: sudo apt install nodejs npm")
+        logger.error("❌ npm not found")
+        logger.info("💡 Install Node.js:")
+        logger.info("   • macOS: brew install node")
+        logger.info("   • Windows: https://nodejs.org/")
+        logger.info("   • Linux: sudo apt install nodejs npm")
 
     def _start_backend(self) -> subprocess.Popen:
         """Start FastAPI backend via uvicorn.
@@ -201,26 +239,26 @@ class ServerLauncher:
         # (set in server/__init__.py) but backend MUST load models
         if "FAIRSENSE_DISABLE_EAGER_LOADING" in env:
             del env["FAIRSENSE_DISABLE_EAGER_LOADING"]
-            print("[DEBUG] Re-enabled eager loading for backend subprocess")
+            self._log_debug("Re-enabled eager loading for backend subprocess")
 
         # Locate run_server.py
         project_root = Path(__file__).parent.parent.parent
         script = project_root / "run_server.py"
 
-        # print(f"[DEBUG] Backend script path: {script}")
-        # print(f"[DEBUG] Script exists: {script.exists()}")
-        # print(f"[DEBUG] Project root: {project_root}")
-        # print(f"[DEBUG] Python executable: {sys.executable}")
-        # print(f"[DEBUG] Backend port: {self.backend_port}")
+        self._log_debug("Backend script path: %s", script)
+        self._log_debug("Script exists: %s", script.exists())
+        self._log_debug("Project root: %s", project_root)
+        self._log_debug("Python executable: %s", sys.executable)
+        self._log_debug("Backend port: %s", self.backend_port)
 
         if not script.exists():
             raise FileNotFoundError(
                 f"Backend launcher script not found: {script}\n"
-                f"Ensure you're running from the project root directory."
+                f"Ensure you're running from the project root directory.",
             )
 
         # Start backend process
-        # print(f"[DEBUG] Starting backend subprocess...")
+        self._log_debug("Starting backend subprocess...")
         if self.verbose:
             # Stream logs to stdout
             proc = subprocess.Popen(
@@ -238,9 +276,8 @@ class ServerLauncher:
                 stderr=subprocess.DEVNULL,
             )
 
-        # print(f"[DEBUG] Backend process started with PID: {proc.pid}")
-        # print(f"[DEBUG] Process poll status: {proc.poll()}")
-        # None = running, int = exited
+        self._log_debug("Backend process started with PID: %s", proc.pid)
+        self._log_debug("Process poll status: %s", proc.poll())
         return proc
 
     def _start_frontend(self) -> subprocess.Popen:
@@ -267,14 +304,16 @@ class ServerLauncher:
         if not ui_dir.exists():
             raise FileNotFoundError(
                 f"UI directory not found: {ui_dir}\n"
-                f"Ensure you cloned the repository completely."
+                f"Ensure you cloned the repository completely.",
             )
 
         # Check if node_modules exists
         node_modules = ui_dir / "node_modules"
         if not node_modules.exists():
-            print("\n⚠️  Node modules not found. Installing dependencies...")
-            print("   This is a one-time setup (may take 1-2 minutes)...")
+            logger.info("⚠️  Node modules not found. Installing dependencies...")
+            logger.info(
+                "   This is a one-time setup (may take 1-2 minutes)...",
+            )
             install_proc = subprocess.run(
                 ["npm", "install"],
                 check=False,
@@ -283,7 +322,7 @@ class ServerLauncher:
             )
             if install_proc.returncode != 0:
                 raise RuntimeError(
-                    "npm install failed. Check your internet connection and try again."
+                    "npm install failed. Check your internet connection and try again.",
                 )
 
         # Start frontend with explicit port
@@ -321,10 +360,10 @@ class ServerLauncher:
                 stderr=subprocess.DEVNULL,
             )
 
-        print(f"[DEBUG] Frontend process started with PID: {proc.pid}")
+        self._log_debug("Frontend process started with PID: %s", proc.pid)
         return proc
 
-    def _wait_for_backend(self, timeout: int = 120) -> bool:
+    def _wait_for_backend(self, timeout: int = 120) -> bool:  # noqa: PLR0912
         """Wait for backend to respond to health checks.
 
         Tries both localhost and 127.0.0.1 for maximum compatibility
@@ -348,8 +387,8 @@ class ServerLauncher:
         ]
         start_time = time.time()
 
-        # print(f"[DEBUG] Starting health checks with {timeout}s timeout")
-        # print(f"[DEBUG] URLs to try: {urls}")
+        self._log_debug("Starting health checks with %ss timeout", timeout)
+        self._log_debug("URLs to try: %s", urls)
 
         attempt = 0
         while time.time() - start_time < timeout:
@@ -359,38 +398,55 @@ class ServerLauncher:
             if self.backend_proc:
                 poll_status = self.backend_proc.poll()
                 if poll_status is not None:
-                    print(
-                        f"[DEBUG] ❌ Backend process DIED with exit code: {poll_status}"
+                    logger.warning(
+                        "Backend process exited with code %s (health check aborted)",
+                        poll_status,
                     )
                     return False
 
-                # if attempt % 5 == 1:  # Log every 5 attempts
-                #     print(f"[DEBUG] Attempt {attempt} - "
-                #           f"backend PID {self.backend_proc.pid} running")
+                if attempt % 5 == 1:
+                    self._log_debug(
+                        "Attempt %s - backend PID %s running",
+                        attempt,
+                        self.backend_proc.pid,
+                    )
 
             for url in urls:
                 try:
-                    # if attempt <= 3:  # Log first 3 attempts
-                    #     print(f"[DEBUG] Trying: {url}")
+                    if attempt <= 3:
+                        self._log_debug("Trying: %s", url)
                     response = requests.get(url, timeout=2)
-                    # print(f"[DEBUG] ✅ SUCCESS! Got response: {response.status_code}")
                     if response.status_code == 200:
+                        self._log_debug(
+                            "Health check success: %s %s",
+                            response.status_code,
+                            url,
+                        )
                         return True
                 except requests.exceptions.ConnectionError:
                     if attempt <= 3:
-                        print("Server not ready")
+                        self._log_debug("Server not ready")
                 except requests.exceptions.Timeout:
                     if attempt <= 3:
-                        print("Error: Request timeout (server slow to respond)")
+                        self._log_debug(
+                            "Request timeout (server slow to respond)",
+                        )
                 except requests.exceptions.RequestException as e:
                     if attempt <= 3:
-                        print(f"Request error: {type(e).__name__}: {e}")
+                        self._log_debug(
+                            "Request error: %s: %s",
+                            type(e).__name__,
+                            e,
+                        )
 
             time.sleep(1)
 
-        # print(f"[DEBUG] ❌ Health check TIMEOUT after {timeout}s")
-        # if self.backend_proc:
-        #     print(f"[DEBUG] Backend process status: {self.backend_proc.poll()}")
+        self._log_debug("Health check TIMEOUT after %ss", timeout)
+        if self.backend_proc:
+            self._log_debug(
+                "Backend process status: %s",
+                self.backend_proc.poll(),
+            )
         return False
 
     def _wait_for_frontend(self, timeout: int = 30) -> bool:
@@ -468,7 +524,7 @@ class ServerLauncher:
             except Exception:
                 pass  # Best effort cleanup
 
-        print("✅ Servers stopped")
+        logger.info("✅ Servers stopped")
 
     def _kill_port(self, port: int) -> None:
         """Kill any process listening on the specified port.
@@ -481,7 +537,11 @@ class ServerLauncher:
             if system == "Windows":
                 # Windows: netstat + taskkill
                 subprocess.run(
-                    f"for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :{port}') do taskkill /F /PID %a",
+                    (
+                        f'for /f "tokens=5" %a in '
+                        f"('netstat -aon ^| findstr :{port}') "
+                        f"do taskkill /F /PID %a"
+                    ),
                     check=False,
                     shell=True,
                     capture_output=True,
@@ -495,9 +555,9 @@ class ServerLauncher:
                     capture_output=True,
                 )
 
-            print(f"[DEBUG] Cleaned up port {port}")
+            self._log_debug("Cleaned up port %s", port)
         except Exception as e:
-            print(f"[DEBUG] Port cleanup warning: {e}")
+            logger.warning("Port cleanup warning: %s", e)
 
     def wait(self) -> None:
         """Block until processes exit or user interrupts (Ctrl+C).
@@ -508,11 +568,11 @@ class ServerLauncher:
             # Wait for backend to exit
             if self.backend_proc:
                 self.backend_proc.wait()
-                print("\n🛑 Backend process exited")
+                logger.info("🛑 Backend process exited")
 
                 # Backend exited - shut down frontend too
                 if self.frontend_proc and self.frontend_proc.poll() is None:
-                    print("🛑 Shutting down frontend...")
+                    logger.info("🛑 Shutting down frontend...")
                     self.stop()
                 return
 
@@ -521,25 +581,25 @@ class ServerLauncher:
                 self.frontend_proc.wait()
         except KeyboardInterrupt:
             # Ctrl+C pressed - stop both servers gracefully
-            print("\n🛑 Shutting down servers...")
+            logger.info("🛑 Shutting down servers...")
             self.stop()
 
     def _print_banner(self) -> None:
         """Print startup banner."""
-        print("=" * 70)
-        print("🚀 FairSense-AgentiX Server Launcher")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("🚀 FairSense-AgentiX Server Launcher")
+        logger.info("=" * 70)
 
     def _print_ready_message(self) -> None:
         """Print ready message with access URLs."""
-        print("\n" + "=" * 70)
-        print("✅ FairSense-AgentiX is running!")
-        print("=" * 70)
-        print(f"Backend:  http://localhost:{self.backend_port}")
-        print(f"Frontend: http://localhost:{self.frontend_port}")
-        print(f"API Docs: http://localhost:{self.backend_port}/docs")
-        print("\nPress Ctrl+C to stop")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("✅ FairSense-AgentiX is running!")
+        logger.info("=" * 70)
+        logger.info("Backend:  http://localhost:%s", self.backend_port)
+        logger.info("Frontend: http://localhost:%s", self.frontend_port)
+        logger.info("API Docs: http://localhost:%s/docs", self.backend_port)
+        logger.info("Press Ctrl+C to stop")
+        logger.info("=" * 70)
 
 
 def start(
@@ -601,6 +661,9 @@ def start(
     - Press Ctrl+C for graceful shutdown
     - Requires Node.js/npm installed (https://nodejs.org/)
     """
+    # Match verbose: DEBUG shows _log_debug lines; INFO is enough for banners.
+    ensure_root_logging(logging.DEBUG if verbose else logging.INFO)
+
     launcher = ServerLauncher(
         backend_port=port,
         frontend_port=ui_port,

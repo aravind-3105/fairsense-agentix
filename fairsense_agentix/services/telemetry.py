@@ -67,7 +67,9 @@ class TelemetryService:
 
     @contextmanager
     def timer(
-        self, operation_name: str, **extra_context: Any
+        self,
+        operation_name: str,
+        **extra_context: Any,
     ) -> Generator[dict[str, float], None, None]:
         """Context manager to time an operation.
 
@@ -222,7 +224,10 @@ class TelemetryService:
             logger.warning(log_msg)
 
     def log_error(
-        self, event: str, error: Exception | None = None, **context: Any
+        self,
+        event: str,
+        error: Exception | None = None,
+        **context: Any,
     ) -> None:
         """Log an error event with structured context.
 
@@ -324,7 +329,11 @@ class TelemetryService:
             self._observers.remove(observer)
 
     def _build_payload(
-        self, *, level: str, event: str, context: dict[str, Any]
+        self,
+        *,
+        level: str,
+        event: str,
+        context: dict[str, Any],
     ) -> dict[str, Any]:
         """Create normalized payload for observers."""
         run_id = context.get("run_id") or self._current_run_id

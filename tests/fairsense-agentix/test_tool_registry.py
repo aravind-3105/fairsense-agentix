@@ -297,7 +297,10 @@ class TestRegistryConfigurations:
         ],
     )
     def test_registry_with_valid_configurations(
-        self, ocr_tool, caption_model, llm_provider
+        self,
+        ocr_tool,
+        caption_model,
+        llm_provider,
     ):
         """Registry should work with valid tool combinations."""
         settings = Settings(
