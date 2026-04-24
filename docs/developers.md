@@ -12,36 +12,95 @@ fairsense-agentix/
 │   ├── __init__.py             # Package exports and eager loading
 │   ├── api.py                  # High-level Python API (FairSense class)
 │   ├── graphs/                 # LangGraph workflow definitions
-│   │   ├── orchestrator_graph.py   # Main ReAct coordinator
-│   │   ├── bias_text_graph.py      # Text bias workflow
-│   │   ├── bias_image_graph.py     # Traditional image workflow
-│   │   ├── bias_image_vlm_graph.py # VLM image workflow
-│   │   ├── risk_graph.py           # Risk assessment workflow
-│   │   └── state.py                # State definitions
+│   │   ├── orchestrator_graph.py   # Public entry: create_orchestrator_graph re-export
+│   │   ├── orchestrator/           # Orchestrator implementation (split modules)
+│   │   │   ├── build.py                # Graph construction and compile
+│   │   │   ├── planning.py             # request_plan, preflight_eval
+│   │   │   ├── execution.py            # execute_workflow (subgraph dispatch)
+│   │   │   ├── evaluation.py           # posthoc_eval, bias source text helper
+│   │   │   ├── decision_finalize.py    # decide_action, apply_refinement, finalize
+│   │   │   └── routing.py              # Conditional edge routing helpers
+│   │   ├── bias_text_graph.py      # Public entry: create_bias_text_graph re-export
+│   │   ├── bias_text/              # Text bias workflow implementation
+│   │   │   ├── build.py                # StateGraph wiring + compile
+│   │   │   ├── nodes.py                # analyze_bias, summarize, highlight
+│   │   │   ├── routing.py              # should_summarize
+│   │   │   └── spans.py                # Span extraction for highlighting
+│   │   ├── bias_image_graph.py     # Public entry: create_bias_image_graph re-export
+│   │   ├── bias_image/             # Traditional image workflow implementation
+│   │   │   ├── build.py                # StateGraph wiring + compile
+│   │   │   ├── nodes_extraction.py     # extract_ocr, generate_caption, merge_text
+│   │   │   ├── nodes_analysis.py       # analyze_bias, summarize, highlight
+│   │   │   ├── validation.py           # Pillow decode checks before OCR/caption
+│   │   │   └── spans.py                # Bias spans mapped to merged OCR+caption text
+│   │   ├── bias_image_vlm_graph.py # Public entry: create_bias_image_vlm_graph re-export
+│   │   ├── bias_image_vlm/         # VLM image workflow implementation
+│   │   │   ├── build.py                # StateGraph wiring + compile
+│   │   │   └── nodes.py                # visual_analyze, summarize, highlight
+│   │   ├── risk_graph.py           # Public entry: create_risk_graph re-export
+│   │   ├── risk/                   # Risk assessment workflow implementation
+│   │   │   ├── build.py                # StateGraph wiring + compile
+│   │   │   ├── nodes_retrieval.py      # embed, FAISS risks, RMF per risk
+│   │   │   └── nodes_output.py         # join, HTML table, CSV export
+│   │   └── state/                  # State definitions (split modules)
+│   │       ├── orchestrator.py         # SelectionPlan, EvaluationResult, OrchestratorState
+│   │       ├── bias_text.py            # BiasTextState
+│   │       ├── bias_image.py           # BiasImageState
+│   │       ├── bias_image_vlm.py       # BiasImageVLMState
+│   │       └── risk.py                 # RiskState
 │   ├── tools/                  # Tool implementations
 │   │   ├── registry.py             # Tool factory and DI container
 │   │   ├── resolvers/               # Per-tool resolver modules (ocr, llm, etc.)
-│   │   ├── interfaces.py           # Tool protocols/interfaces
+│   │   ├── interfaces/             # Tool protocol interfaces (split modules)
+│   │   │   ├── image.py                # OCRTool, CaptionTool
+│   │   │   ├── text.py                 # LLMTool, SummarizerTool, VLMTool
+│   │   │   ├── search.py               # EmbedderTool, FAISSIndexTool
+│   │   │   └── output.py               # FormatterTool, PersistenceTool
 │   │   ├── ocr/                    # OCR implementations
 │   │   ├── caption/                # Image captioning
 │   │   ├── vlm/                    # Vision-Language Models
 │   │   ├── llm/                    # LLM integrations
 │   │   ├── embeddings/             # Text embeddings
 │   │   ├── faiss_index/            # Vector search
-│   │   ├── formatter/              # Output formatting
+│   │   ├── formatter/              # Output formatting (HTML)
+│   │   │   ├── html_formatter.py       # HTMLFormatter facade
+│   │   │   ├── highlight.py            # Bias span fragments + full documents
+│   │   │   └── tables.py               # Data table HTML
 │   │   ├── persistence/            # File I/O
-│   │   └── fake.py                 # Fake tools for testing
+│   │   └── fake/                   # Fake tools for testing (split modules)
+│   │       ├── image.py                # FakeOCRTool, FakeCaptionTool
+│   │       ├── text.py                 # FakeLLMTool, FakeSummarizerTool
+│   │       ├── search.py               # FakeEmbedderTool, FakeFAISSIndexTool
+│   │       └── output.py               # FakeFormatterTool, FakePersistenceTool
 │   ├── services/               # Support services
 │   │   ├── router.py               # Workflow routing logic
-│   │   ├── evaluator.py            # Quality evaluation
+│   │   ├── evaluator/              # Quality evaluation (split modules)
+│   │   │   ├── common.py               # EvaluationContext (shared)
+│   │   │   ├── bias.py                 # LLM-based bias evaluator
+│   │   │   └── risk.py                 # Rule-based risk evaluator
 │   │   ├── telemetry.py            # Event streaming
 │   │   └── event_bus.py            # WebSocket event bus
 │   ├── service_api/            # FastAPI backend
-│   │   ├── server.py               # REST/WebSocket endpoints
+│   │   ├── server.py               # App factory: lifespan, middleware, router includes
+│   │   ├── app_state.py            # Shared runtime state (engine, event_bus, locks)
+│   │   ├── helpers.py              # run_analysis, run_analysis_background
+│   │   └── routes/                 # APIRouter modules
+│   │       ├── health.py               # GET /v1/health, POST /v1/shutdown
+│   │       ├── analyze.py              # POST /v1/analyze* (4 endpoints)
+│   │       ├── batch.py                # POST/GET /v1/batch
+│   │       └── stream.py               # WS /v1/stream/{run_id}
 │   │   ├── schemas.py              # Request/response models
 │   │   └── utils.py                # Helper functions
 │   ├── server/                 # Server launcher utilities
-│   │   └── launcher.py             # Process management
+│   │   ├── launcher/               # ServerLauncher orchestration (split modules)
+│   │   │   ├── messages.py             # Banners, ready message, troubleshooting output
+│   │   │   ├── health.py               # HTTP health-check polling
+│   │   │   ├── processes.py            # start_backend, start_frontend, kill_port
+│   │   │   └── core.py                 # ServerLauncher orchestrator + start()
+│   │   ├── launcher_ports.py       # Port helpers and listener cleanup
+│   │   ├── launcher_health.py      # Backend/frontend readiness waits
+│   │   ├── launcher_processes.py   # Spawn backend/frontend subprocesses
+│   │   └── launcher_troubleshooting.py  # Troubleshooting log helpers
 │   ├── prompts/                # LLM prompt templates
 │   │   ├── prompt_loader.py        # Template loading
 │   │   └── templates/              # .txt files with Jinja2 templates
@@ -71,6 +130,77 @@ fairsense-agentix/
 ├── mkdocs.yml                  # Documentation config
 └── README.md                   # Project README
 ```
+
+### Orchestrator package (`graphs/orchestrator/`)
+
+The orchestrator supergraph used to live entirely in `orchestrator_graph.py`. It is now split into focused modules under `fairsense_agentix/graphs/orchestrator/` so each file stays easier to read and review. **Imports for callers are unchanged:** use `from fairsense_agentix.graphs.orchestrator_graph import create_orchestrator_graph` (or `from fairsense_agentix import create_orchestrator_graph`).
+
+| Module | Contents |
+|--------|----------|
+| `build.py` | `create_orchestrator_graph()` — registers nodes, edges, and conditional routes, then compiles the graph. |
+| `planning.py` | `request_plan` (router integration), `preflight_eval` (plan validation stub / future checks). |
+| `execution.py` | `execute_workflow` — dispatches to `bias_text`, `bias_image` / VLM, `bias_image_vlm`, or `risk` subgraphs based on `plan.workflow_id`. |
+| `evaluation.py` | `posthoc_eval` (quality evaluation), `_extract_bias_source_text` (evaluator context for bias workflows). |
+| `decision_finalize.py` | `decide_action` (accept / refine / fail), `apply_refinement` (plan/options updates), `finalize` (client-facing `final_result`). |
+| `routing.py` | `should_execute_workflow`, `route_after_decision` — LangGraph conditional edge callables. |
+
+`orchestrator_graph.py` keeps the high-level module docstring and re-exports `create_orchestrator_graph` from `orchestrator.build`. When you add a new workflow, you still update `services/router.py` for routing; extend **`execution.py`** with a new `workflow_id` branch (and any packaging of subgraph results), following the existing patterns.
+
+### Bias text package (`graphs/bias_text/`)
+
+The text bias workflow lives under `fairsense_agentix/graphs/bias_text/`. **Callers still import** `create_bias_text_graph` **from** `fairsense_agentix.graphs.bias_text_graph`.
+
+| Module | Contents |
+|--------|----------|
+| `build.py` | `create_bias_text_graph()` — analyze → conditional summarize → highlight. |
+| `nodes.py` | `analyze_bias`, `summarize`, `highlight` (prompt template from package root). |
+| `routing.py` | `should_summarize` — long text or `enable_summary` option. |
+| `spans.py` | `_extract_spans_from_analysis` — character spans in original text. |
+
+### Risk package (`graphs/risk/`)
+
+The CSV / FAISS risk workflow lives under `fairsense_agentix/graphs/risk/`. **Callers still import** `create_risk_graph` **from** `fairsense_agentix.graphs.risk_graph`.
+
+| Module | Contents |
+|--------|----------|
+| `build.py` | `create_risk_graph()` — sequential embed → search → RMF → join → HTML → CSV. |
+| `nodes_retrieval.py` | `embed_scenario`, `search_risks`, `search_rmf_per_risk`. |
+| `nodes_output.py` | `join_data`, `format_html`, `export_csv`. |
+
+### Evaluator package (`services/evaluator/`)
+
+The quality evaluators live under `fairsense_agentix/services/evaluator/`. All names are re-exported from `__init__.py` so existing imports of `from fairsense_agentix.services.evaluator import ...` are unchanged.
+
+| Module | Contents |
+|--------|----------|
+| `common.py` | `EvaluationContext` — shared dataclass used by both evaluators. |
+| `bias.py` | `BiasEvaluatorOutput`, `evaluate_bias_output` — LLM-based critique via OpenAI/Anthropic. Includes prompt rendering, `_build_plain_langchain_model`, serialization, and fake/forced-score helpers. |
+| `risk.py` | `RiskEvaluatorOutput`, `evaluate_risk_output` — rule-based checks: RMF breadth, duplicate detection, FAISS score sanity, risk coverage. |
+
+---
+
+### Bias image VLM package (`graphs/bias_image_vlm/`)
+
+The VLM image bias workflow lives under `fairsense_agentix/graphs/bias_image_vlm/`. **Callers still import** `create_bias_image_vlm_graph` **from** `fairsense_agentix.graphs.bias_image_vlm_graph`.
+
+| Module | Contents |
+|--------|----------|
+| `build.py` | `create_bias_image_vlm_graph()` — sequential visual_analyze → summarize → highlight. |
+| `nodes.py` | `visual_analyze` (VLM CoT prompt), `summarize`, `highlight` (HTML with bias instances). |
+
+No routing module — the workflow is a simple linear chain. Prompt template resolved from the package root (`prompts/templates/bias_visual_analysis_v1.txt`).
+
+### Bias image package (`graphs/bias_image/`)
+
+The traditional OCR + caption image workflow is implemented under `fairsense_agentix/graphs/bias_image/`. **Callers still import** `create_bias_image_graph` **from** `fairsense_agentix.graphs.bias_image_graph`.
+
+| Module | Contents |
+|--------|----------|
+| `build.py` | `create_bias_image_graph()` — parallel OCR/caption fan-out, merge, analyze, summarize, highlight. |
+| `nodes_extraction.py` | `extract_ocr`, `generate_caption`, `merge_text`. |
+| `nodes_analysis.py` | `analyze_bias` (loads `prompts/templates/bias_analysis_v1.txt` from package root), `summarize`, `highlight`. |
+| `validation.py` | `_ensure_valid_image_bytes` — optional Pillow verification. |
+| `spans.py` | `_extract_spans_from_analysis` — maps bias instances to spans in merged text. |
 
 ---
 
@@ -196,13 +326,28 @@ from fairsense_agentix.services.telemetry import telemetry
 
 ---
 
+## interfaces/ — Tool Protocol Interfaces
+
+`fairsense_agentix/tools/interfaces/` defines all `@runtime_checkable` Protocol classes that tool implementations must satisfy. Split across four focused modules:
+
+| Module | Protocols |
+|---|---|
+| `image.py` | `OCRTool`, `CaptionTool` |
+| `text.py` | `LLMTool`, `SummarizerTool`, `VLMTool` |
+| `search.py` | `EmbedderTool`, `FAISSIndexTool` |
+| `output.py` | `FormatterTool`, `PersistenceTool` |
+
+All names are re-exported from `interfaces/__init__.py` so existing imports like `from fairsense_agentix.tools.interfaces import OCRTool` continue to work unchanged.
+
+---
+
 ## How to Add a Custom Tool
 
 Tools in FairSense follow the **Tool Abstraction Pattern** - they implement an interface and are registered via the ToolRegistry.
 
 ### Step 1: Define Tool Interface
 
-**File:** `fairsense_agentix/tools/interfaces.py`
+**File:** `fairsense_agentix/tools/interfaces/` (add to the appropriate submodule: `image.py`, `text.py`, `search.py`, or `output.py`)
 
 ```python
 from typing import Protocol
@@ -545,7 +690,7 @@ Workflows are LangGraph state machines that define analysis pipelines.
 
 ### Step 1: Define Workflow State
 
-**File:** `fairsense_agentix/graphs/state.py`
+**File:** `fairsense_agentix/graphs/state/` (add to the appropriate submodule)
 
 ```python
 from typing import TypedDict
@@ -651,7 +796,7 @@ def create_selection_plan(
     # ...
 ```
 
-**File:** `fairsense_agentix/graphs/orchestrator_graph.py`
+**File:** `fairsense_agentix/graphs/orchestrator/execution.py`
 
 ```python
 def execute_workflow(state: OrchestratorState) -> dict:
@@ -944,6 +1089,36 @@ def my_node(state):
     result = process(state)
     return {"result": result}
 ```
+
+### Input Type Detection and Routing
+
+The server auto-detects whether a string payload is plain text or a CSV (risk workflow) using `looks_like_csv` in `fairsense_agentix/service_api/utils.py`. The rules are:
+
+| Condition | Detected as |
+|---|---|
+| `bytes` / `bytearray` | `image` |
+| `Path` with image extension | `image` |
+| `Path` with `.csv` extension | `csv` |
+| String with **≥ 2 lines**, all containing commas, consistent comma count per line | `csv` → risk workflow |
+| Everything else (including single-line strings with commas) | `text` → bias text workflow |
+
+**Examples that route to bias text:**
+```
+We need a skilled, motivated, and experienced engineer.   ← single line, ignored
+```
+```
+This role is rewarding, flexible, and well-paid.
+It also offers great benefits, career growth.             ← inconsistent comma counts (3 vs 2)
+```
+
+**Examples that route to risk (CSV):**
+```
+name,age,role
+Alice,30,engineer
+Bob,25,designer
+```
+
+If your text input is unexpectedly routing to the risk workflow, check whether it spans multiple lines and has the same number of commas on each line.
 
 ---
 
