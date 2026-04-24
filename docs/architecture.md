@@ -326,7 +326,17 @@ graph LR
 **Knowledge Base:**
 - **Risks:** 280+ AI risks from NIST AI Risk Management Framework
 - **RMF:** 500+ mitigation recommendations mapped to risk categories
-- **Storage:** FAISS indices built at startup; index files and metadata live under `data/indexes/` (e.g. `risks.faiss`, `rmf.faiss`) and package `fairsense_agentix/data/indexes/`
+- **Storage:** FAISS index files live inside the package at `fairsense_agentix/data/indexes/` in LangChain format:
+  ```
+  fairsense_agentix/data/indexes/
+  ├── risks/index.faiss   # vector index (1,340 risks, 384-dim embeddings)
+  ├── risks/index.pkl     # LangChain document store
+  ├── risks_meta.json     # human-readable fields (id, risk_name, description, severity, category)
+  ├── rmf/index.faiss
+  ├── rmf/index.pkl
+  └── rmf_meta.json
+  ```
+  The `FAIRSENSE_FAISS_RISKS_INDEX_PATH` env var uses a virtual `.faiss` path (e.g. `fairsense_agentix/data/indexes/risks.faiss`) — the resolver strips the extension and looks for the `risks/index.faiss` folder structure. If that folder is missing, the system silently falls back to `FakeFAISSIndexTool` which returns hardcoded placeholder results.
 
 ---
 
