@@ -305,10 +305,9 @@ print(f"Total Risks Identified: {len(result.risks)}")
 
 # Top risks
 for risk in result.risks[:5]:
-    print(f"\n{risk.name} (Score: {risk.score:.2f}/100)")
+    print(f"\n{risk.risk_name} (Relevance: {risk.score:.2f})")
     print(f"  Category: {risk.category}")
     print(f"  Description: {risk.description}")
-    print(f"  Mitigation: {risk.mitigation}")
 ```
 
 ### Risk Result Object
@@ -324,12 +323,13 @@ for risk in result.risks[:5]:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | `str` | Risk identifier |
-| `category` | `str` | Risk type: `fairness`, `security`, `compliance`, etc. |
-| `score` | `float` | Severity score (0-100) |
-| `description` | `str` | What the risk is |
-| `mitigation` | `str` | How to address it |
-| `related_framework` | `str` | AI-RMF, NIST, etc. |
+| `risk_name` | `str` | Risk title from the MIT AI Risk Repository |
+| `category` | `str` | Domain taxonomy label (e.g., `3.1 AI system safety failures`) |
+| `score` | `float` | Relevance score (0–1) — FAISS semantic similarity to the query |
+| `description` | `str` | Full risk description from the repository |
+
+!!! note "Risk source"
+    Risks are retrieved from the [MIT AI Risk Repository](https://airisk.mit.edu/) (V3, 1,340 entries) using semantic similarity search. The `category` field follows the repository's Domain Taxonomy; the number prefix (e.g., `3.1`) identifies the domain and subcategory. A score of `1.0` means the risk is maximally relevant to the described scenario; `0.0` means unrelated.
 
 ### CSV Dataset Analysis
 
@@ -371,12 +371,12 @@ Monitoring: None currently planned
 
 result = engine.assess_risk(deployment_plan)
 
-# Check critical risks
-critical = [r for r in result.risks if r.score > 80]
+# Check high-relevance risks (score > 0.7 = strong semantic match)
+critical = [r for r in result.risks if r.score > 0.7]
 if critical:
-    print("🚨 CRITICAL RISKS - DO NOT DEPLOY")
+    print("🚨 HIGH-RELEVANCE RISKS DETECTED")
     for risk in critical:
-        print(f"  • {risk.name}: {risk.description}")
+        print(f"  • {risk.risk_name}: {risk.description}")
 ```
 
 #### Compliance Check
@@ -389,9 +389,8 @@ result = engine.assess_risk(scenario)
 compliance_risks = [r for r in result.risks if r.category == "compliance"]
 
 for risk in compliance_risks:
-    print(f"\n⚖️  {risk.name}")
-    print(f"   Framework: {risk.related_framework}")
-    print(f"   Mitigation: {risk.mitigation}")
+    print(f"\n⚖️  {risk.risk_name} (score: {risk.score:.2f})")
+    print(f"   {risk.description}")
 ```
 
 #### Vendor Assessment
@@ -408,9 +407,62 @@ Explainability: Black-box model
 result = engine.assess_risk(vendor_proposal)
 
 # Generate vendor scorecard
-print(f"Vendor Risk Score: {sum(r.score for r in result.risks) / len(result.risks):.1f}/100")
-print(f"High-Priority Concerns: {len([r for r in result.risks if r.score > 70])}")
+avg_score = sum(r.score for r in result.risks) / len(result.risks) if result.risks else 0
+print(f"Avg Relevance Score: {avg_score:.2f}")
+print(f"High-Relevance Concerns: {len([r for r in result.risks if r.score > 0.6])}")
 ```
+
+---
+
+## Using the Web Interface
+
+The web UI is the easiest way to run analyses interactively.
+
+### Launch
+
+```bash
+python examples/launch_server.py
+# Or: python -c "from fairsense_agentix import server; server.start()"
+```
+
+This starts the backend API at `http://localhost:8000` and opens the React UI at `http://localhost:5173`.
+
+### Landing Page
+
+When you open the UI you arrive at the **landing page**, which introduces the platform and shows three analysis mode cards (**Bias (Text)**, **Bias (Image)**, **Risk**). Click any card to jump directly to that mode in the analysis app.
+
+The page background features a subtle dot grid and a pink gradient at the top — consistent with the FairSense brand accent colors.
+
+### Analysis App (`/analyze`)
+
+Select a mode from the tab bar at the top:
+
+| Mode | Input | What it detects |
+|------|-------|-----------------|
+| **Bias (Text)** | Paste or type text | Gender, age, racial, disability, socioeconomic bias |
+| **Bias (Image)** | Upload an image | Visual stereotypes, underrepresentation |
+| **Risk** | Describe an AI deployment | Fairness, security, compliance risks (MIT AI Risk Repository) |
+
+Each mode includes **clickable demo examples** in the right column — select one to pre-fill the input and run an analysis immediately without typing anything.
+
+### Reading Results
+
+**Bias results** — scored instances listed with the affected text span, bias type badge (color-coded by category), and a plain-language explanation.
+
+**Risk results** — the top semantically matched risks from the [MIT AI Risk Repository](https://airisk.mit.edu/), each showing:
+
+| UI element | Field | Notes |
+|---|---|---|
+| Title | `risk_name` | Risk title from the repository |
+| Category label | `category` | MIT Domain Taxonomy label, e.g. `3.1 AI system safety failures`. Hover the ⓘ on the first card for a tooltip explaining the taxonomy. |
+| Score badge | `score` | Relevance score 0–1 (FAISS semantic similarity). Higher = closer match to your scenario. |
+| Description | `description` | Full risk description (academic citations stripped for readability) |
+
+A **"MIT AI Risk Repository ↗"** link in the results header opens the full database for deeper exploration.
+
+### Shutdown
+
+Click the red **Shutdown** button in the top-right corner of the app page to gracefully stop both servers, or press `Ctrl+C` in the terminal.
 
 ---
 

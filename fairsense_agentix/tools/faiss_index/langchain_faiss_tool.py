@@ -274,34 +274,21 @@ class LangChainFAISSTool:
             # Convert to numpy array for LangChain
             query_np = np.array(query_vector, dtype="float32")
 
-            # Use LangChain's similarity_search_by_vector (without scores)
-            # Then use similarity_search_with_score_by_vector separately if needed
-            # For now, return results without scores since computing them requires
-            # access to the underlying index which LangChain doesn't expose directly
-            docs = self.vectorstore.similarity_search_by_vector(
-                embedding=query_np.tolist(),  # LangChain expects list
+            docs_with_scores = self.vectorstore.similarity_search_with_score_by_vector(
+                embedding=query_np.tolist(),
                 k=top_k,
             )
 
-            # Build result list matching our protocol
             results = []
-            for rank, doc in enumerate(docs):
-                # Score computation: LangChain doesn't expose scores in this method
-                # Use 0.0 as placeholder - for precise scores, search_by_text instead
-                score = 0.0  # Placeholder
-
-                # Extract metadata from document
-                # LangChain stores metadata in doc.metadata
+            for rank, (doc, score) in enumerate(docs_with_scores):
                 result_dict = doc.metadata.copy()
-
-                # Add search metadata
-                result_dict["score"] = float(score)
+                # Convert L2 distance to a 0–1 relevance score.
+                # Linear mapping: l2_dist 0→1.0, 2→0.0 (max L2 for normalized vectors)
+                relevance = round(max(0.0, 1.0 - float(score) / 2.0), 3)
+                result_dict["score"] = relevance
                 result_dict["rank"] = rank
-
-                # If text is available in document, add it
                 if doc.page_content:
                     result_dict["text"] = doc.page_content
-
                 results.append(result_dict)
 
             return results

@@ -89,3 +89,30 @@
   opacity: 0.7;
   margin-right: 0.2em;
 }
+
+/* Mermaid diagram zoom on hover */
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.mermaid {
+  display: block;
+  cursor: zoom-in;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transform-origin: top center;
+  position: relative;
+  z-index: 0;
+  border-radius: 6px;
+}
+
+.mermaid:hover {
+  transform: scale(1.6);
+  z-index: 10;
+  background: var(--md-default-bg-color);
+  padding: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+}
