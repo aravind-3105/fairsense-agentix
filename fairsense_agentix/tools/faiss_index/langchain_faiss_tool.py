@@ -280,11 +280,13 @@ class LangChainFAISSTool:
             )
 
             results = []
-            for rank, (doc, score) in enumerate(docs_with_scores):
+            for rank, (doc, l2_dist_sq) in enumerate(docs_with_scores):
                 result_dict = doc.metadata.copy()
-                # Convert L2 distance to a 0–1 relevance score.
-                # Linear mapping: l2_dist 0→1.0, 2→0.0 (max L2 for normalized vectors)
-                relevance = round(max(0.0, 1.0 - float(score) / 2.0), 3)
+                # Assumes unit-normalised embeddings (sentence-transformers default).
+                # IndexFlatL2 returns squared L2; for unit vectors: l2_sq = 2*(1-cos),
+                # so cos = 1 - l2_sq/2. Clamp to [0,1]: handles both non-unit vectors
+                # (l2_sq > 4) and negative cosine similarities (dissimilar pairs).
+                relevance = round(max(0.0, 1.0 - float(l2_dist_sq) / 2.0), 3)
                 result_dict["score"] = relevance
                 result_dict["rank"] = rank
                 if doc.page_content:

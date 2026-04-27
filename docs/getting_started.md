@@ -13,7 +13,7 @@ Before you begin, ensure you have:
 - **API key** for your chosen LLM provider:
   - [Anthropic](https://console.anthropic.com/) for Claude models (recommended)
   - [OpenAI](https://platform.openai.com/api-keys) for GPT models
-- **(Optional)** [Node.js 18+](https://nodejs.org/) for running the React UI
+- **(Optional)** [Node.js 20+](https://nodejs.org/) for running the React UI
 
 ---
 
