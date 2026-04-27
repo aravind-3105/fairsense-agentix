@@ -137,22 +137,36 @@ const DEMO_IMAGE_SVGs = {
 };
 
 async function createDemoImageFile(svgString: string, filename: string): Promise<File> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
+    const cleanup = () => URL.revokeObjectURL(url);
     const img = new window.Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 800;
       canvas.height = 560;
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        cleanup();
+        reject(new Error("Failed to create image preview: 2D canvas context unavailable."));
+        return;
+      }
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, 800, 560);
       ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
+      cleanup();
       canvas.toBlob((blob) => {
-        resolve(new File([blob!], filename, { type: "image/png" }));
+        if (!blob) {
+          reject(new Error("Failed to create image preview: PNG conversion returned no data."));
+          return;
+        }
+        resolve(new File([blob], filename, { type: "image/png" }));
       }, "image/png");
+    };
+    img.onerror = () => {
+      cleanup();
+      reject(new Error("Failed to create image preview: SVG could not be loaded."));
     };
     img.src = url;
   });
@@ -165,10 +179,13 @@ interface TimelineEntry {
   context: Record<string, unknown>;
 }
 
+const VALID_MODES: Mode[] = ["text", "image", "csv"];
+
 export default function App() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialMode = (searchParams.get("mode") as Mode) ?? "text";
+  const modeParam = searchParams.get("mode");
+  const initialMode: Mode = VALID_MODES.includes(modeParam as Mode) ? (modeParam as Mode) : "text";
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -903,7 +920,7 @@ function ResultPanel({ result }: { result: any | null }) {
           </div>
         </header>
         <div className="space-y-3">
-          {risks.slice(0, 5).filter((r: any) => (r.score ?? 0) > 0).map((risk: any, idx: number) => (
+          {risks.filter((r: any) => (r.score ?? 0) > 0).slice(0, 5).map((risk: any, idx: number) => (
             <div key={idx} className="rounded-xl border border-slate-800/50 bg-slate-900/30 p-4 space-y-2 hover:border-slate-700/70 transition-colors">
               <div className="flex justify-between items-start gap-3">
                 <div className="space-y-1 min-w-0">
@@ -1210,36 +1227,23 @@ function AboutModal({ onClose }: { onClose: () => void }) {
                     role: "Applied ML Scientist — Responsible AI",
                     email: "shaina.raza@vectorinstitute.ai",
                     linkedin: "https://www.linkedin.com/in/shainaraza/",
-                    photo: "https://media.licdn.com/dms/image/v2/D5603AQHUgEgXEYb_cw/profile-displayphoto-crop_800_800/B56ZmawXbDI4AI-/0/1759237995702?e=1778112000&v=beta&t=rO90EphvhrTdREsqk1LYZoW9m8IOm277OXPc7dJWlaE",
                   },
                   {
                     name: "Aravind Narayanan",
                     role: "Associate Applied ML Specialist",
                     email: "aravind.narayanan@vectorinstitute.ai",
                     linkedin: "https://www.linkedin.com/in/aravind-n-774665144/",
-                    photo: "https://media.licdn.com/dms/image/v2/D4D03AQFb2AEQkVhjWg/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1695527449774?e=1778112000&v=beta&t=sOHAj_1jCL3I2bL1Lrvi3tgUBZsOPQjzwr1n7dPCw2A",
                   },
                   {
                     name: "Mahshid Alinoori",
                     role: "Applied ML Specialist",
                     email: "mahshid.alinoori@vectorinstitute.ai",
                     linkedin: "https://www.linkedin.com/in/mahshid-alinoori/",
-                    photo: "https://media.licdn.com/dms/image/v2/D5603AQE4YYFri1iOOg/profile-displayphoto-crop_800_800/B56Zs4oGKcIcAI-/0/1766181601721?e=1778112000&v=beta&t=CNQ2NzY_f5ln7NPceo0meHg86PdFuYVJzTHolBz5Xww",
                   },
                 ].map((member) => (
                   <div key={member.name} className="flex gap-4 rounded-xl border border-slate-800/50 bg-slate-900/30 p-4">
-                    <img
-                      src={member.photo}
-                      alt={member.name}
-                      className="h-12 w-12 flex-shrink-0 rounded-full object-cover border border-slate-700"
-                      onError={(e) => {
-                        const el = e.currentTarget;
-                        el.style.display = "none";
-                        el.nextElementSibling?.removeAttribute("style");
-                      }}
-                    />
-                    <div className="h-12 w-12 flex-shrink-0 rounded-full bg-accent-200/20 border border-accent-200/30 items-center justify-center text-accent-200 text-sm font-semibold hidden">
-                      {member.name[0]}
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-accent-200/30 bg-accent-200/20 text-sm font-semibold text-accent-200">
+                      {member.name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
                     </div>
                     <div className="space-y-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-200">{member.name}</p>

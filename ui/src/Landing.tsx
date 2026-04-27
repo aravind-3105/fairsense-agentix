@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Image, ShieldAlert, ChevronRight, ChevronDown, ScanSearch, Brain, BarChart2 } from "lucide-react";
 import vectorLogo from "./assets/Vector Logo_Bilingual_White_Horizontal.png";
@@ -33,7 +33,7 @@ export default function Landing() {
     detailsRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const modes: { icon: React.ReactNode; title: string; mode: string; audience: string; description: string; example: string }[] = [
+  const modes: { icon: ReactNode; title: string; mode: string; audience: string; description: string; example: string }[] = [
     {
       icon: <FileText size={22} />,
       mode: "text",
