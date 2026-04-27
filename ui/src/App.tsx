@@ -143,26 +143,30 @@ async function createDemoImageFile(svgString: string, filename: string): Promise
     const cleanup = () => URL.revokeObjectURL(url);
     const img = new window.Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 800;
-      canvas.height = 560;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        cleanup();
-        reject(new Error("Failed to create image preview: 2D canvas context unavailable."));
-        return;
-      }
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, 800, 560);
-      ctx.drawImage(img, 0, 0);
-      cleanup();
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error("Failed to create image preview: PNG conversion returned no data."));
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 800;
+        canvas.height = 560;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to create image preview: 2D canvas context unavailable."));
           return;
         }
-        resolve(new File([blob], filename, { type: "image/png" }));
-      }, "image/png");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, 800, 560);
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Failed to create image preview: PNG conversion returned no data."));
+            return;
+          }
+          resolve(new File([blob], filename, { type: "image/png" }));
+        }, "image/png");
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to create image preview."));
+      } finally {
+        cleanup();
+      }
     };
     img.onerror = () => {
       cleanup();
@@ -456,8 +460,12 @@ export default function App() {
                     <button
                       key={demo.key}
                       onClick={async () => {
-                        const f = await createDemoImageFile(DEMO_IMAGE_SVGs[demo.key], `${demo.key}.png`);
-                        setFile(f);
+                        try {
+                          const f = await createDemoImageFile(DEMO_IMAGE_SVGs[demo.key], `${demo.key}.png`);
+                          setFile(f);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Failed to load demo image.");
+                        }
                       }}
                       className="group overflow-hidden rounded-xl border border-slate-700 hover:border-accent-200/50 transition-colors text-left"
                     >

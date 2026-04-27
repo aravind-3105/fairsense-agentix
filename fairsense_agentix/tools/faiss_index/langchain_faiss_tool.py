@@ -282,9 +282,10 @@ class LangChainFAISSTool:
             results = []
             for rank, (doc, l2_dist_sq) in enumerate(docs_with_scores):
                 result_dict = doc.metadata.copy()
-                # FAISS IndexFlatL2 returns squared L2 distances.
-                # For unit vectors, squared L2 ∈ [0,4] = 2*(1 - cosine_sim),
-                # so cosine_sim = 1 - (l2_dist_sq / 2). Clamp to 0 for non-unit vectors.
+                # Assumes unit-normalised embeddings (sentence-transformers default).
+                # IndexFlatL2 returns squared L2; for unit vectors: l2_sq = 2*(1-cos),
+                # so cos = 1 - l2_sq/2. Clamp to [0,1]: handles both non-unit vectors
+                # (l2_sq > 4) and negative cosine similarities (dissimilar pairs).
                 relevance = round(max(0.0, 1.0 - float(l2_dist_sq) / 2.0), 3)
                 result_dict["score"] = relevance
                 result_dict["rank"] = rank
