@@ -1123,7 +1123,7 @@
 <ul>
 <li><strong>FastAPI REST API</strong> for programmatic access</li>
 <li><strong>WebSocket streaming</strong> for real-time agent telemetry</li>
-<li><strong>React UI</strong> with live timeline visualization</li>
+<li><strong>React UI</strong> with landing page, demo examples, and live timeline visualization</li>
 <li><strong>Batch processing</strong> for large-scale analysis jobs</li>
 </ul>
 <h3 id="highly-configurable">⚙️ Highly Configurable<a class="headerlink" href="#highly-configurable" title="Permanent link">&para;</a></h3>
@@ -1199,11 +1199,12 @@
 <p>This starts:
 - <strong>Backend API</strong> at <code>http://localhost:8000</code>
 - <strong>React UI</strong> at <code>http://localhost:5173</code></p>
-<p>The UI provides:
-- Text input field and image drag-and-drop
-- Live agent timeline showing reasoning steps
-- Downloadable results (HTML highlights, CSV tables)
-- Batch job management</p>
+<p>The UI has two pages:</p>
+<ul>
+<li><strong>Landing page</strong> (<code>/</code>) — introduces the platform with a hero section, background gradient, and three analysis mode cards (Bias Text, Bias Image, Risk). Click any card to jump directly into that mode.</li>
+<li><strong>Analysis app</strong> (<code>/analyze</code>) — select a mode from the tab bar, then paste text, upload an image, or describe an AI deployment scenario. Each mode includes <strong>clickable demo examples</strong> in the right column to pre-fill inputs instantly. Results show a live agent timeline on the left and structured output on the right.</li>
+</ul>
+<p>Risk results link to the <a href="https://airisk.mit.edu/">MIT AI Risk Repository</a> and display relevance scores (0–1) with category labels from the repository's Domain Taxonomy.</p>
 <hr />
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <ul>

@@ -1275,7 +1275,7 @@
 <li><strong>API key</strong> for your chosen LLM provider:</li>
 <li><a href="https://console.anthropic.com/">Anthropic</a> for Claude models (recommended)</li>
 <li><a href="https://platform.openai.com/api-keys">OpenAI</a> for GPT models</li>
-<li><strong>(Optional)</strong> <a href="https://nodejs.org/">Node.js 18+</a> for running the React UI</li>
+<li><strong>(Optional)</strong> <a href="https://nodejs.org/">Node.js 20+</a> for running the React UI</li>
 </ul>
 <hr />
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
@@ -1491,21 +1491,44 @@
 </tbody>
 </table>
 <h3 id="using-the-ui">Using the UI<a class="headerlink" href="#using-the-ui" title="Permanent link">&para;</a></h3>
-<p>The web interface provides:</p>
+<p>The web interface has two pages:</p>
+<p><strong>Landing page (<code>/</code>)</strong> — Introduces the platform with a hero section, mode cards (click any card to jump directly into that mode), and a how-it-works overview.</p>
+<p><strong>Analysis app (<code>/analyze</code>)</strong> — The main tool. Select a mode from the tab bar at the top:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Input</th>
+<th>What it detects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bias (Text)</strong></td>
+<td>Paste text</td>
+<td>Gender, age, racial, disability, socioeconomic bias</td>
+</tr>
+<tr>
+<td><strong>Bias (Image)</strong></td>
+<td>Upload image</td>
+<td>Visual stereotypes, underrepresentation</td>
+</tr>
+<tr>
+<td><strong>Risk</strong></td>
+<td>Describe an AI deployment</td>
+<td>Fairness, security, compliance risks (sourced from MIT AI Risk Repository)</td>
+</tr>
+</tbody>
+</table>
+<p>Each mode includes <strong>clickable demo examples</strong> on the right — select one to pre-fill the input and run a sample analysis immediately.</p>
+<p>Once you submit:</p>
 <ol>
-<li><strong>Unified Input</strong> - Text field or drag-and-drop image upload</li>
-<li><strong>Mode Selection</strong> - Choose between:</li>
-<li>Bias (Text) - Analyze text content</li>
-<li>Bias (Image) - Analyze visual content</li>
-<li>Risk - Assess deployment scenarios</li>
-<li><strong>Live Timeline</strong> - Watch the agent's reasoning process in real-time</li>
-<li><strong>Results Panel</strong> - View structured outputs with:</li>
-<li>Bias instances with severity levels</li>
-<li>Highlighted text/annotated images</li>
-<li>Risk tables with mitigation strategies</li>
-<li><strong>Batch Jobs</strong> - Process multiple items at once</li>
-<li><strong>Shutdown Button</strong> - Gracefully stop both servers</li>
+<li><strong>Agent Timeline</strong> (left) — live stream of agent reasoning steps</li>
+<li><strong>Results Panel</strong> (right) — structured output:</li>
+<li>Bias mode: scored instances with highlighted text and severity badges</li>
+<li>Risk mode: top matched risks with category, relevance score, and link to the MIT AI Risk Repository</li>
 </ol>
+<p><strong>Shutdown Button</strong> — top-right of the app page; gracefully stops both servers.</p>
 <h3 id="shutdown-the-server">Shutdown the Server<a class="headerlink" href="#shutdown-the-server" title="Permanent link">&para;</a></h3>
 <p><strong>From UI:</strong> Click the red "Shutdown" button in the top-right corner</p>
 <p><strong>From Command Line:</strong> Press <code>Ctrl+C</code> in the terminal</p>

@@ -1749,37 +1749,39 @@
 <hr />
 <h2 id="system-overview">System Overview<a class="headerlink" href="#system-overview" title="Permanent link">&para;</a></h2>
 <p>FairSense-AgentiX is built on an <strong>agentic architecture</strong> that uses a ReAct (Reasoning + Acting) pattern to intelligently analyze content for bias and AI risks. Unlike traditional ML pipelines, the system dynamically selects tools, evaluates outputs, and refines results through an iterative feedback loop.</p>
-<pre class="mermaid"><code>graph TB
-    Client[Client Entry Point&lt;br/&gt;API/CLI/GUI]
+<pre class="mermaid"><code>flowchart TB
+    Client(["Client\nAPI · CLI · GUI"])
 
-    subgraph FairSense API
-        API[FairSense Class&lt;br/&gt;analyze_text/analyze_image/assess_risk]
+    subgraph api ["FairSense API"]
+        API["FairSense Class\nanalyze_text · analyze_image · assess_risk"]
     end
 
-    subgraph Orchestrator Supergraph
-        Router[Router&lt;br/&gt;Workflow Selection]
-        Preflight[Preflight Evaluation]
-        Executor[Execute Workflow]
-        Evaluator[Post-hoc Evaluation]
-        Decision[Decide Action]
-        Refinement[Apply Refinement]
-        Finalize[Finalize Result]
+    subgraph orch ["Orchestrator Supergraph"]
+        Router["Router\nWorkflow Selection"]
+        Preflight["Preflight\nEvaluation"]
+        Executor["Execute\nWorkflow"]
+        Evaluator["Post-hoc\nEvaluation"]
+        Decision{"Decide\nAction"}
+        Refinement["Apply\nRefinement"]
+        Finalize["Finalize\nResult"]
     end
 
-    subgraph Workflow Subgraphs
-        BiasText[Bias Text Workflow&lt;br/&gt;LLM → Summarize → Highlight]
-        BiasImage[Bias Image Workflow&lt;br/&gt;OCR + Caption → LLM → Highlight]
-        BiasVLM[Bias Image VLM Workflow&lt;br/&gt;VLM → Highlight]
-        Risk[Risk Workflow&lt;br/&gt;Embed → FAISS → RMF]
+    subgraph wf ["Workflow Subgraphs"]
+        direction LR
+        BiasText["Bias Text\nLLM → Summarize → Highlight"]
+        BiasImage["Bias Image\nOCR + Caption → LLM → Highlight"]
+        BiasVLM["Bias Image VLM\nVLM → Highlight"]
+        Risk["Risk Assessment\nEmbed → FAISS → RMF"]
     end
 
-    subgraph Tool Ecosystem
-        OCR[OCR Tool&lt;br/&gt;Tesseract/PaddleOCR]
-        Caption[Caption Tool&lt;br/&gt;BLIP/BLIP-2]
-        VLM[VLM Tool&lt;br/&gt;GPT-4V/Claude Vision]
-        LLM[LLM Tool&lt;br/&gt;GPT-4/Claude]
-        Embedder[Embedder&lt;br/&gt;sentence-transformers]
-        FAISS[FAISS Indices&lt;br/&gt;Risks + RMF]
+    subgraph tools ["Tool Ecosystem"]
+        direction LR
+        OCR["OCR\nTesseract / PaddleOCR"]
+        Caption["Caption\nBLIP / BLIP-2"]
+        VLM["VLM\nGPT-4V / Claude Vision"]
+        LLM["LLM\nGPT-4 / Claude"]
+        Embedder["Embedder\nsentence-transformers"]
+        FAISS["FAISS Indices\nRisks + RMF"]
     end
 
     Client --&gt; API
@@ -1792,8 +1794,8 @@
     Executor --&gt; Risk
     Executor --&gt; Evaluator
     Evaluator --&gt; Decision
-    Decision --&gt;|accept/fail| Finalize
-    Decision --&gt;|refine| Refinement
+    Decision -- "accept / fail" --&gt; Finalize
+    Decision -- "refine" --&gt; Refinement
     Refinement --&gt; Router
     Finalize --&gt; API
 
@@ -1805,9 +1807,12 @@
     Risk --&gt; Embedder
     Risk --&gt; FAISS
 
-    style Orchestrator fill:#e1f5ff
-    style Workflow Subgraphs fill:#fff4e6
-    style Tool Ecosystem fill:#f3e5f5</code></pre>
+    style Client fill:#fce4ec,stroke:#eb088a,stroke-width:3px,color:#9c0057
+    style api fill:#fce4ec,stroke:#f48fb1,color:#000
+    style orch fill:#e3f2fd,stroke:#90caf9,color:#000
+    style wf fill:#fff3e0,stroke:#ffcc80,color:#000
+    style tools fill:#f3e5f5,stroke:#ce93d8,color:#000
+    style Decision fill:#fff9c4,stroke:#f9a825,color:#000</code></pre>
 <h3 id="key-design-principles">Key Design Principles<a class="headerlink" href="#key-design-principles" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>Agentic Decision-Making</strong> - The orchestrator autonomously selects workflows, evaluates quality, and refines outputs</li>
@@ -1883,22 +1888,31 @@
 </tbody>
 </table>
 <h4 id="state-flow">State Flow<a class="headerlink" href="#state-flow" title="Permanent link">&para;</a></h4>
-<pre class="mermaid"><code>stateDiagram-v2
-    [*] --&gt; request_plan
+<pre class="mermaid"><code>flowchart LR
+    S((" ")) --&gt; request_plan
+
+    request_plan["request_plan"]
+    preflight_eval["preflight_eval"]
+    execute_workflow["execute_workflow"]
+    posthoc_eval["posthoc_eval"]
+    decide_action{"decide_action"}
+    apply_refinement["apply_refinement\n*(max 2-3 iterations)*"]
+    finalize["finalize"]
+    E((" "))
+
     request_plan --&gt; preflight_eval
-    preflight_eval --&gt; execute_workflow : passed
-    preflight_eval --&gt; finalize : failed
+    preflight_eval -- "passed" --&gt; execute_workflow
+    preflight_eval -- "failed" --&gt; finalize
     execute_workflow --&gt; posthoc_eval
     posthoc_eval --&gt; decide_action
-    decide_action --&gt; finalize : accept/fail
-    decide_action --&gt; apply_refinement : refine
-    apply_refinement --&gt; request_plan
-    finalize --&gt; [*]
+    decide_action -- "accept/fail" --&gt; finalize
+    decide_action -- "refine" --&gt; apply_refinement
+    apply_refinement -- "retry" --&gt; request_plan
+    finalize --&gt; E
 
-    note right of apply_refinement
-        Refinement Loop
-        (max 2-3 iterations)
-    end note</code></pre>
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style decide_action fill:#fff9c4,stroke:#f9a825,color:#000</code></pre>
 <p><strong>Key Features:</strong>
 - <strong>ReAct Pattern:</strong> Router reasons about input → Executor acts → Evaluator observes → Decision reflects
 - <strong>Refinement Loop:</strong> Iterative quality improvement (disabled by default in Phase 2-6, enabled in Phase 7+)
@@ -1962,13 +1976,17 @@
 <h4 id="41-bias-text-workflow">4.1 Bias Text Workflow<a class="headerlink" href="#41-bias-text-workflow" title="Permanent link">&para;</a></h4>
 <p><strong>File:</strong> <code>bias_text_graph.py</code></p>
 <p><strong>Flow:</strong>
-<pre class="mermaid"><code>graph LR
-    START --&gt; analyze_bias[Analyze Bias&lt;br/&gt;LLM call with structured output]
-    analyze_bias --&gt; summarize{Need Summary?&lt;br/&gt;text &gt; 500 chars}
-    summarize --&gt;|yes| generate_summary[Generate Summary&lt;br/&gt;LLM call]
-    summarize --&gt;|no| highlight[Highlight HTML&lt;br/&gt;Span extraction]
+<pre class="mermaid"><code>flowchart LR
+    S((" ")) --&gt; analyze_bias["Analyze Bias\nLLM call with structured output"]
+    analyze_bias --&gt; summarize{"Need Summary?\ntext &gt; 500 chars"}
+    summarize -- "yes" --&gt; generate_summary["Generate Summary\nLLM call"]
+    summarize -- "no" --&gt; highlight["Highlight HTML\nSpan extraction"]
     generate_summary --&gt; highlight
-    highlight --&gt; END</code></pre></p>
+    highlight --&gt; E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style summarize fill:#fff9c4,stroke:#f9a825,color:#000</code></pre></p>
 <p><strong>Nodes:</strong>
 1. <strong>analyze_bias</strong> - Calls LLM with bias detection prompt, returns structured <code>BiasAnalysisOutput</code>
 2. <strong>summarize</strong> (conditional) - Generates executive summary if text is long
@@ -1981,18 +1999,21 @@
 <h4 id="42-bias-image-workflow-traditional">4.2 Bias Image Workflow (Traditional)<a class="headerlink" href="#42-bias-image-workflow-traditional" title="Permanent link">&para;</a></h4>
 <p><strong>File:</strong> <code>bias_image_graph.py</code></p>
 <p><strong>Flow:</strong>
-<pre class="mermaid"><code>graph LR
-    START --&gt; parallel[Parallel Execution]
-    parallel --&gt; ocr[OCR&lt;br/&gt;Extract text]
-    parallel --&gt; caption[Caption&lt;br/&gt;Describe image]
-    ocr --&gt; merge[Merge Text&lt;br/&gt;Combine OCR + caption]
+<pre class="mermaid"><code>flowchart LR
+    S((" ")) --&gt; ocr["OCR\nExtract text"]
+    S --&gt; caption["Caption\nDescribe image"]
+    ocr --&gt; merge["Merge Text\nCombine OCR + caption"]
     caption --&gt; merge
-    merge --&gt; analyze_bias[Analyze Bias&lt;br/&gt;LLM call]
-    analyze_bias --&gt; summarize{Need Summary?}
-    summarize --&gt;|yes| generate_summary[Generate Summary]
-    summarize --&gt;|no| highlight[Highlight HTML]
+    merge --&gt; analyze_bias["Analyze Bias\nLLM call"]
+    analyze_bias --&gt; summarize{"Need Summary?"}
+    summarize -- "yes" --&gt; generate_summary["Generate Summary"]
+    summarize -- "no" --&gt; highlight["Highlight HTML"]
     generate_summary --&gt; highlight
-    highlight --&gt; END</code></pre></p>
+    highlight --&gt; E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style summarize fill:#fff9c4,stroke:#f9a825,color:#000</code></pre></p>
 <p><strong>Nodes:</strong>
 1. <strong>ocr</strong> - Extracts text from image using Tesseract or PaddleOCR
 2. <strong>caption</strong> - Generates image description using BLIP or BLIP-2
@@ -2012,13 +2033,17 @@
 <h4 id="43-bias-image-vlm-workflow">4.3 Bias Image VLM Workflow<a class="headerlink" href="#43-bias-image-vlm-workflow" title="Permanent link">&para;</a></h4>
 <p><strong>File:</strong> <code>bias_image_vlm_graph.py</code></p>
 <p><strong>Flow:</strong>
-<pre class="mermaid"><code>graph LR
-    START --&gt; vlm_analyze[VLM Analysis&lt;br/&gt;Single multimodal call]
-    vlm_analyze --&gt; summarize{Need Summary?}
-    summarize --&gt;|yes| generate_summary[Generate Summary]
-    summarize --&gt;|no| highlight[Highlight HTML]
+<pre class="mermaid"><code>flowchart LR
+    S((" ")) --&gt; vlm_analyze["VLM Analysis\nSingle multimodal call"]
+    vlm_analyze --&gt; summarize{"Need Summary?"}
+    summarize -- "yes" --&gt; generate_summary["Generate Summary"]
+    summarize -- "no" --&gt; highlight["Highlight HTML"]
     generate_summary --&gt; highlight
-    highlight --&gt; END</code></pre></p>
+    highlight --&gt; E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff
+    style summarize fill:#fff9c4,stroke:#f9a825,color:#000</code></pre></p>
 <p><strong>Nodes:</strong>
 1. <strong>vlm_analyze</strong> - Single multimodal LLM call (GPT-4V or Claude Vision) with Chain-of-Thought reasoning
 2. <strong>summarize</strong> (conditional) - Optional summary
@@ -2037,14 +2062,17 @@
 <h4 id="44-risk-assessment-workflow">4.4 Risk Assessment Workflow<a class="headerlink" href="#44-risk-assessment-workflow" title="Permanent link">&para;</a></h4>
 <p><strong>File:</strong> <code>risk_graph.py</code></p>
 <p><strong>Flow:</strong>
-<pre class="mermaid"><code>graph LR
-    START --&gt; embed[Embed Scenario&lt;br/&gt;Text → vector]
-    embed --&gt; retrieve_risks[Retrieve Risks&lt;br/&gt;FAISS similarity search]
-    retrieve_risks --&gt; retrieve_rmf[Retrieve RMF&lt;br/&gt;Per-risk recommendations]
-    retrieve_rmf --&gt; join[Join Tables&lt;br/&gt;Combine risks + RMF]
-    join --&gt; format[Format Output&lt;br/&gt;HTML table + CSV]
-    format --&gt; persist[Persist CSV&lt;br/&gt;Save to outputs/]
-    persist --&gt; END</code></pre></p>
+<pre class="mermaid"><code>flowchart LR
+    S((" ")) --&gt; embed["Embed Scenario\nText → vector"]
+    embed --&gt; retrieve_risks["Retrieve Risks\nFAISS similarity search"]
+    retrieve_risks --&gt; retrieve_rmf["Retrieve RMF\nPer-risk recommendations"]
+    retrieve_rmf --&gt; join["Join Tables\nCombine risks + RMF"]
+    join --&gt; format["Format Output\nHTML table + CSV"]
+    format --&gt; persist["Persist CSV\nSave to outputs/"]
+    persist --&gt; E((" "))
+
+    style S fill:#eb088a,stroke:#b00068,color:#fff
+    style E fill:#555,stroke:#555,color:#fff</code></pre></p>
 <p><strong>Nodes:</strong>
 1. <strong>embed_scenario</strong> - Converts deployment scenario to 384-dim vector using sentence-transformers
 2. <strong>retrieve_risks</strong> - Semantic search against 280+ AI risks from NIST AI-RMF
@@ -2061,7 +2089,16 @@
 <p><strong>Knowledge Base:</strong>
 - <strong>Risks:</strong> 280+ AI risks from NIST AI Risk Management Framework
 - <strong>RMF:</strong> 500+ mitigation recommendations mapped to risk categories
-- <strong>Storage:</strong> FAISS indices built at startup; index files and metadata live under <code>data/indexes/</code> (e.g. <code>risks.faiss</code>, <code>rmf.faiss</code>) and package <code>fairsense_agentix/data/indexes/</code></p>
+- <strong>Storage:</strong> FAISS index files live inside the package at <code>fairsense_agentix/data/indexes/</code> in LangChain format:
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>fairsense_agentix/data/indexes/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── risks/index.faiss   # vector index (1,340 risks, 384-dim embeddings)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── risks/index.pkl     # LangChain document store
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── risks_meta.json     # human-readable fields (id, risk_name, description, severity, category)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── rmf/index.faiss
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── rmf/index.pkl
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>└── rmf_meta.json
+</span></code></pre></div>
+  The <code>FAIRSENSE_FAISS_RISKS_INDEX_PATH</code> env var uses a virtual <code>.faiss</code> path (e.g. <code>fairsense_agentix/data/indexes/risks.faiss</code>) — the resolver strips the extension and looks for the <code>risks/index.faiss</code> folder structure. If that folder is missing, the system silently falls back to <code>FakeFAISSIndexTool</code> which returns hardcoded placeholder results.</p>
 <hr />
 <h3 id="5-tool-ecosystem">5. Tool Ecosystem<a class="headerlink" href="#5-tool-ecosystem" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose:</strong> Provide reusable, swappable implementations of core ML/AI capabilities</p>
@@ -2071,21 +2108,21 @@
 <p><strong>File:</strong> <code>tools/registry.py</code></p>
 <p><strong>Purpose:</strong> Dependency injection container that constructs all tool instances based on configuration</p>
 <p><strong>Pattern:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@dataclass</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolRegistry</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ocr</span><span class="p">:</span> <span class="n">OCRTool</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">caption</span><span class="p">:</span> <span class="n">CaptionTool</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">llm</span><span class="p">:</span> <span class="n">LLMTool</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">summarizer</span><span class="p">:</span> <span class="n">SummarizerTool</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">embedder</span><span class="p">:</span> <span class="n">EmbedderTool</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">faiss_risks</span><span class="p">:</span> <span class="n">FAISSIndexTool</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">faiss_rmf</span><span class="p">:</span> <span class="n">FAISSIndexTool</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">formatter</span><span class="p">:</span> <span class="n">FormatterTool</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">persistence</span><span class="p">:</span> <span class="n">PersistenceTool</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">vlm</span><span class="p">:</span> <span class="n">VLMTool</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">create_tool_registry</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1"># All tools now available via registry.ocr, registry.llm, etc.</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolRegistry</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">ocr</span><span class="p">:</span> <span class="n">OCRTool</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">caption</span><span class="p">:</span> <span class="n">CaptionTool</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">llm</span><span class="p">:</span> <span class="n">LLMTool</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">summarizer</span><span class="p">:</span> <span class="n">SummarizerTool</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">embedder</span><span class="p">:</span> <span class="n">EmbedderTool</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">faiss_risks</span><span class="p">:</span> <span class="n">FAISSIndexTool</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">faiss_rmf</span><span class="p">:</span> <span class="n">FAISSIndexTool</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">formatter</span><span class="p">:</span> <span class="n">FormatterTool</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">persistence</span><span class="p">:</span> <span class="n">PersistenceTool</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">vlm</span><span class="p">:</span> <span class="n">VLMTool</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">create_tool_registry</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># All tools now available via registry.ocr, registry.llm, etc.</span>
 </span></code></pre></div></p>
 <p><strong>Benefits:</strong>
 - <strong>Single Source of Truth:</strong> One place constructs all tools
@@ -2167,17 +2204,17 @@
 - <strong>Caption:</strong> <code>settings.caption_model = "auto"</code> → BLIP-2 (better) or BLIP (fallback)
 - <strong>Embedder:</strong> <code>settings.embedding_provider = "auto"</code> → sentence-transformers (local, free) or OpenAI (API)</p>
 <p><strong>Manual Override:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Force specific implementations</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_OCR_TOOL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;tesseract&quot;</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_CAPTION_MODEL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;blip2&quot;</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_LLM_PROVIDER&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;anthropic&quot;</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_LLM_MODEL_NAME&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;claude-3-5-sonnet-20241022&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Force specific implementations</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_OCR_TOOL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;tesseract&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_CAPTION_MODEL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;blip2&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_LLM_PROVIDER&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;anthropic&quot;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_LLM_MODEL_NAME&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;claude-3-5-sonnet-20241022&quot;</span>
 </span></code></pre></div></p>
 <p><strong>Testing Mode:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Use fake tools for fast deterministic testing</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_LLM_PROVIDER&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fake&quot;</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_OCR_TOOL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fake&quot;</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_CAPTION_MODEL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fake&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Use fake tools for fast deterministic testing</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_LLM_PROVIDER&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fake&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_OCR_TOOL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fake&quot;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;FAIRSENSE_CAPTION_MODEL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fake&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="6-evaluator-service">6. Evaluator Service<a class="headerlink" href="#6-evaluator-service" title="Permanent link">&para;</a></h3>
@@ -2192,10 +2229,10 @@
 - <strong>Accuracy:</strong> Are bias spans correctly identified and grounded in source text?
 - <strong>Actionability:</strong> Are explanations clear and useful?</p>
 <p><strong>Output:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">BiasEvaluatorOutput</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">score</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># 0-100</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">justification</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Why this score</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">suggested_changes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>  <span class="c1"># Concrete refinement actions</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">BiasEvaluatorOutput</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">score</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># 0-100</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">justification</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Why this score</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">suggested_changes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>  <span class="c1"># Concrete refinement actions</span>
 </span></code></pre></div></p>
 <p><strong>Refinement Triggers:</strong>
 - If <code>score &lt; settings.bias_evaluator_min_score</code> (default: 75)
@@ -2210,12 +2247,12 @@
 - <strong>Coverage:</strong> Sufficient number of RMF recommendations per risk?
 - <strong>No Duplicates:</strong> Risk names and descriptions are unique?</p>
 <p><strong>Output:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">RiskEvaluatorOutput</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">score</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># 0-100</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">justification</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">suggested_changes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># e.g., {&quot;top_k&quot;: 10}</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># Diagnostics</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">RiskEvaluatorOutput</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">score</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># 0-100</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">justification</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">suggested_changes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># e.g., {&quot;top_k&quot;: 10}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># Diagnostics</span>
 </span></code></pre></div></p>
 <p><strong>Refinement Hints:</strong>
 - Increase <code>top_k</code> if diversity is low
@@ -2287,12 +2324,12 @@
 </tbody>
 </table>
 <p><strong>WebSocket Example:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">websockets</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">async</span> <span class="k">with</span> <span class="n">websockets</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ws://localhost:8000/v1/stream/</span><span class="si">{</span><span class="n">run_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ws</span><span class="p">:</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">async</span> <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">ws</span><span class="p">:</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="n">event</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;context&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">websockets</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">async</span> <span class="k">with</span> <span class="n">websockets</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ws://localhost:8000/v1/stream/</span><span class="si">{</span><span class="n">run_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ws</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="k">async</span> <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">ws</span><span class="p">:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="n">event</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;context&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="8-service-api-layer">8. Service API Layer<a class="headerlink" href="#8-service-api-layer" title="Permanent link">&para;</a></h3>
@@ -2361,17 +2398,17 @@
 3. Backend runs analysis in background, emits events to WebSocket
 4. WebSocket closes after <code>analysis_complete</code> or <code>analysis_error</code></p>
 <p><strong>Event Format:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123...&quot;</span><span class="p">,</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1234567890.123</span><span class="p">,</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tool_call_start&quot;</span><span class="p">,</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">&quot;context&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Running OCR on image&quot;</span><span class="p">,</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">&quot;tool_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ocr&quot;</span><span class="p">,</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123...&quot;</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1234567890.123</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tool_call_start&quot;</span><span class="p">,</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">&quot;context&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Running OCR on image&quot;</span><span class="p">,</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nt">&quot;tool_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ocr&quot;</span><span class="p">,</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="9-frontend-ui">9. Frontend UI<a class="headerlink" href="#9-frontend-ui" title="Permanent link">&para;</a></h3>
@@ -2435,6 +2472,7 @@
     C-&gt;&gt;O: analyze_image(image_bytes)
     O-&gt;&gt;R: request_plan("image", bytes)
     R--&gt;&gt;O: SelectionPlan(workflow_id="bias_image_vlm")
+    O-&gt;&gt;O: preflight_eval (validate plan)
     O-&gt;&gt;BV: invoke(image_bytes, options)
     BV-&gt;&gt;VLM: analyze_image(bytes, prompt, BiasVisualAnalysisOutput)
     Note over VLM: Single multimodal LLM call&lt;br/&gt;with CoT reasoning
@@ -2444,6 +2482,7 @@
     O-&gt;&gt;E: posthoc_eval(result)
     E--&gt;&gt;O: EvaluationResult(passed=true)
     O-&gt;&gt;O: decide_action → accept
+    O-&gt;&gt;O: finalize
     O--&gt;&gt;C: BiasResult</code></pre>
 <h3 id="risk-assessment-flow">Risk Assessment Flow<a class="headerlink" href="#risk-assessment-flow" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>sequenceDiagram
@@ -2458,6 +2497,7 @@
     C-&gt;&gt;O: assess_risk("deployment scenario")
     O-&gt;&gt;R: request_plan("csv", content)
     R--&gt;&gt;O: SelectionPlan(workflow_id="risk")
+    O-&gt;&gt;O: preflight_eval (validate plan)
     O-&gt;&gt;RG: invoke(scenario_text, options)
     RG-&gt;&gt;Embed: embed(scenario_text)
     Embed--&gt;&gt;RG: [384-dim vector]
@@ -2470,6 +2510,7 @@
     Form--&gt;&gt;RG: html_table, csv_path
     RG--&gt;&gt;O: {risks, rmf_recommendations, html_table, csv_path}
     O-&gt;&gt;O: decide_action → accept
+    O-&gt;&gt;O: finalize
     O--&gt;&gt;C: RiskResult</code></pre>
 <hr />
 <h2 id="technology-stack">Technology Stack<a class="headerlink" href="#technology-stack" title="Permanent link">&para;</a></h2>
@@ -2530,23 +2571,23 @@
 <h3 id="2-tool-abstraction-pattern">2. Tool Abstraction Pattern<a class="headerlink" href="#2-tool-abstraction-pattern" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose:</strong> Swap implementations without changing workflow code</p>
 <p><strong>Implementation:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Interface</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">OCRTool</span><span class="p">:</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">extract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_bytes</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Implementations</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">TesseractOCR</span><span class="p">(</span><span class="n">OCRTool</span><span class="p">):</span> <span class="o">...</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">PaddleOCR</span><span class="p">(</span><span class="n">OCRTool</span><span class="p">):</span> <span class="o">...</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">FakeOCR</span><span class="p">(</span><span class="n">OCRTool</span><span class="p">):</span> <span class="o">...</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Factory</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">_resolve_ocr_tool</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="n">Settings</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OCRTool</span><span class="p">:</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">ocr_tool</span> <span class="o">==</span> <span class="s2">&quot;tesseract&quot;</span><span class="p">:</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        <span class="k">return</span> <span class="n">TesseractOCR</span><span class="p">()</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="k">elif</span> <span class="n">settings</span><span class="o">.</span><span class="n">ocr_tool</span> <span class="o">==</span> <span class="s2">&quot;paddleocr&quot;</span><span class="p">:</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>        <span class="k">return</span> <span class="n">PaddleOCR</span><span class="p">()</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="k">elif</span> <span class="n">settings</span><span class="o">.</span><span class="n">ocr_tool</span> <span class="o">==</span> <span class="s2">&quot;fake&quot;</span><span class="p">:</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>        <span class="k">return</span> <span class="n">FakeOCR</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Interface</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">OCRTool</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">extract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_bytes</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Implementations</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">TesseractOCR</span><span class="p">(</span><span class="n">OCRTool</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">PaddleOCR</span><span class="p">(</span><span class="n">OCRTool</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">FakeOCR</span><span class="p">(</span><span class="n">OCRTool</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Factory</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">_resolve_ocr_tool</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="n">Settings</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OCRTool</span><span class="p">:</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">ocr_tool</span> <span class="o">==</span> <span class="s2">&quot;tesseract&quot;</span><span class="p">:</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        <span class="k">return</span> <span class="n">TesseractOCR</span><span class="p">()</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="k">elif</span> <span class="n">settings</span><span class="o">.</span><span class="n">ocr_tool</span> <span class="o">==</span> <span class="s2">&quot;paddleocr&quot;</span><span class="p">:</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>        <span class="k">return</span> <span class="n">PaddleOCR</span><span class="p">()</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="k">elif</span> <span class="n">settings</span><span class="o">.</span><span class="n">ocr_tool</span> <span class="o">==</span> <span class="s2">&quot;fake&quot;</span><span class="p">:</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>        <span class="k">return</span> <span class="n">FakeOCR</span><span class="p">()</span>
 </span></code></pre></div></p>
 <p><strong>Benefits:</strong>
 - Easy testing (inject fake tools)
@@ -2572,16 +2613,16 @@
 <h3 id="4-event-driven-telemetry-pattern">4. Event-Driven Telemetry Pattern<a class="headerlink" href="#4-event-driven-telemetry-pattern" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose:</strong> Observable agent reasoning without coupling</p>
 <p><strong>Implementation:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Every operation emits events</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">with</span> <span class="n">telemetry</span><span class="o">.</span><span class="n">timer</span><span class="p">(</span><span class="s2">&quot;node_execution&quot;</span><span class="p">,</span> <span class="n">node_name</span><span class="o">=</span><span class="s2">&quot;analyze_bias&quot;</span><span class="p">):</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">telemetry</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="s2">&quot;node_start&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node_name</span><span class="p">)</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">analyze_bias</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">telemetry</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="s2">&quot;node_complete&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node_name</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># WebSocket listener receives events in real-time</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">event_bus</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span><span class="n">run_id</span><span class="p">):</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="c1"># Display in UI timeline</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">render_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Every operation emits events</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">with</span> <span class="n">telemetry</span><span class="o">.</span><span class="n">timer</span><span class="p">(</span><span class="s2">&quot;node_execution&quot;</span><span class="p">,</span> <span class="n">node_name</span><span class="o">=</span><span class="s2">&quot;analyze_bias&quot;</span><span class="p">):</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">telemetry</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="s2">&quot;node_start&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node_name</span><span class="p">)</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">analyze_bias</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">telemetry</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="s2">&quot;node_complete&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node_name</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># WebSocket listener receives events in real-time</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">event_bus</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span><span class="n">run_id</span><span class="p">):</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="c1"># Display in UI timeline</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">render_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </span></code></pre></div></p>
 <p><strong>Benefits:</strong>
 - Zero coupling between workflows and UI
@@ -2592,18 +2633,18 @@
 <h3 id="5-dependency-injection-via-registry">5. Dependency Injection via Registry<a class="headerlink" href="#5-dependency-injection-via-registry" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose:</strong> Centralized tool construction and configuration</p>
 <p><strong>Implementation:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Single source of truth</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">create_tool_registry</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Tools injected into workflows</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_bias_text_graph</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">CompiledStateGraph</span><span class="p">:</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="n">registry</span> <span class="o">=</span> <span class="n">get_tool_registry</span><span class="p">()</span>  <span class="c1"># Singleton</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_bias_node</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">output_schema</span><span class="o">=</span><span class="n">BiasAnalysisOutput</span><span class="p">)</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;bias_analysis&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">}</span>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="c1"># ...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Single source of truth</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">create_tool_registry</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Tools injected into workflows</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_bias_text_graph</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">CompiledStateGraph</span><span class="p">:</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">registry</span> <span class="o">=</span> <span class="n">get_tool_registry</span><span class="p">()</span>  <span class="c1"># Singleton</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_bias_node</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">output_schema</span><span class="o">=</span><span class="n">BiasAnalysisOutput</span><span class="p">)</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;bias_analysis&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">}</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="c1"># ...</span>
 </span></code></pre></div></p>
 <p><strong>Benefits:</strong>
 - Testability (inject mocks)

@@ -89,3 +89,59 @@
   opacity: 0.7;
   margin-right: 0.2em;
 }
+
+/* Override Material's Mermaid CSS variables in dark mode so node/label text stays dark.
+   The fills render correctly but Material sets fg color vars to light values in slate mode. */
+[data-md-color-scheme="slate"] {
+  --md-mermaid-node-fg-color: hsla(0, 0%, 0%, 1);
+  --md-mermaid-label-fg-color: hsla(0, 0%, 0%, 1);
+  --md-mermaid-node-alt-fg-color: hsla(0, 0%, 0%, 1);
+  --md-mermaid-sequence-actor-fg-color: hsla(0, 0%, 0%, 1);
+}
+
+/* Broad fallback targeting SVG text and HTML label elements directly */
+[data-md-color-scheme="slate"] .mermaid svg text,
+[data-md-color-scheme="slate"] .mermaid .label,
+[data-md-color-scheme="slate"] .mermaid .label span,
+[data-md-color-scheme="slate"] .mermaid .nodeLabel,
+[data-md-color-scheme="slate"] .mermaid .nodeLabel p,
+[data-md-color-scheme="slate"] .mermaid .edgeLabel,
+[data-md-color-scheme="slate"] .mermaid .edgeLabel p,
+[data-md-color-scheme="slate"] .mermaid .cluster-label span {
+  color: #000 !important;
+  fill: #000 !important;
+}
+
+/* Allow mermaid diagrams to overflow container when zoomed */
+.md-content__inner,
+.md-typeset {
+  overflow: visible !important;
+}
+
+/* Mermaid diagram zoom on hover */
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.mermaid {
+  display: block;
+  cursor: zoom-in;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transform-origin: top center;
+  position: relative;
+  z-index: 0;
+  border-radius: 6px;
+}
+
+
+.mermaid:hover {
+  transform: scale(1.6);
+  z-index: 100;
+  background: var(--md-default-bg-color);
+  padding: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+}
