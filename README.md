@@ -28,6 +28,16 @@ FairSense-AgentiX is an intelligent bias detection and risk assessment platform 
 pip install fairsense-agentix
 ```
 
+#### Optional: PaddleOCR backend
+
+The default OCR backend is Tesseract (CPU-friendly, no extra setup). For GPU-accelerated PaddleOCR (higher accuracy on rotated/complex text), install the `paddle` extra:
+
+```bash
+pip install fairsense-agentix[paddle]
+```
+
+This pulls in `paddlepaddle`, which has platform-specific wheels and is much heavier — only install if you need it. Once installed, set `FAIRSENSE_OCR_TOOL=paddleocr` (or `auto` to let the runtime pick based on GPU availability).
+
 ### From Source
 
 ```bash
