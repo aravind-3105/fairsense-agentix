@@ -41,13 +41,12 @@ print(f"Bias Detected: {result.bias_detected}")
 print(f"Risk Level: {result.risk_level}")
 print(f"Summary: {result.summary}")
 
-# Iterate through bias instances
-for instance in result.bias_instances:
-    print(f"\nType: {instance.type}")
-    print(f"Severity: {instance.severity}")
-    print(f"Text: '{instance.text_span}'")
-    print(f"Explanation: {instance.explanation}")
-    print(f"Mitigation: {instance.mitigation_suggestion}")
+# Iterate through bias instances (each is a dict, not an object)
+for instance in (result.bias_instances or []):
+    print(f"\nType: {instance.get('type')}")
+    print(f"Severity: {instance.get('severity')}")
+    print(f"Text: '{instance.get('text_span')}'")
+    print(f"Explanation: {instance.get('explanation')}")
 ```
 
 ### Understanding the Result Object
@@ -56,25 +55,28 @@ The `BiasResult` object contains:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `bias_detected` | `bool` | Whether any bias was found |
-| `risk_level` | `str` | Overall severity: `low`, `medium`, `high` |
-| `summary` | `str` | High-level explanation of findings |
-| `bias_instances` | `list[BiasInstance]` | Detailed bias findings |
-| `highlighted_html` | `str` | HTML with color-coded highlights |
+| `status` | `str` | Execution status: `success`, `failed`, or `partial` |
+| `bias_detected` | `bool \| None` | Whether any bias was found |
+| `risk_level` | `str \| None` | Overall severity: `low`, `medium`, `high` |
+| `summary` | `str \| None` | High-level explanation of findings |
+| `bias_instances` | `list[dict] \| None` | Detailed bias findings (list of dicts) |
+| `highlighted_html` | `str \| None` | HTML with color-coded highlights |
 | `metadata` | `ResultMetadata` | Execution details (time, model, workflow ID) |
+| `errors` | `list[str]` | Error messages (empty if successful) |
+| `warnings` | `list[str]` | Warning messages (empty if none) |
 
-For the full list of fields (e.g. `status`, `bias_analysis`, `ocr_text`, `errors`), see the [API Reference](api.md).
+For image analysis, the result also includes `caption_text`, `ocr_text`, `merged_text`, and `image_base64`. See the [API Reference](api.md).
 
-**BiasInstance Fields:**
+**`bias_instances` dict keys:**
 
-| Field | Type | Description |
-|-------|------|-------------|
+Each item in `result.bias_instances` is a `dict` with these keys (use `.get(...)` for safe access):
+
+| Key | Type | Description |
+|-----|------|-------------|
 | `type` | `str` | Bias category: `gender`, `age`, `racial`, `disability`, `socioeconomic` |
 | `severity` | `str` | Impact level: `low`, `medium`, `high` |
 | `text_span` | `str` | The problematic text excerpt |
 | `explanation` | `str` | Why this is biased |
-| `mitigation_suggestion` | `str` | How to fix it |
-| `context` | `str` | Surrounding text for context |
 
 ### Advanced: Highlighted HTML Output
 
@@ -118,10 +120,10 @@ Requirements:
 result = engine.analyze_text(job_posting)
 
 # Check for hiring-related biases
-for instance in result.bias_instances:
-    if instance.type in ["age", "racial"]:
-        print(f"⚠️  Legal Risk: {instance.text_span}")
-        print(f"   Mitigation: {instance.mitigation_suggestion}")
+for instance in (result.bias_instances or []):
+    if instance.get("type") in ["age", "racial"]:
+        print(f"⚠️  Legal Risk: {instance.get('text_span')}")
+        print(f"   Explanation: {instance.get('explanation')}")
 ```
 
 #### Marketing Copy
@@ -135,7 +137,9 @@ to help them manage their households while looking their best.
 result = engine.analyze_text(ad_copy)
 
 # Identify gender stereotyping
-gender_biases = [i for i in result.bias_instances if i.type == "gender"]
+gender_biases = [
+    i for i in (result.bias_instances or []) if i.get("type") == "gender"
+]
 print(f"Found {len(gender_biases)} gender-related issues")
 ```
 
@@ -169,38 +173,33 @@ with open("team_photo.jpg", "rb") as f:
 
 result = engine.analyze_image(image_bytes)
 
-# Access results
-print(f"Visual Description: {result.visual_description}")
+# Access results — image-specific fields are caption_text and ocr_text
+print(f"Caption: {result.caption_text}")
+print(f"OCR Text: {result.ocr_text}")
 print(f"Bias Detected: {result.bias_detected}")
 print(f"Risk Level: {result.risk_level}")
+print(f"Summary: {result.summary}")
 
-# Bias instances for images
-for instance in result.bias_instances:
-    print(f"\nType: {instance.type}")
-    print(f"Visual Element: {instance.visual_element}")
-    print(f"Explanation: {instance.explanation}")
+# Bias instances for images (each is a dict with the same keys as text bias)
+for instance in (result.bias_instances or []):
+    print(f"\nType: {instance.get('type')}")
+    print(f"Severity: {instance.get('severity')}")
+    print(f"Text: '{instance.get('text_span')}'")
+    print(f"Explanation: {instance.get('explanation')}")
 ```
 
 ### Image Result Object
 
-The image analysis result includes:
+`analyze_image()` returns a `BiasResult` (the same type as `analyze_text()`). The image-specific fields populated are:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `visual_description` | `str` | What the VLM sees in the image |
-| `bias_detected` | `bool` | Whether bias was found |
-| `bias_instances` | `list[BiasInstance]` | Visual bias findings |
-| `image_base64` | `str` | Base64-encoded annotated image |
-| `reasoning_trace` | `str` | Agent's step-by-step reasoning |
+| `caption_text` | `str \| None` | Generated image caption from the VLM |
+| `ocr_text` | `str \| None` | Text extracted from the image via OCR |
+| `merged_text` | `str \| None` | Combined OCR + caption text used for analysis |
+| `image_base64` | `str \| None` | Base64-encoded image with data URL (for UI display) |
 
-**BiasInstance for Images:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | `str` | Bias category |
-| `visual_element` | `str` | Description of problematic element |
-| `explanation` | `str` | Why this represents bias |
-| `severity` | `str` | Impact level |
+All other fields (`status`, `bias_detected`, `risk_level`, `summary`, `bias_instances`, `highlighted_html`, `metadata`, `errors`, `warnings`) work the same as for text analysis. See the [API Reference](api.md) for the full schema.
 
 ### Working with Different Image Sources
 
@@ -272,7 +271,8 @@ for img_path in campaign_images:
         issues.append({
             "file": img_path,
             "issues": result.bias_instances,
-            "description": result.visual_description
+            "caption": result.caption_text,
+            "ocr_text": result.ocr_text,
         })
 
 # Generate report
@@ -299,37 +299,51 @@ employment history, and zip code to predict default risk.
 
 result = engine.assess_risk(scenario)
 
-# Access results
-print(f"Overall Risk: {result.risk_level}")
+# Access results — RiskResult uses `status`, not `risk_level`
+print(f"Status: {result.status}")
+if result.errors:
+    print(f"Errors: {result.errors}")
 print(f"Total Risks Identified: {len(result.risks)}")
 
-# Top risks
+# Top risks (each is a dict — use .get() for safe access)
 for risk in result.risks[:5]:
-    print(f"\n{risk.risk_name} (Relevance: {risk.score:.2f})")
-    print(f"  Category: {risk.category}")
-    print(f"  Description: {risk.description}")
+    risk_id = risk.get("id") or risk.get("risk_id", "")
+    description = risk.get("description") or risk.get("text", "")
+    print(f"\n[{risk_id}] (Relevance: {risk.get('score', 0):.2f})")
+    print(f"  Category: {risk.get('category')}")
+    print(f"  Description: {description}")
 ```
 
 ### Risk Result Object
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `risk_level` | `str` | Overall severity: `low`, `medium`, `high`, `critical` |
-| `risks` | `list[RiskItem]` | Identified risks, sorted by score |
-| `summary` | `str` | High-level risk overview |
+| `status` | `str` | Execution status: `success`, `failed`, or `partial` |
+| `risks` | `list[dict]` | Identified risks, sorted by relevance score |
+| `rmf_recommendations` | `dict[str, list[dict]]` | NIST AI-RMF recommendations keyed by risk ID |
+| `embedding` | `list[float] \| None` | Vector embedding of the scenario |
+| `html_table` | `str \| None` | Formatted HTML table of risks + recommendations |
+| `csv_path` | `str \| None` | Path to exported CSV file |
 | `metadata` | `ResultMetadata` | Execution details |
+| `errors` | `list[str]` | Error messages (empty if successful) |
+| `warnings` | `list[str]` | Warning messages (empty if none) |
 
-**RiskItem Fields:**
+**`risks` dict keys:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `risk_name` | `str` | Risk title from the MIT AI Risk Repository |
+Each item in `result.risks` is a `dict`. Use `.get(...)` for safe access since key names can vary between sources:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `id` or `risk_id` | `str` | Risk identifier from the source repository |
+| `description` or `text` | `str` | Full risk description |
 | `category` | `str` | Domain taxonomy label (e.g., `3.1 AI system safety failures`) |
 | `score` | `float` | Relevance score (0–1) — FAISS semantic similarity to the query |
-| `description` | `str` | Full risk description from the repository |
 
 !!! note "Risk source"
     Risks are retrieved from the [MIT AI Risk Repository](https://airisk.mit.edu/) (V3, 1,340 entries) using semantic similarity search. The `category` field follows the repository's Domain Taxonomy; the number prefix (e.g., `3.1`) identifies the domain and subcategory. A score of `1.0` means the risk is maximally relevant to the described scenario; `0.0` means unrelated.
+
+!!! warning "If `result.status` is `failed`"
+    `status: failed` means the agent's quality evaluator rejected the output (e.g., low FAISS similarity scores against the MIT AI Risk Repository). Check `result.errors` for details. Vague or short scenario descriptions tend to produce low similarity; more specific, domain-relevant scenarios — describing the model, training data, deployment context, and human-impact surface — generally produce higher similarity scores and `status: success`.
 
 ### CSV Dataset Analysis
 
@@ -352,7 +366,7 @@ indicates whether the loan was historically approved (1) or denied (0).
 result = engine.assess_risk(context + "\n\n" + csv_data)
 
 # Check for fairness risks
-fairness_risks = [r for r in result.risks if r.category == "fairness"]
+fairness_risks = [r for r in result.risks if r.get("category") == "fairness"]
 print(f"Found {len(fairness_risks)} fairness concerns")
 ```
 
@@ -372,11 +386,13 @@ Monitoring: None currently planned
 result = engine.assess_risk(deployment_plan)
 
 # Check high-relevance risks (score > 0.7 = strong semantic match)
-critical = [r for r in result.risks if r.score > 0.7]
+critical = [r for r in result.risks if r.get("score", 0) > 0.7]
 if critical:
     print("🚨 HIGH-RELEVANCE RISKS DETECTED")
     for risk in critical:
-        print(f"  • {risk.risk_name}: {risk.description}")
+        risk_id = risk.get("id") or risk.get("risk_id", "")
+        description = risk.get("description") or risk.get("text", "")
+        print(f"  • [{risk_id}]: {description}")
 ```
 
 #### Compliance Check
@@ -386,11 +402,13 @@ if critical:
 result = engine.assess_risk(scenario)
 
 # Filter by compliance category
-compliance_risks = [r for r in result.risks if r.category == "compliance"]
+compliance_risks = [r for r in result.risks if r.get("category") == "compliance"]
 
 for risk in compliance_risks:
-    print(f"\n⚖️  {risk.risk_name} (score: {risk.score:.2f})")
-    print(f"   {risk.description}")
+    risk_id = risk.get("id") or risk.get("risk_id", "")
+    description = risk.get("description") or risk.get("text", "")
+    print(f"\n⚖️  [{risk_id}] (score: {risk.get('score', 0):.2f})")
+    print(f"   {description}")
 ```
 
 #### Vendor Assessment
@@ -407,9 +425,16 @@ Explainability: Black-box model
 result = engine.assess_risk(vendor_proposal)
 
 # Generate vendor scorecard
-avg_score = sum(r.score for r in result.risks) / len(result.risks) if result.risks else 0
+avg_score = (
+    sum(r.get("score", 0) for r in result.risks) / len(result.risks)
+    if result.risks
+    else 0
+)
 print(f"Avg Relevance Score: {avg_score:.2f}")
-print(f"High-Relevance Concerns: {len([r for r in result.risks if r.score > 0.6])}")
+print(
+    f"High-Relevance Concerns: "
+    f"{len([r for r in result.risks if r.get('score', 0) > 0.6])}"
+)
 ```
 
 ---
@@ -451,12 +476,12 @@ Each mode includes **clickable demo examples** in the right column — select on
 
 **Risk results** — the top semantically matched risks from the [MIT AI Risk Repository](https://airisk.mit.edu/), each showing:
 
-| UI element | Field | Notes |
+| UI element | Dict key | Notes |
 |---|---|---|
-| Title | `risk_name` | Risk title from the repository |
+| Title | `id` (or `risk_id`) | Risk identifier from the repository |
 | Category label | `category` | MIT Domain Taxonomy label, e.g. `3.1 AI system safety failures`. Hover the ⓘ on the first card for a tooltip explaining the taxonomy. |
 | Score badge | `score` | Relevance score 0–1 (FAISS semantic similarity). Higher = closer match to your scenario. |
-| Description | `description` | Full risk description (academic citations stripped for readability) |
+| Description | `description` (or `text`) | Full risk description (academic citations stripped for readability) |
 
 A **"MIT AI Risk Repository ↗"** link in the results header opens the full database for deeper exploration.
 
@@ -762,7 +787,7 @@ if exec_time > 60:
 results = [engine.analyze_text(doc) for doc in documents]
 
 # Generate summary report
-total_biases = sum(len(r.bias_instances) for r in results)
+total_biases = sum(len(r.bias_instances or []) for r in results)
 avg_risk = sum(1 for r in results if r.risk_level == "high") / len(results)
 
 print(f"Analysis Summary:")

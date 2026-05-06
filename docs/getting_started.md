@@ -8,7 +8,7 @@ This guide will walk you through installing FairSense-AgentiX, configuring it, a
 
 Before you begin, ensure you have:
 
-- **Python 3.12+** installed
+- **Python 3.12** installed (3.13 not yet supported)
 - **[uv](https://docs.astral.sh/uv/)** package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - **API key** for your chosen LLM provider:
   - [Anthropic](https://console.anthropic.com/) for Claude models (recommended)
@@ -125,11 +125,12 @@ print(f"Bias Detected: {result.bias_detected}")
 print(f"Risk Level: {result.risk_level}")
 print(f"Summary: {result.summary}")
 
-print(f"\nFound {len(result.bias_instances)} bias instances:")
-for instance in result.bias_instances:
-    print(f"  • {instance.type} ({instance.severity})")
-    print(f"    Text: \"{instance.text_span}\"")
-    print(f"    Reason: {instance.explanation}\n")
+# bias_instances is a list of dicts (or None); use dict .get() access
+print(f"\nFound {len(result.bias_instances or [])} bias instances:")
+for instance in (result.bias_instances or []):
+    print(f"  • {instance.get('type')} ({instance.get('severity')})")
+    print(f"    Text: \"{instance.get('text_span')}\"")
+    print(f"    Reason: {instance.get('explanation')}\n")
 ```
 
 **Expected Output:**
@@ -168,17 +169,23 @@ from fairsense_agentix import FairSense
 engine = FairSense()
 
 # Analyze an image file
-with open("team_photo.jpg", "rb") as f:
+with open("team_photo.webp", "rb") as f:
     image_bytes = f.read()
 
 result = engine.analyze_image(image_bytes)
 
-print(f"Visual Description: {result.visual_description}")
+# Image-specific fields: caption_text (VLM caption) and ocr_text (extracted text)
+print(f"Caption: {result.caption_text}")
+print(f"OCR Text: {result.ocr_text}")
 print(f"Bias Detected: {result.bias_detected}")
+print(f"Risk Level: {result.risk_level}")
+print(f"Summary: {result.summary}")
 
-for instance in result.bias_instances:
-    print(f"  • {instance.type}: {instance.visual_element}")
-    print(f"    {instance.explanation}")
+print(f"\nFound {len(result.bias_instances or [])} bias instances:")
+for instance in (result.bias_instances or []):
+    print(f"  • {instance.get('type')} ({instance.get('severity')})")
+    print(f"    Text: \"{instance.get('text_span')}\"")
+    print(f"    Reason: {instance.get('explanation')}\n")
 ```
 
 ### Risk Assessment (CSV/Dataset)
@@ -192,20 +199,31 @@ engine = FairSense()
 
 # Describe your deployment scenario
 scenario = """
-We're deploying a resume screening model that uses GPT-4 to rank candidates.
-The model is trained on historical hiring data from the past 5 years.
-It will be used to filter applicants for software engineering roles.
+We are deploying a resume screening AI system using a GPT-4 based LLM to rank
+job applicants for software engineering roles. The model was fine-tuned on
+5 years of historical hiring decisions from our company. The system will
+automatically filter out the bottom 80% of applicants before human review.
+Applicants are not informed that AI screening is used.
 """
 
 result = engine.assess_risk(scenario)
 
-print(f"Overall Risk Level: {result.risk_level}")
+# RiskResult exposes status (not risk_level), and `risks` is a list of dicts
+print(f"Status: {result.status}")
+if result.errors:
+    print(f"Errors: {result.errors}")
+
 print(f"\nTop Risks:")
 for risk in result.risks[:5]:  # Show top 5
-    print(f"  • {risk.name} (Score: {risk.score:.2f})")
-    print(f"    {risk.description}")
-    print(f"    Mitigation: {risk.mitigation}\n")
+    risk_id = risk.get('id') or risk.get('risk_id', '')
+    description = risk.get('description') or risk.get('text', '')
+    print(f"  • [{risk_id}] (Score: {risk.get('score', 0):.2f})")
+    print(f"    Category: {risk.get('category')}")
+    print(f"    {description}\n")
 ```
+
+!!! note "If `status` is `failed`"
+    `status: failed` means the agent's quality evaluator rejected the output (e.g., low FAISS similarity scores against the MIT AI Risk Repository). Check `result.errors` for details. Vague or short scenario descriptions tend to produce low similarity; more specific, domain-relevant scenarios — describing the model, training data, deployment context, and human-impact surface — generally produce higher similarity scores and `status: success`.
 
 ---
 

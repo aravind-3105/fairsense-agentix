@@ -49,7 +49,7 @@ source .venv/bin/activate
 
 ### Requirements
 
-- **Python 3.12+**
+- **Python 3.12** (3.13 not yet supported)
 - **4GB+ RAM** (for ML models)
 - **API key** for OpenAI or Anthropic (for LLM functionality)
 
