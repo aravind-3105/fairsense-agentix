@@ -1,11 +1,12 @@
 [project]
 name = "fairsense-agentix"
-version = "0.1.1"
+version = "0.2.0"
 description = "An agentic fairness and AI-risk analysis platform for detecting bias in text and images"
 readme = {file = "README.md", content-type = "text/markdown"}
 authors = [ {name = "Vector AI Engineering", email = "ai_engineering@vectorinstitute.ai"}]
 license = {text = "MIT"}
 requires-python = ">=3.12"
+keywords = ["fairness", "bias detection", "AI safety", "LLM", "agentic", "multimodal"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -38,7 +39,9 @@ dependencies = [
     "tiktoken>=0.7.0,<0.12.0", # OpenAI tokenizer (constrain to version with prebuilt wheels)
     # Phase 5.3: OCR Tools
     "pytesseract>=0.3.10", # Tesseract OCR wrapper (CPU-friendly, 100+ languages)
-    "paddleocr>=2.7.0", # PaddleOCR (GPU-accelerated, excellent accuracy)
+    # NOTE: paddleocr moved to optional extra `[paddle]` — requires paddlepaddle
+    # which has heavy/platform-fragile wheels. Install with:
+    #   pip install fairsense-agentix[paddle]
     "pillow>=10.0.0", # Image processing (PIL, used by OCR and captioning)
     # Phase 5.3: Image Captioning
     "transformers>=4.35.0", # Hugging Face transformers (BLIP/BLIP-2 models)
@@ -59,6 +62,15 @@ Homepage = "https://github.com/VectorInstitute/fairsense-agentix"
 Documentation = "https://vectorinstitute.github.io/fairsense-agentix/"
 Repository = "https://github.com/VectorInstitute/fairsense-agentix"
 Issues = "https://github.com/VectorInstitute/fairsense-agentix/issues"
+
+[project.optional-dependencies]
+# PaddleOCR backend (GPU-accelerated, ~95% accuracy, handles rotated text).
+# Pulls in paddlepaddle which has platform-specific wheels — opt-in only.
+# Install with: pip install fairsense-agentix[paddle]
+paddle = [
+    "paddleocr>=2.7.0",
+    "paddlepaddle>=2.6.0",
+]
 
 [build-system]
 requires = ["hatchling"]
