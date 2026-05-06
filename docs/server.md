@@ -86,7 +86,7 @@ def start(
 
 ## Requirements
 
-- **Python 3.12+** with fairsense-agentix installed (`uv sync` or `pip install -e .`)
+- **Python 3.12** with fairsense-agentix installed (`uv sync` or `pip install -e .`) — 3.13 not yet supported
 - **Node.js 20+** and npm for the React UI
 
 ---

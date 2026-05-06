@@ -118,9 +118,9 @@ result = engine.analyze_text(
 )
 
 print(f"Overall: {result.summary}")
-print(f"Found {len(result.bias_instances)} bias instances")
-for instance in result.bias_instances:
-    print(f"  - {instance['type']} ({instance['severity']}): {instance['text_span']}")
+print(f"Found {len(result.bias_instances or [])} bias instances")
+for instance in (result.bias_instances or []):
+    print(f"  - {instance.get('type')} ({instance.get('severity')}): {instance.get('text_span')}")
 ```
 
 ### Using the Web Interface
