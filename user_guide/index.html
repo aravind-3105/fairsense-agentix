@@ -1916,13 +1916,12 @@
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Risk Level: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">risk_level</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Summary: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="c1"># Iterate through bias instances</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">:</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Type: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Severity: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">severity</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Text: &#39;</span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">text_span</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Explanation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">explanation</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mitigation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">mitigation_suggestion</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="c1"># Iterate through bias instances (each is a dict, not an object)</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span> <span class="ow">or</span> <span class="p">[]):</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Type: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Severity: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;severity&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Text: &#39;</span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;text_span&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Explanation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;explanation&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="understanding-the-result-object">Understanding the Result Object<a class="headerlink" href="#understanding-the-result-object" title="Permanent link">&para;</a></h3>
 <p>The <code>BiasResult</code> object contains:</p>
@@ -1936,28 +1935,33 @@
 </thead>
 <tbody>
 <tr>
+<td><code>status</code></td>
+<td><code>str</code></td>
+<td>Execution status: <code>success</code>, <code>failed</code>, or <code>partial</code></td>
+</tr>
+<tr>
 <td><code>bias_detected</code></td>
-<td><code>bool</code></td>
+<td><code>bool \| None</code></td>
 <td>Whether any bias was found</td>
 </tr>
 <tr>
 <td><code>risk_level</code></td>
-<td><code>str</code></td>
+<td><code>str \| None</code></td>
 <td>Overall severity: <code>low</code>, <code>medium</code>, <code>high</code></td>
 </tr>
 <tr>
 <td><code>summary</code></td>
-<td><code>str</code></td>
+<td><code>str \| None</code></td>
 <td>High-level explanation of findings</td>
 </tr>
 <tr>
 <td><code>bias_instances</code></td>
-<td><code>list[BiasInstance]</code></td>
-<td>Detailed bias findings</td>
+<td><code>list[dict] \| None</code></td>
+<td>Detailed bias findings (list of dicts)</td>
 </tr>
 <tr>
 <td><code>highlighted_html</code></td>
-<td><code>str</code></td>
+<td><code>str \| None</code></td>
 <td>HTML with color-coded highlights</td>
 </tr>
 <tr>
@@ -1965,14 +1969,25 @@
 <td><code>ResultMetadata</code></td>
 <td>Execution details (time, model, workflow ID)</td>
 </tr>
+<tr>
+<td><code>errors</code></td>
+<td><code>list[str]</code></td>
+<td>Error messages (empty if successful)</td>
+</tr>
+<tr>
+<td><code>warnings</code></td>
+<td><code>list[str]</code></td>
+<td>Warning messages (empty if none)</td>
+</tr>
 </tbody>
 </table>
-<p>For the full list of fields (e.g. <code>status</code>, <code>bias_analysis</code>, <code>ocr_text</code>, <code>errors</code>), see the <a href="../api/">API Reference</a>.</p>
-<p><strong>BiasInstance Fields:</strong></p>
+<p>For image analysis, the result also includes <code>caption_text</code>, <code>ocr_text</code>, <code>merged_text</code>, and <code>image_base64</code>. See the <a href="../api/">API Reference</a>.</p>
+<p><strong><code>bias_instances</code> dict keys:</strong></p>
+<p>Each item in <code>result.bias_instances</code> is a <code>dict</code> with these keys (use <code>.get(...)</code> for safe access):</p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
+<th>Key</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
@@ -1997,16 +2012,6 @@
 <td><code>explanation</code></td>
 <td><code>str</code></td>
 <td>Why this is biased</td>
-</tr>
-<tr>
-<td><code>mitigation_suggestion</code></td>
-<td><code>str</code></td>
-<td>How to fix it</td>
-</tr>
-<tr>
-<td><code>context</code></td>
-<td><code>str</code></td>
-<td>Surrounding text for context</td>
 </tr>
 </tbody>
 </table>
@@ -2045,10 +2050,10 @@
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyze_text</span><span class="p">(</span><span class="n">job_posting</span><span class="p">)</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Check for hiring-related biases</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">:</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="k">if</span> <span class="n">instance</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;racial&quot;</span><span class="p">]:</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;⚠️  Legal Risk: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">text_span</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   Mitigation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">mitigation_suggestion</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span> <span class="ow">or</span> <span class="p">[]):</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="k">if</span> <span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;racial&quot;</span><span class="p">]:</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;⚠️  Legal Risk: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;text_span&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   Explanation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;explanation&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="marketing-copy">Marketing Copy<a class="headerlink" href="#marketing-copy" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">ad_copy</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -2059,8 +2064,10 @@
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyze_text</span><span class="p">(</span><span class="n">ad_copy</span><span class="p">)</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Identify gender stereotyping</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">gender_biases</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;gender&quot;</span><span class="p">]</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gender_biases</span><span class="p">)</span><span class="si">}</span><span class="s2"> gender-related issues&quot;</span><span class="p">)</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">gender_biases</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span> <span class="ow">or</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;gender&quot;</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">]</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gender_biases</span><span class="p">)</span><span class="si">}</span><span class="s2"> gender-related issues&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="content-moderation">Content Moderation<a class="headerlink" href="#content-moderation" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">user_comment</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -2085,19 +2092,22 @@
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">analyze_image</span><span class="p">(</span><span class="n">image_bytes</span><span class="p">)</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># Access results</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Visual Description: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">visual_description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bias Detected: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">bias_detected</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Risk Level: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">risk_level</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="c1"># Bias instances for images</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">:</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Type: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Visual Element: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">visual_element</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Explanation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">explanation</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># Access results — image-specific fields are caption_text and ocr_text</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Caption: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">caption_text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OCR Text: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">ocr_text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bias Detected: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">bias_detected</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Risk Level: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">risk_level</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Summary: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1"># Bias instances for images (each is a dict with the same keys as text bias)</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span> <span class="ow">or</span> <span class="p">[]):</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Type: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Severity: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;severity&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Text: &#39;</span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;text_span&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Explanation: </span><span class="si">{</span><span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;explanation&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="image-result-object">Image Result Object<a class="headerlink" href="#image-result-object" title="Permanent link">&para;</a></h3>
-<p>The image analysis result includes:</p>
+<p><code>analyze_image()</code> returns a <code>BiasResult</code> (the same type as <code>analyze_text()</code>). The image-specific fields populated are:</p>
 <table>
 <thead>
 <tr>
@@ -2108,64 +2118,28 @@
 </thead>
 <tbody>
 <tr>
-<td><code>visual_description</code></td>
-<td><code>str</code></td>
-<td>What the VLM sees in the image</td>
+<td><code>caption_text</code></td>
+<td><code>str \| None</code></td>
+<td>Generated image caption from the VLM</td>
 </tr>
 <tr>
-<td><code>bias_detected</code></td>
-<td><code>bool</code></td>
-<td>Whether bias was found</td>
+<td><code>ocr_text</code></td>
+<td><code>str \| None</code></td>
+<td>Text extracted from the image via OCR</td>
 </tr>
 <tr>
-<td><code>bias_instances</code></td>
-<td><code>list[BiasInstance]</code></td>
-<td>Visual bias findings</td>
+<td><code>merged_text</code></td>
+<td><code>str \| None</code></td>
+<td>Combined OCR + caption text used for analysis</td>
 </tr>
 <tr>
 <td><code>image_base64</code></td>
-<td><code>str</code></td>
-<td>Base64-encoded annotated image</td>
-</tr>
-<tr>
-<td><code>reasoning_trace</code></td>
-<td><code>str</code></td>
-<td>Agent's step-by-step reasoning</td>
+<td><code>str \| None</code></td>
+<td>Base64-encoded image with data URL (for UI display)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>BiasInstance for Images:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>type</code></td>
-<td><code>str</code></td>
-<td>Bias category</td>
-</tr>
-<tr>
-<td><code>visual_element</code></td>
-<td><code>str</code></td>
-<td>Description of problematic element</td>
-</tr>
-<tr>
-<td><code>explanation</code></td>
-<td><code>str</code></td>
-<td>Why this represents bias</td>
-</tr>
-<tr>
-<td><code>severity</code></td>
-<td><code>str</code></td>
-<td>Impact level</td>
-</tr>
-</tbody>
-</table>
+<p>All other fields (<code>status</code>, <code>bias_detected</code>, <code>risk_level</code>, <code>summary</code>, <code>bias_instances</code>, <code>highlighted_html</code>, <code>metadata</code>, <code>errors</code>, <code>warnings</code>) work the same as for text analysis. See the <a href="../api/">API Reference</a> for the full schema.</p>
 <h3 id="working-with-different-image-sources">Working with Different Image Sources<a class="headerlink" href="#working-with-different-image-sources" title="Permanent link">&para;</a></h3>
 <h4 id="from-file">From File<a class="headerlink" href="#from-file" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;advertisement.png&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -2220,12 +2194,13 @@
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>        <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>            <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">img_path</span><span class="p">,</span>
 </span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>            <span class="s2">&quot;issues&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">,</span>
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">visual_description</span>
-</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>        <span class="p">})</span>
-</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
-</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="c1"># Generate report</span>
-</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="k">if</span> <span class="n">issues</span><span class="p">:</span>
-</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">issues</span><span class="p">)</span><span class="si">}</span><span class="s2"> images needing review&quot;</span><span class="p">)</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>            <span class="s2">&quot;caption&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">caption_text</span><span class="p">,</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>            <span class="s2">&quot;ocr_text&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">ocr_text</span><span class="p">,</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>        <span class="p">})</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="c1"># Generate report</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="k">if</span> <span class="n">issues</span><span class="p">:</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">issues</span><span class="p">)</span><span class="si">}</span><span class="s2"> images needing review&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="risk-assessment">Risk Assessment<a class="headerlink" href="#risk-assessment" title="Permanent link">&para;</a></h2>
@@ -2242,15 +2217,19 @@
 </span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">assess_risk</span><span class="p">(</span><span class="n">scenario</span><span class="p">)</span>
 </span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1"># Access results</span>
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Overall Risk: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">risk_level</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total Risks Identified: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="c1"># Top risks</span>
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">risk_name</span><span class="si">}</span><span class="s2"> (Relevance: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
-</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Category: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">category</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Description: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1"># Access results — RiskResult uses `status`, not `risk_level`</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Status: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Errors: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total Risks Identified: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="c1"># Top risks (each is a dict — use .get() for safe access)</span>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>
+</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>    <span class="n">risk_id</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;risk_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>    <span class="n">description</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[</span><span class="si">{</span><span class="n">risk_id</span><span class="si">}</span><span class="s2">] (Relevance: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;score&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Category: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Description: </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="risk-result-object">Risk Result Object<a class="headerlink" href="#risk-result-object" title="Permanent link">&para;</a></h3>
 <table>
@@ -2263,41 +2242,72 @@
 </thead>
 <tbody>
 <tr>
-<td><code>risk_level</code></td>
+<td><code>status</code></td>
 <td><code>str</code></td>
-<td>Overall severity: <code>low</code>, <code>medium</code>, <code>high</code>, <code>critical</code></td>
+<td>Execution status: <code>success</code>, <code>failed</code>, or <code>partial</code></td>
 </tr>
 <tr>
 <td><code>risks</code></td>
-<td><code>list[RiskItem]</code></td>
-<td>Identified risks, sorted by score</td>
+<td><code>list[dict]</code></td>
+<td>Identified risks, sorted by relevance score</td>
 </tr>
 <tr>
-<td><code>summary</code></td>
-<td><code>str</code></td>
-<td>High-level risk overview</td>
+<td><code>rmf_recommendations</code></td>
+<td><code>dict[str, list[dict]]</code></td>
+<td>NIST AI-RMF recommendations keyed by risk ID</td>
+</tr>
+<tr>
+<td><code>embedding</code></td>
+<td><code>list[float] \| None</code></td>
+<td>Vector embedding of the scenario</td>
+</tr>
+<tr>
+<td><code>html_table</code></td>
+<td><code>str \| None</code></td>
+<td>Formatted HTML table of risks + recommendations</td>
+</tr>
+<tr>
+<td><code>csv_path</code></td>
+<td><code>str \| None</code></td>
+<td>Path to exported CSV file</td>
 </tr>
 <tr>
 <td><code>metadata</code></td>
 <td><code>ResultMetadata</code></td>
 <td>Execution details</td>
 </tr>
+<tr>
+<td><code>errors</code></td>
+<td><code>list[str]</code></td>
+<td>Error messages (empty if successful)</td>
+</tr>
+<tr>
+<td><code>warnings</code></td>
+<td><code>list[str]</code></td>
+<td>Warning messages (empty if none)</td>
+</tr>
 </tbody>
 </table>
-<p><strong>RiskItem Fields:</strong></p>
+<p><strong><code>risks</code> dict keys:</strong></p>
+<p>Each item in <code>result.risks</code> is a <code>dict</code>. Use <code>.get(...)</code> for safe access since key names can vary between sources:</p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
+<th>Key</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>risk_name</code></td>
+<td><code>id</code> or <code>risk_id</code></td>
 <td><code>str</code></td>
-<td>Risk title from the MIT AI Risk Repository</td>
+<td>Risk identifier from the source repository</td>
+</tr>
+<tr>
+<td><code>description</code> or <code>text</code></td>
+<td><code>str</code></td>
+<td>Full risk description</td>
 </tr>
 <tr>
 <td><code>category</code></td>
@@ -2309,16 +2319,15 @@
 <td><code>float</code></td>
 <td>Relevance score (0–1) — FAISS semantic similarity to the query</td>
 </tr>
-<tr>
-<td><code>description</code></td>
-<td><code>str</code></td>
-<td>Full risk description from the repository</td>
-</tr>
 </tbody>
 </table>
 <div class="admonition note">
 <p class="admonition-title">Risk source</p>
 <p>Risks are retrieved from the <a href="https://airisk.mit.edu/">MIT AI Risk Repository</a> (V3, 1,340 entries) using semantic similarity search. The <code>category</code> field follows the repository's Domain Taxonomy; the number prefix (e.g., <code>3.1</code>) identifies the domain and subcategory. A score of <code>1.0</code> means the risk is maximally relevant to the described scenario; <code>0.0</code> means unrelated.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">If <code>result.status</code> is <code>failed</code></p>
+<p><code>status: failed</code> means the agent's quality evaluator rejected the output (e.g., low FAISS similarity scores against the MIT AI Risk Repository). Check <code>result.errors</code> for details. Vague or short scenario descriptions tend to produce low similarity; more specific, domain-relevant scenarios — describing the model, training data, deployment context, and human-impact surface — generally produce higher similarity scores and <code>status: success</code>.</p>
 </div>
 <h3 id="csv-dataset-analysis">CSV Dataset Analysis<a class="headerlink" href="#csv-dataset-analysis" title="Permanent link">&para;</a></h3>
 <p>For structured data, you can provide CSV content directly:</p>
@@ -2338,7 +2347,7 @@
 </span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">assess_risk</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">csv_data</span><span class="p">)</span>
 </span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
 </span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="c1"># Check for fairness risks</span>
-</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="n">fairness_risks</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">category</span> <span class="o">==</span> <span class="s2">&quot;fairness&quot;</span><span class="p">]</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="n">fairness_risks</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;fairness&quot;</span><span class="p">]</span>
 </span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">fairness_risks</span><span class="p">)</span><span class="si">}</span><span class="s2"> fairness concerns&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="common-use-cases_2">Common Use Cases<a class="headerlink" href="#common-use-cases_2" title="Permanent link">&para;</a></h3>
@@ -2354,22 +2363,26 @@
 </span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">assess_risk</span><span class="p">(</span><span class="n">deployment_plan</span><span class="p">)</span>
 </span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
 </span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="c1"># Check high-relevance risks (score &gt; 0.7 = strong semantic match)</span>
-</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="n">critical</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">score</span> <span class="o">&gt;</span> <span class="mf">0.7</span><span class="p">]</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="n">critical</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.7</span><span class="p">]</span>
 </span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="k">if</span> <span class="n">critical</span><span class="p">:</span>
 </span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;🚨 HIGH-RELEVANCE RISKS DETECTED&quot;</span><span class="p">)</span>
 </span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">critical</span><span class="p">:</span>
-</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  • </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">risk_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>        <span class="n">risk_id</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;risk_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>        <span class="n">description</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  • [</span><span class="si">{</span><span class="n">risk_id</span><span class="si">}</span><span class="s2">]: </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="compliance-check">Compliance Check<a class="headerlink" href="#compliance-check" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Check against regulatory frameworks</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">assess_risk</span><span class="p">(</span><span class="n">scenario</span><span class="p">)</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Filter by compliance category</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">compliance_risks</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">category</span> <span class="o">==</span> <span class="s2">&quot;compliance&quot;</span><span class="p">]</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">compliance_risks</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;compliance&quot;</span><span class="p">]</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
 </span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">compliance_risks</span><span class="p">:</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">⚖️  </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">risk_name</span><span class="si">}</span><span class="s2"> (score: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    <span class="n">risk_id</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;risk_id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>    <span class="n">description</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">⚖️  [</span><span class="si">{</span><span class="n">risk_id</span><span class="si">}</span><span class="s2">] (score: </span><span class="si">{</span><span class="n">risk</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;score&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="vendor-assessment">Vendor Assessment<a class="headerlink" href="#vendor-assessment" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">vendor_proposal</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -2383,9 +2396,16 @@
 </span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">assess_risk</span><span class="p">(</span><span class="n">vendor_proposal</span><span class="p">)</span>
 </span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>
 </span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="c1"># Generate vendor scorecard</span>
-</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="n">avg_score</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">score</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span> <span class="k">else</span> <span class="mi">0</span>
-</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Avg Relevance Score: </span><span class="si">{</span><span class="n">avg_score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;High-Relevance Concerns: </span><span class="si">{</span><span class="nb">len</span><span class="p">([</span><span class="n">r</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">r</span><span class="o">.</span><span class="n">score</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.6</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="n">avg_score</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>    <span class="nb">sum</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="p">)</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">risks</span>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>    <span class="k">else</span> <span class="mi">0</span>
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="p">)</span>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Avg Relevance Score: </span><span class="si">{</span><span class="n">avg_score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="nb">print</span><span class="p">(</span>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>    <span class="sa">f</span><span class="s2">&quot;High-Relevance Concerns: &quot;</span>
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a>    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">([</span><span class="n">r</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">result</span><span class="o">.</span><span class="n">risks</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;score&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.6</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="using-the-web-interface">Using the Web Interface<a class="headerlink" href="#using-the-web-interface" title="Permanent link">&para;</a></h2>
@@ -2434,15 +2454,15 @@
 <thead>
 <tr>
 <th>UI element</th>
-<th>Field</th>
+<th>Dict key</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Title</td>
-<td><code>risk_name</code></td>
-<td>Risk title from the repository</td>
+<td><code>id</code> (or <code>risk_id</code>)</td>
+<td>Risk identifier from the repository</td>
 </tr>
 <tr>
 <td>Category label</td>
@@ -2456,7 +2476,7 @@
 </tr>
 <tr>
 <td>Description</td>
-<td><code>description</code></td>
+<td><code>description</code> (or <code>text</code>)</td>
 <td>Full risk description (academic citations stripped for readability)</td>
 </tr>
 </tbody>
@@ -2709,7 +2729,7 @@
 </span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">engine</span><span class="o">.</span><span class="n">analyze_text</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">documents</span><span class="p">]</span>
 </span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>
 </span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="c1"># Generate summary report</span>
-</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="n">total_biases</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">bias_instances</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">)</span>
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="n">total_biases</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">bias_instances</span> <span class="ow">or</span> <span class="p">[])</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">)</span>
 </span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="n">avg_risk</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">risk_level</span> <span class="o">==</span> <span class="s2">&quot;high&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 </span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>
 </span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Analysis Summary:&quot;</span><span class="p">)</span>
